@@ -66,6 +66,7 @@ docker compose ps
 | PostgreSQL | localhost:5432 | Base de datos local para desarrollo |
 
 Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT` y `POSTGRES_PORT`.
+Si el puerto local `5432` ya esta ocupado, usar por ejemplo `POSTGRES_PORT=55432`.
 Los stubs de backend y frontend se reemplazaran por las aplicaciones reales cuando se implementen
 los issues de API y UI.
 
