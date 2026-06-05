@@ -42,8 +42,8 @@ seguridad, observabilidad, integracion y despliegue continuos.
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/Code-Hdez/QA_Gestion_Inventarios
-cd QA_Gestion_Inventarios
+git clone https://github.com/xPshycho/qa_gestion_inventarios
+cd qa_gestion_inventarios
 
 # 2. Configurar variables de entorno
 cp .env.example .env
@@ -51,11 +51,24 @@ cp .env.example .env
 # Editar .env con los valores reales
 
 # 3. Levantar el sistema completo
-docker compose up -d
+docker compose up --build -d
 
 # 4. Verificar que todos los servicios esten corriendo
 docker compose ps
 ```
+
+## Servicios locales con Docker Compose
+
+| Servicio | URL / puerto | Descripcion |
+|----------|--------------|-------------|
+| Frontend | http://localhost:5173 | Stub temporal para validar el entorno local |
+| Backend | http://localhost:8080/health | Healthcheck HTTP del stub de API |
+| PostgreSQL | localhost:5432 | Base de datos local para desarrollo |
+
+Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT` y `POSTGRES_PORT`.
+Si el puerto local `5432` ya esta ocupado, usar por ejemplo `POSTGRES_PORT=55432`.
+Los stubs de backend y frontend se reemplazaran por las aplicaciones reales cuando se implementen
+los issues de API y UI.
 
 ## Estructura del repositorio
 
@@ -80,6 +93,7 @@ docker compose ps
 ├── .env.example
 ├── .gitignore
 ├── commitlint.config.js
+├── docker-compose.override.yml
 └── docker-compose.yml
 ```
 
@@ -87,7 +101,7 @@ docker compose ps
 
 | Ambiente | Descripcion | URL |
 |----------|-------------|-----|
-| Development | Local con Docker Compose | http://localhost:3000 |
+| Development | Local con Docker Compose | http://localhost:5173 |
 | Staging | Replica de produccion para pruebas post-deploy | TBD |
 | Production | Ambiente final | TBD |
 
