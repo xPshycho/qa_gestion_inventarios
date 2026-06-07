@@ -3,7 +3,7 @@
 Proyecto final de la asignatura Aseguramiento de Calidad de Software.  
 Pontificia Universidad Catolica Madre y Maestra - Facultad de Ciencias e Ingenieria.
 
-## Descripcion
+## Descripcion 
 
 Sistema moderno de gestion de inventarios orientado a pequenas empresas, construido con un
 ecosistema completo de aseguramiento de calidad de software (QAS), pruebas automatizadas,
