@@ -19,12 +19,29 @@ services:
     networks:
       - inventory-network
 
+  flyway:
+    image: flyway/flyway:11-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src/main/resources/db/migration:/flyway/sql:ro
+    command:
+      - -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
+      - -user=${POSTGRES_USER:-inventory_user}
+      - -password=${POSTGRES_PASSWORD:-cambiar}
+      - -locations=filesystem:/flyway/sql
+      - -connectRetries=10
+      - migrate
+    networks:
+      - inventory-network
+
   backend:
     image: nginx:1.27-alpine
     restart: unless-stopped
     depends_on:
-      postgres:
-        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
     volumes:
       - ./infra/docker/backend-stub/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     expose:

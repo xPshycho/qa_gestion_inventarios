@@ -3,7 +3,7 @@
 Proyecto final de la asignatura Aseguramiento de Calidad de Software.  
 Pontificia Universidad Catolica Madre y Maestra - Facultad de Ciencias e Ingenieria.
 
-## Descripcion
+## Descripcion 
 
 Sistema moderno de gestion de inventarios orientado a pequenas empresas, construido con un
 ecosistema completo de aseguramiento de calidad de software (QAS), pruebas automatizadas,
@@ -64,11 +64,33 @@ docker compose ps
 | Frontend | http://localhost:5173 | Stub temporal para validar el entorno local |
 | Backend | http://localhost:8080/health | Healthcheck HTTP del stub de API |
 | PostgreSQL | localhost:5432 | Base de datos local para desarrollo |
+| Flyway | Servicio interno | Aplica migraciones antes de iniciar el backend |
 
 Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT` y `POSTGRES_PORT`.
 Si el puerto local `5432` ya esta ocupado, usar por ejemplo `POSTGRES_PORT=55432`.
 Los stubs de backend y frontend se reemplazaran por las aplicaciones reales cuando se implementen
 los issues de API y UI.
+
+## Migraciones de base de datos
+
+Flyway ejecuta las migraciones versionadas ubicadas en `backend/src/main/resources/db/migration`.
+El servicio `backend` inicia despues de que Flyway aplica correctamente los scripts sobre PostgreSQL.
+
+```bash
+# Levantar PostgreSQL, ejecutar migraciones y dejar el entorno local arriba
+POSTGRES_PORT=55432 docker compose up --build -d
+
+# Ver estado de servicios y confirmar que Flyway completo su ejecucion
+POSTGRES_PORT=55432 docker compose ps
+
+# Validar datos iniciales de productos
+POSTGRES_PORT=55432 docker compose exec postgres \
+  psql -U inventory_user -d inventory -c "SELECT sku, name, current_stock FROM products ORDER BY sku;"
+
+# Validar permisos y roles iniciales
+POSTGRES_PORT=55432 docker compose exec postgres \
+  psql -U inventory_user -d inventory -c "SELECT code, module FROM permissions ORDER BY code;"
+```
 
 ## Estructura del repositorio
 
@@ -83,7 +105,7 @@ los issues de API y UI.
 ├── infra/
 │   ├── docker/                 # Dockerfiles y compose
 │   ├── keycloak/               # Realm export y configuracion
-│   ├── migrations/             # Scripts Flyway
+│   ├── migrations/             # Evidencias o recursos de migraciones
 │   └── observability/          # Grafana, Prometheus, Loki, Tempo, Alloy
 ├── tests/
 │   ├── e2e/                    # Playwright
