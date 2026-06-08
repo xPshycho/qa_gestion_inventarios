@@ -69,10 +69,10 @@ JOIN roles r ON r.code = 'INVENTORY_VIEWER'
 WHERE u.username = 'viewer';
 
 INSERT INTO products (sku, name, description, category, price, current_stock, minimum_stock, status) VALUES
-  ('SKU-LAP-001', 'Laptop empresarial 14 pulgadas', 'Equipo portatil para personal administrativo', 'Tecnologia', 48500.00, 18, 5, 'ACTIVE'),
-  ('SKU-MON-002', 'Monitor 24 pulgadas', 'Monitor LED para estaciones de trabajo', 'Tecnologia', 9200.00, 9, 4, 'ACTIVE'),
-  ('SKU-TEC-003', 'Teclado mecanico', 'Teclado mecanico para productividad', 'Accesorios', 3200.00, 3, 3, 'ACTIVE'),
-  ('SKU-SIL-004', 'Silla ergonomica', 'Silla ajustable para oficina', 'Mobiliario', 14500.00, 0, 2, 'INACTIVE');
+  ('DELL-LAT-5440', 'Dell Latitude 5440', 'Laptop empresarial Dell Latitude 5440 con pantalla de 14 pulgadas', 'Laptops', 68500.00, 12, 4, 'ACTIVE'),
+  ('LEN-T14-G4', 'Lenovo ThinkPad T14 Gen 4', 'Laptop Lenovo ThinkPad T14 Gen 4 para productividad empresarial', 'Laptops', 74500.00, 8, 3, 'ACTIVE'),
+  ('HP-EB840-G10', 'HP EliteBook 840 G10', 'Laptop HP EliteBook 840 G10 orientada a usuarios corporativos', 'Laptops', 71500.00, 6, 2, 'ACTIVE'),
+  ('APP-MBA13-M2', 'Apple MacBook Air 13 M2', 'MacBook Air de 13 pulgadas con chip Apple M2', 'Laptops', 82900.00, 0, 2, 'INACTIVE');
 
 INSERT INTO stock_movements (
   product_id,
@@ -87,7 +87,7 @@ SELECT p.id, u.id, 'INITIAL', 0, p.current_stock, p.current_stock, 'Seed inicial
 FROM products p
 CROSS JOIN inventory_users u
 WHERE u.username = 'carlos'
-  AND p.sku IN ('SKU-LAP-001', 'SKU-MON-002', 'SKU-TEC-003', 'SKU-SIL-004');
+  AND p.sku IN ('DELL-LAT-5440', 'LEN-T14-G4', 'HP-EB840-G10', 'APP-MBA13-M2');
 
 INSERT INTO audit_log (table_name, record_id, action, actor_user_id, new_values, correlation_id)
 SELECT 'products', p.id::TEXT, 'INSERT', u.id,
@@ -96,4 +96,4 @@ SELECT 'products', p.id::TEXT, 'INSERT', u.id,
 FROM products p
 CROSS JOIN inventory_users u
 WHERE u.username = 'carlos'
-  AND p.sku IN ('SKU-LAP-001', 'SKU-MON-002', 'SKU-TEC-003', 'SKU-SIL-004');
+  AND p.sku IN ('DELL-LAT-5440', 'LEN-T14-G4', 'HP-EB840-G10', 'APP-MBA13-M2');
