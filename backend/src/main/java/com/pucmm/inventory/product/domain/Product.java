@@ -12,6 +12,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "products")
@@ -54,56 +55,35 @@ public class Product {
     protected Product() {
     }
 
-    public Product(
-            String sku,
-            String name,
-            String description,
-            String category,
-            BigDecimal price,
-            Integer currentStock,
-            Integer minimumStock,
-            ProductStatus status
-    ) {
-        this.sku = sku;
-        this.name = name;
-        this.description = description;
-        this.category = category;
-        this.price = price;
-        this.currentStock = currentStock;
-        this.minimumStock = minimumStock;
-        this.status = status;
+    public Product(ProductData data) {
+        apply(data);
     }
 
     @PrePersist
     void prePersist() {
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     void preUpdate() {
-        updatedAt = OffsetDateTime.now();
+        updatedAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
 
-    public void update(
-            String sku,
-            String name,
-            String description,
-            String category,
-            BigDecimal price,
-            Integer currentStock,
-            Integer minimumStock,
-            ProductStatus status
-    ) {
-        this.sku = sku;
-        this.name = name;
-        this.description = description;
-        this.category = category;
-        this.price = price;
-        this.currentStock = currentStock;
-        this.minimumStock = minimumStock;
-        this.status = status;
+    public void update(ProductData data) {
+        apply(data);
+    }
+
+    private void apply(ProductData data) {
+        this.sku = data.sku();
+        this.name = data.name();
+        this.description = data.description();
+        this.category = data.category();
+        this.price = data.price();
+        this.currentStock = data.currentStock();
+        this.minimumStock = data.minimumStock();
+        this.status = data.status();
     }
 
     public Long getId() {

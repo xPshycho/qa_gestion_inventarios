@@ -1,6 +1,7 @@
 package com.pucmm.inventory.common.api;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 public record ErrorResponse(
         int status,
@@ -8,6 +9,6 @@ public record ErrorResponse(
         OffsetDateTime timestamp
 ) {
     public static ErrorResponse of(int status, String message) {
-        return new ErrorResponse(status, message, OffsetDateTime.now());
+        return new ErrorResponse(status, message, OffsetDateTime.now(ZoneOffset.UTC));
     }
 }

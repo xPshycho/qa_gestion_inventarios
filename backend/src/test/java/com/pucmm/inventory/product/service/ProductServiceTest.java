@@ -10,6 +10,7 @@ import com.pucmm.inventory.product.api.dto.ProductPageResponse;
 import com.pucmm.inventory.product.api.dto.ProductRequest;
 import com.pucmm.inventory.product.api.dto.ProductResponse;
 import com.pucmm.inventory.product.domain.Product;
+import com.pucmm.inventory.product.domain.ProductData;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.repository.ProductRepository;
 import java.math.BigDecimal;
@@ -146,7 +147,7 @@ class ProductServiceTest {
     }
 
     private Product productWithId(Long id, String sku) {
-        Product product = new Product(
+        Product product = new Product(new ProductData(
                 sku,
                 "Dell Latitude 5440",
                 "Laptop empresarial Dell Latitude 5440 con pantalla de 14 pulgadas",
@@ -155,7 +156,7 @@ class ProductServiceTest {
                 12,
                 4,
                 ProductStatus.ACTIVE
-        );
+        ));
         setPersistenceFields(product, id);
         return product;
     }

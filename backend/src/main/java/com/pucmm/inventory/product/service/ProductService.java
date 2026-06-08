@@ -4,6 +4,7 @@ import com.pucmm.inventory.product.api.dto.ProductPageResponse;
 import com.pucmm.inventory.product.api.dto.ProductRequest;
 import com.pucmm.inventory.product.api.dto.ProductResponse;
 import com.pucmm.inventory.product.domain.Product;
+import com.pucmm.inventory.product.domain.ProductData;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.repository.ProductRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -51,16 +52,7 @@ public class ProductService {
             throw new DuplicateSkuException(request.sku());
         }
 
-        Product product = new Product(
-                request.sku(),
-                request.name(),
-                request.description(),
-                request.category(),
-                request.price(),
-                request.currentStock(),
-                request.minimumStock(),
-                request.status()
-        );
+        Product product = new Product(toProductData(request));
 
         return ProductResponse.from(productRepository.save(product));
     }
@@ -72,7 +64,19 @@ public class ProductService {
             throw new DuplicateSkuException(request.sku());
         }
 
-        product.update(
+        product.update(toProductData(request));
+
+        return ProductResponse.from(productRepository.save(product));
+    }
+
+    @Transactional
+    public void deleteProduct(Long id) {
+        Product product = findProductById(id);
+        productRepository.delete(product);
+    }
+
+    private ProductData toProductData(ProductRequest request) {
+        return new ProductData(
                 request.sku(),
                 request.name(),
                 request.description(),
@@ -82,14 +86,6 @@ public class ProductService {
                 request.minimumStock(),
                 request.status()
         );
-
-        return ProductResponse.from(productRepository.save(product));
-    }
-
-    @Transactional
-    public void deleteProduct(Long id) {
-        Product product = findProductById(id);
-        productRepository.delete(product);
     }
 
     private Product findProductById(Long id) {
