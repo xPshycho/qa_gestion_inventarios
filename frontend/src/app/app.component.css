@@ -1,0 +1,271 @@
+.inventory-page {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.header-band,
+.filters,
+.table-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.header-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+  line-height: 1.1;
+}
+
+.metric {
+  min-width: 128px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  text-align: right;
+}
+
+.metric strong,
+.metric span {
+  display: block;
+}
+
+.metric strong {
+  font-size: 1.75rem;
+}
+
+.metric span {
+  color: var(--muted);
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(170px, 1fr) minmax(140px, 0.8fr) minmax(96px, 0.5fr) auto;
+  align-items: end;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+  padding: 0 12px;
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: 3px solid rgba(54, 90, 216, 0.22);
+  outline-offset: 2px;
+}
+
+.ghost-button,
+.refresh-button,
+.pagination button {
+  min-height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+  padding: 0 14px;
+  font-weight: 700;
+}
+
+.refresh-button {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: var(--primary-strong);
+}
+
+.table-panel {
+  overflow: hidden;
+}
+
+.table-toolbar,
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.table-toolbar span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 3px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sort-button span {
+  min-width: 32px;
+  color: var(--accent);
+  font-size: 0.7rem;
+}
+
+.sku {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+}
+
+.description {
+  display: block;
+  max-width: 420px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-top: 4px;
+}
+
+.status {
+  display: inline-flex;
+  min-width: 76px;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--inactive-bg);
+  color: #344054;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.status-active {
+  background: var(--success-bg);
+  color: var(--primary-strong);
+}
+
+.state,
+.empty {
+  padding: 24px 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.state-error {
+  color: var(--danger);
+  background: #fff1f0;
+  border-top: 1px solid #ffd5d2;
+  border-bottom: 1px solid #ffd5d2;
+}
+
+.pagination {
+  border-top: 1px solid var(--border);
+  background: #fbfcfc;
+}
+
+.pagination span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .field-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .inventory-page {
+    width: min(100% - 20px, 1180px);
+    padding-top: 18px;
+  }
+
+  .header-band,
+  .table-toolbar,
+  .pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .metric {
+    text-align: left;
+  }
+
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}

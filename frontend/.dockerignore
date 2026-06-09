@@ -1,0 +1,8 @@
+node_modules
+.pnpm-store
+dist
+coverage
+.angular
+.git
+npm-debug.log
+package-lock.json

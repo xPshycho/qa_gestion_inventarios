@@ -25,6 +25,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -42,11 +44,24 @@ class ProductServiceTest {
         when(productRepository.findAll(any(Specification.class), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1));
 
-        ProductPageResponse response = productService.findProducts(0, 20, "latitude", "Laptops", ProductStatus.ACTIVE);
+        ProductPageResponse response = productService.findProducts(
+                0,
+                20,
+                "latitude",
+                "Laptops",
+                ProductStatus.ACTIVE,
+                "name",
+                "desc"
+        );
 
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().getFirst().sku()).isEqualTo("DELL-LAT-5440");
         assertThat(response.totalElements()).isEqualTo(1);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(productRepository).findAll(any(Specification.class), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("name"))
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.DESC);
     }
 
     @Test

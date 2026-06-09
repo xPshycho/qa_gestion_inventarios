@@ -50,15 +50,32 @@ class ProductControllerTest {
     @Test
     void listProductsReturnsPage() throws Exception {
         ProductPageResponse page = new ProductPageResponse(List.of(response(1L, "DELL-LAT-5440")), 0, 20, 1, 1);
-        when(productService.findProducts(0, 20, "latitude", "Laptops", ProductStatus.ACTIVE)).thenReturn(page);
+        when(productService.findProducts(
+                0,
+                20,
+                "latitude",
+                "Laptops",
+                ProductStatus.ACTIVE,
+                "name",
+                "desc"
+        )).thenReturn(page);
 
         mockMvc.perform(get("/products")
                         .param("search", "latitude")
                         .param("category", "Laptops")
-                        .param("status", "ACTIVE"))
+                        .param("status", "ACTIVE")
+                        .param("sort", "name")
+                        .param("direction", "desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].sku").value("DELL-LAT-5440"))
                 .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void listProductsRejectsUnsupportedSortField() throws Exception {
+        mockMvc.perform(get("/products").param("sort", "unknown"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
