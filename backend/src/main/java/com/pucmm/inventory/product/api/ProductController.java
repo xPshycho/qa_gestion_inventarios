@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -41,9 +42,13 @@ public class ProductController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) ProductStatus status
+            @RequestParam(required = false) ProductStatus status,
+            @RequestParam(defaultValue = "id")
+            @Pattern(regexp = "id|sku|name|category|price|currentStock|minimumStock|status|updatedAt")
+            String sort,
+            @RequestParam(defaultValue = "asc") @Pattern(regexp = "(?i)asc|desc") String direction
     ) {
-        return productService.findProducts(page, size, search, category, status);
+        return productService.findProducts(page, size, search, category, status, sort, direction);
     }
 
     @GetMapping("/{id}")

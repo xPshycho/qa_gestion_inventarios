@@ -32,9 +32,11 @@ public class ProductService {
             int size,
             String search,
             String category,
-            ProductStatus status
+            ProductStatus status,
+            String sort,
+            String direction
     ) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").ascending());
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(direction), sort));
         Page<ProductResponse> products = productRepository
                 .findAll(buildSpecification(search, category, status), pageRequest)
                 .map(ProductResponse::from);
