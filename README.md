@@ -21,7 +21,7 @@ seguridad, observabilidad, integracion y despliegue continuos.
 | Capa | Tecnologia |
 |------|------------|
 | Backend | Spring Boot |
-| Frontend | React |
+| Frontend | Angular |
 | Base de datos | PostgreSQL |
 | Migraciones | Flyway |
 | Seguridad | Keycloak, OAuth2, JWT |
@@ -61,15 +61,14 @@ docker compose ps
 
 | Servicio | URL / puerto | Descripcion |
 |----------|--------------|-------------|
-| Frontend | http://localhost:5173 | Stub temporal para validar el entorno local |
+| Frontend | http://localhost:5173 | Interfaz Angular de gestion de productos |
 | Backend | http://localhost:8080/health | Healthcheck HTTP del stub de API |
 | PostgreSQL | localhost:5432 | Base de datos local para desarrollo |
 | Flyway | Servicio interno | Aplica migraciones antes de iniciar el backend |
 
 Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT` y `POSTGRES_PORT`.
 Si el puerto local `5432` ya esta ocupado, usar por ejemplo `POSTGRES_PORT=55432`.
-Los stubs de backend y frontend se reemplazaran por las aplicaciones reales cuando se implementen
-los issues de API y UI.
+La interfaz Angular consume la API del backend mediante la ruta `/api`.
 
 ## Migraciones de base de datos
 
@@ -183,8 +182,11 @@ cd backend && TBD
 # Integration tests (requiere Docker)
 cd backend && TBD
 
-# E2E tests
-TBD
+# Frontend
+cd frontend && pnpm test
+
+# Build frontend
+cd frontend && pnpm build
 
 # Performance tests
 TBD
