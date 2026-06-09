@@ -41,7 +41,7 @@ class ProductServiceTest {
     @Test
     void findProductsReturnsPaginatedProducts() {
         Product product = productWithId(1L, "DELL-LAT-5440");
-        when(productRepository.findAll(any(Specification.class), any(PageRequest.class)))
+        when(productRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1));
 
         ProductPageResponse response = productService.findProducts(
@@ -58,7 +58,7 @@ class ProductServiceTest {
         assertThat(response.content().getFirst().sku()).isEqualTo("DELL-LAT-5440");
         assertThat(response.totalElements()).isEqualTo(1);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(productRepository).findAll(any(Specification.class), pageableCaptor.capture());
+        verify(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), pageableCaptor.capture());
         assertThat(pageableCaptor.getValue().getSort().getOrderFor("name"))
                 .extracting(Sort.Order::getDirection)
                 .isEqualTo(Sort.Direction.DESC);

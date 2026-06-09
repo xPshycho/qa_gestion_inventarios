@@ -5,6 +5,10 @@ import com.pucmm.inventory.product.api.dto.ProductRequest;
 import com.pucmm.inventory.product.api.dto.ProductResponse;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.service.ProductService;
+import com.pucmm.inventory.stock.api.dto.StockAdjustmentRequest;
+import com.pucmm.inventory.stock.api.dto.StockMovementRequest;
+import com.pucmm.inventory.stock.api.dto.StockMovementResponse;
+import com.pucmm.inventory.stock.service.StockService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -12,6 +16,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import java.net.URI;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,9 +35,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Products", description = "CRUD de productos del inventario")
 public class ProductController {
     private final ProductService productService;
+    private final StockService stockService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, StockService stockService) {
         this.productService = productService;
+        this.stockService = stockService;
     }
 
     @GetMapping
@@ -80,5 +87,38 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/stock/entries")
+    @Operation(summary = "Registrar entrada de stock")
+    public StockMovementResponse registerStockEntry(
+            @PathVariable Long id,
+            @Valid @RequestBody StockMovementRequest request
+    ) {
+        return stockService.registerEntry(id, request);
+    }
+
+    @PostMapping("/{id}/stock/exits")
+    @Operation(summary = "Registrar salida de stock")
+    public StockMovementResponse registerStockExit(
+            @PathVariable Long id,
+            @Valid @RequestBody StockMovementRequest request
+    ) {
+        return stockService.registerExit(id, request);
+    }
+
+    @PostMapping("/{id}/stock/adjustments")
+    @Operation(summary = "Registrar ajuste de inventario")
+    public StockMovementResponse adjustStock(
+            @PathVariable Long id,
+            @Valid @RequestBody StockAdjustmentRequest request
+    ) {
+        return stockService.adjustStock(id, request);
+    }
+
+    @GetMapping("/{id}/stock-movements")
+    @Operation(summary = "Consultar historial de movimientos de stock")
+    public List<StockMovementResponse> listStockMovements(@PathVariable Long id) {
+        return stockService.findMovements(id);
     }
 }

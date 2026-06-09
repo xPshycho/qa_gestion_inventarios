@@ -16,6 +16,7 @@ public record ProductResponse(
         BigDecimal price,
         Integer currentStock,
         Integer minimumStock,
+        boolean stockAlert,
         ProductStatus status,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
@@ -30,6 +31,7 @@ public record ProductResponse(
                 product.getPrice(),
                 product.getCurrentStock(),
                 product.getMinimumStock(),
+                product.hasMinimumStockAlert(),
                 product.getStatus(),
                 product.getCreatedAt(),
                 product.getUpdatedAt()
