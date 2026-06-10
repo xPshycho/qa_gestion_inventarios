@@ -63,10 +63,12 @@ docker compose ps
 |----------|--------------|-------------|
 | Frontend | http://localhost:5173 | Interfaz Angular de gestion de productos |
 | Backend | http://localhost:8080/health | Healthcheck HTTP del stub de API |
+| Keycloak | http://localhost:8081 | Realm `inventory` para OAuth2/JWT |
 | PostgreSQL | localhost:5432 | Base de datos local para desarrollo |
 | Flyway | Servicio interno | Aplica migraciones antes de iniciar el backend |
 
-Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT` y `POSTGRES_PORT`.
+Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT`, `KEYCLOAK_PORT`
+y `POSTGRES_PORT`.
 Si el puerto local `5432` ya esta ocupado, usar por ejemplo `POSTGRES_PORT=55432`.
 La interfaz Angular consume la API del backend mediante la ruta `/api`.
 
@@ -137,6 +139,10 @@ POSTGRES_PORT=55432 docker compose exec postgres \
 | `report:view` | Ver reportes y dashboard |
 | `user:manage` | Gestionar usuarios, roles y permisos |
 | `audit:view` | Consultar auditoria del sistema |
+
+La configuracion importable de Keycloak vive en `infra/keycloak/inventory-realm.json`.
+La matriz de roles, usuarios demo y comandos de validacion JWT estan documentados en
+`docs/security/keycloak.md`.
 
 ## Branch strategy
 
