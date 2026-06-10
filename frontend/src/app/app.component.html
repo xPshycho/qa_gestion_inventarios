@@ -1,14 +1,16 @@
 <main class="inventory-page">
   <section class="header-band">
     <div>
-      <p class="eyebrow">Productos</p>
-      <h1>Inventario de productos</h1>
+      <p class="eyebrow">Dashboard</p>
+      <h1>Inventario operativo</h1>
     </div>
     <div class="metric">
       <strong>{{ page.totalElements }}</strong>
       <span>registros</span>
     </div>
   </section>
+
+  <app-dashboard (refreshProducts)="loadProducts()"></app-dashboard>
 
   <section class="filters" aria-label="Filtros de productos">
     <label class="field field-wide">

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
+import { DashboardComponent } from './dashboard.component';
 import { Product, ProductPage, ProductQuery, ProductStatus, SortField } from './product.model';
 import { ProductService } from './product.service';
 
@@ -18,7 +19,7 @@ const DEFAULT_QUERY: ProductQuery = {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, DashboardComponent, FormsModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
