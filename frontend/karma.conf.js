@@ -1,4 +1,6 @@
-module.exports = function (config) {
+const path = require('node:path');
+
+module.exports = function configureKarma(config) {
   config.set({
     basePath: '',
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
@@ -17,7 +19,7 @@ module.exports = function (config) {
       suppressAll: true
     },
     coverageReporter: {
-      dir: require('path').join(__dirname, './coverage/qa-gestion-inventarios-frontend'),
+      dir: path.join(__dirname, './coverage/qa-gestion-inventarios-frontend'),
       subdir: '.',
       reporters: [
         { type: 'html' },
@@ -25,13 +27,7 @@ module.exports = function (config) {
       ]
     },
     reporters: ['progress', 'kjhtml'],
-    browsers: ['ChromeHeadlessNoSandbox'],
-    customLaunchers: {
-      ChromeHeadlessNoSandbox: {
-        base: 'ChromeHeadless',
-        flags: ['--no-sandbox', '--disable-dev-shm-usage']
-      }
-    },
+    browsers: ['ChromeHeadless'],
     restartOnFileChange: true
   });
 };

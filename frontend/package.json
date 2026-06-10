@@ -6,7 +6,7 @@
   "scripts": {
     "start": "ng serve --host 0.0.0.0 --port 5173",
     "build": "ng build",
-    "test": "ng test --watch=false --browsers=ChromeHeadlessNoSandbox"
+    "test": "ng test --watch=false --browsers=ChromeHeadless"
   },
   "dependencies": {
     "@angular/animations": "^19.2.0",
