@@ -22,6 +22,12 @@ import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.service.DuplicateSkuException;
 import com.pucmm.inventory.product.service.ProductNotFoundException;
 import com.pucmm.inventory.product.service.ProductService;
+import com.pucmm.inventory.stock.api.dto.StockAdjustmentRequest;
+import com.pucmm.inventory.stock.api.dto.StockMovementRequest;
+import com.pucmm.inventory.stock.api.dto.StockMovementResponse;
+import com.pucmm.inventory.stock.domain.StockMovementType;
+import com.pucmm.inventory.stock.service.InsufficientStockException;
+import com.pucmm.inventory.stock.service.StockService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -46,6 +52,9 @@ class ProductControllerTest {
 
     @MockitoBean
     private ProductService productService;
+
+    @MockitoBean
+    private StockService stockService;
 
     @Test
     void listProductsReturnsPage() throws Exception {
@@ -177,6 +186,82 @@ class ProductControllerTest {
         verify(productService).deleteProduct(1L);
     }
 
+    @Test
+    void registerStockEntryReturnsMovement() throws Exception {
+        StockMovementRequest request = new StockMovementRequest(3, 2L, "Recepcion de mercancia");
+        when(stockService.registerEntry(1L, request)).thenReturn(movement(1L, StockMovementType.ENTRY, 12, 15, 3));
+
+        mockMvc.perform(post("/products/{id}/stock/entries", 1L)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.movementType").value("ENTRY"))
+                .andExpect(jsonPath("$.previousQuantity").value(12))
+                .andExpect(jsonPath("$.newQuantity").value(15))
+                .andExpect(jsonPath("$.deltaQuantity").value(3));
+    }
+
+    @Test
+    void registerStockExitReturnsBadRequestWhenStockWouldBeNegative() throws Exception {
+        StockMovementRequest request = new StockMovementRequest(20, 2L, "Salida");
+        when(stockService.registerExit(1L, request)).thenThrow(new InsufficientStockException(1L, 12, 20));
+
+        mockMvc.perform(post("/products/{id}/stock/exits", 1L)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message", containsString("Stock insuficiente")));
+    }
+
+    @Test
+    void adjustStockReturnsMovement() throws Exception {
+        StockAdjustmentRequest request = new StockAdjustmentRequest(4, null, "Conteo fisico");
+        when(stockService.adjustStock(1L, request)).thenReturn(movement(1L, StockMovementType.ADJUSTMENT, 12, 4, -8));
+
+        mockMvc.perform(post("/products/{id}/stock/adjustments", 1L)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.movementType").value("ADJUSTMENT"))
+                .andExpect(jsonPath("$.stockAlert").value(true));
+    }
+
+    @Test
+    void stockMovementRequiresValidBody() throws Exception {
+        StockMovementRequest request = new StockMovementRequest(0, null, "Cantidad invalida");
+
+        mockMvc.perform(post("/products/{id}/stock/entries", 1L)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message", containsString("quantity")));
+    }
+
+    @Test
+    void stockEntryRequiresCsrfToken() throws Exception {
+        mockMvc.perform(post("/products/{id}/stock/entries", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new StockMovementRequest(1, null, null))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void listStockMovementsReturnsHistory() throws Exception {
+        when(stockService.findMovements(1L)).thenReturn(List.of(movement(1L, StockMovementType.EXIT, 12, 9, -3)));
+
+        mockMvc.perform(get("/products/{id}/stock-movements", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].movementType").value("EXIT"))
+                .andExpect(jsonPath("$[0].previousQuantity").value(12))
+                .andExpect(jsonPath("$[0].newQuantity").value(9));
+    }
+
     private ProductRequest request(String sku) {
         return new ProductRequest(
                 sku,
@@ -200,8 +285,34 @@ class ProductControllerTest {
                 new BigDecimal("68500.00"),
                 12,
                 4,
+                false,
                 ProductStatus.ACTIVE,
                 TIMESTAMP,
+                TIMESTAMP
+        );
+    }
+
+    private StockMovementResponse movement(
+            Long id,
+            StockMovementType movementType,
+            Integer previousQuantity,
+            Integer newQuantity,
+            Integer deltaQuantity
+    ) {
+        return new StockMovementResponse(
+                id,
+                1L,
+                "DELL-LAT-5440",
+                "Dell Latitude 5440",
+                2L,
+                "edwin",
+                "Edwin Balbuena",
+                movementType,
+                previousQuantity,
+                newQuantity,
+                deltaQuantity,
+                "Movimiento de prueba",
+                newQuantity <= 4,
                 TIMESTAMP
         );
     }

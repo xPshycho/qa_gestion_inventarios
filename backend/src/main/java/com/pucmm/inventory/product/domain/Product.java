@@ -75,6 +75,22 @@ public class Product {
         apply(data);
     }
 
+    public void increaseStock(int quantity) {
+        currentStock += quantity;
+    }
+
+    public void decreaseStock(int quantity) {
+        currentStock -= quantity;
+    }
+
+    public void adjustStock(int newQuantity) {
+        currentStock = newQuantity;
+    }
+
+    public boolean hasMinimumStockAlert() {
+        return currentStock <= minimumStock;
+    }
+
     private void apply(ProductData data) {
         this.sku = data.sku();
         this.name = data.name();

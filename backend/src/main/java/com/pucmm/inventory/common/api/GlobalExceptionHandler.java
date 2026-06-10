@@ -2,6 +2,9 @@ package com.pucmm.inventory.common.api;
 
 import com.pucmm.inventory.product.service.DuplicateSkuException;
 import com.pucmm.inventory.product.service.ProductNotFoundException;
+import com.pucmm.inventory.stock.service.InsufficientStockException;
+import com.pucmm.inventory.stock.service.InventoryUserNotFoundException;
+import com.pucmm.inventory.stock.service.StockMovementValidationException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -40,6 +43,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateSkuException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateSku(DuplicateSkuException exception) {
         return buildResponse(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(InventoryUserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleInventoryUserNotFound(InventoryUserNotFoundException exception) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage());
+    }
+
+    @ExceptionHandler({InsufficientStockException.class, StockMovementValidationException.class})
+    public ResponseEntity<ErrorResponse> handleStockBusinessRule(RuntimeException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {
