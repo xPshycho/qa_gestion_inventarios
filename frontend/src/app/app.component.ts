@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
-import { Product, ProductPage, ProductQuery, ProductStatus, SortDirection, SortField } from './product.model';
+import { Product, ProductPage, ProductQuery, ProductStatus, SortField } from './product.model';
 import { ProductService } from './product.service';
 
 const DEFAULT_QUERY: ProductQuery = {
