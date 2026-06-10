@@ -36,6 +36,26 @@ services:
     networks:
       - inventory-network
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.3
+    restart: unless-stopped
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-cambiar}
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+    command:
+      - start-dev
+      - --import-realm
+    volumes:
+      - ./infra/keycloak:/opt/keycloak/data/import:ro
+    expose:
+      - "8080"
+      - "9000"
+    networks:
+      - inventory-network
+
   backend:
     build:
       context: ./backend
