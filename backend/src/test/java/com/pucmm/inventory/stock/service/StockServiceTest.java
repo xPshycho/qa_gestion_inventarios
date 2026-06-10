@@ -95,9 +95,10 @@ class StockServiceTest {
     @Test
     void registerExitRejectsNegativeStock() {
         Product product = productWithStock(2, 4);
+        StockMovementRequest request = new StockMovementRequest(3, null, "Entrega");
         when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
 
-        assertThatThrownBy(() -> stockService.registerExit(1L, new StockMovementRequest(3, null, "Entrega")))
+        assertThatThrownBy(() -> stockService.registerExit(1L, request))
                 .isInstanceOf(InsufficientStockException.class)
                 .hasMessageContaining("Stock insuficiente");
     }
@@ -121,9 +122,10 @@ class StockServiceTest {
 
     @Test
     void registerEntryRejectsUnknownProduct() {
+        StockMovementRequest request = new StockMovementRequest(1, null, null);
         when(productRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> stockService.registerEntry(99L, new StockMovementRequest(1, null, null)))
+        assertThatThrownBy(() -> stockService.registerEntry(99L, request))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessageContaining("99");
     }
@@ -131,10 +133,11 @@ class StockServiceTest {
     @Test
     void registerEntryRejectsUnknownUser() {
         Product product = productWithStock(12, 4);
+        StockMovementRequest request = new StockMovementRequest(1, 99L, null);
         when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
         when(inventoryUserRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> stockService.registerEntry(1L, new StockMovementRequest(1, 99L, null)))
+        assertThatThrownBy(() -> stockService.registerEntry(1L, request))
                 .isInstanceOf(InventoryUserNotFoundException.class)
                 .hasMessageContaining("99");
     }
