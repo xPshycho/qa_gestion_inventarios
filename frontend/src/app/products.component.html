@@ -217,11 +217,11 @@
           Cancelar
         </button>
         <button
+          #deleteConfirmButton
           type="button"
           class="danger-button"
           (click)="confirmDelete()"
           [disabled]="deletingProductId !== null"
-          autofocus
         >
           {{ deletingProductId !== null ? 'Eliminando...' : 'Eliminar producto' }}
         </button>

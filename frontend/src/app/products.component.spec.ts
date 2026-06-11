@@ -111,6 +111,14 @@ describe('ProductsComponent', () => {
     expect(productService.deleteProduct).not.toHaveBeenCalled();
   });
 
+  it('cierra el dialogo con la tecla escape', () => {
+    component.requestDelete(page.content[0]);
+
+    component.closeDeleteDialog();
+
+    expect(component.productPendingDelete).toBeNull();
+  });
+
   it('elimina el producto confirmado y actualiza el listado', () => {
     component.requestDelete(page.content[0]);
     productService.listProducts.calls.reset();

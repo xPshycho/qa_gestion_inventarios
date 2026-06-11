@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription, finalize } from 'rxjs';
@@ -30,6 +30,8 @@ export class ProductsComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private productsSubscription?: Subscription;
   private searchTimer?: ReturnType<typeof setTimeout>;
+
+  @ViewChild('deleteConfirmButton') deleteConfirmButton?: ElementRef<HTMLButtonElement>;
 
   products: Product[] = [];
   page: ProductPage = {
@@ -128,6 +130,7 @@ export class ProductsComponent implements OnInit, OnDestroy {
 
   requestDelete(product: Product): void {
     this.productPendingDelete = product;
+    setTimeout(() => this.deleteConfirmButton?.nativeElement.focus());
   }
 
   cancelDelete(): void {
@@ -169,6 +172,11 @@ export class ProductsComponent implements OnInit, OnDestroy {
           );
         }
       });
+  }
+
+  @HostListener('document:keydown.escape')
+  closeDeleteDialog(): void {
+    this.cancelDelete();
   }
 
   totalPages(): number {
