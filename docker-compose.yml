@@ -68,6 +68,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-inventory_user}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cambiar}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${KEYCLOAK_URL:-http://localhost:8081}/realms/${KEYCLOAK_REALM:-inventory}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-inventory}/protocol/openid-connect/certs
     expose:
       - "8080"
     healthcheck:
@@ -87,6 +89,10 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_URL:-http://localhost:8081}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-inventory}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-inventory-frontend}
     expose:
       - "8080"
     healthcheck:
