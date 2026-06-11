@@ -4,11 +4,24 @@
       <p class="eyebrow">Productos</p>
       <h1>Catalogo de inventario</h1>
     </div>
-    <div class="metric">
-      <strong>{{ page.totalElements }}</strong>
-      <span>registros</span>
+    <div class="header-actions">
+      <a
+        *ngIf="auth.hasPermission('product:manage')"
+        routerLink="/productos/nuevo"
+        class="primary-action"
+      >
+        Nuevo producto
+      </a>
+      <div class="metric">
+        <strong>{{ page.totalElements }}</strong>
+        <span>registros</span>
+      </div>
     </div>
   </section>
+
+  <div *ngIf="successMessage" class="page-message page-message-success" role="status">
+    {{ successMessage }}
+  </div>
 
   <section class="filters" aria-label="Filtros de productos">
     <label class="field field-wide">

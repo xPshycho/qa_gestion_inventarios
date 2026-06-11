@@ -4,6 +4,7 @@ import { authGuard, homeGuard, loginGuard, permissionGuard } from './auth/auth.g
 import { DashboardPageComponent } from './dashboard-page.component';
 import { ForbiddenComponent } from './forbidden.component';
 import { LoginComponent } from './login.component';
+import { ProductCreatePageComponent } from './product-create-page.component';
 import { ProductsComponent } from './products.component';
 
 @Component({
@@ -29,6 +30,12 @@ export const routes: Routes = [
     component: DashboardPageComponent,
     canActivate: [permissionGuard],
     data: { permission: 'report:view' }
+  },
+  {
+    path: 'productos/nuevo',
+    component: ProductCreatePageComponent,
+    canActivate: [permissionGuard],
+    data: { permission: 'product:manage' }
   },
   {
     path: 'productos',

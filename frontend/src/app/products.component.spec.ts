@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { AuthService } from './auth/auth.service';
 import { ProductPage, ProductQuery } from './product.model';
 import { ProductService } from './product.service';
 import { ProductsComponent } from './products.component';
@@ -8,6 +10,7 @@ import { ProductsComponent } from './products.component';
 describe('ProductsComponent', () => {
   let fixture: ComponentFixture<ProductsComponent>;
   let productService: jasmine.SpyObj<ProductService>;
+  let authService: jasmine.SpyObj<AuthService>;
 
   const page: ProductPage = {
     content: [
@@ -35,11 +38,15 @@ describe('ProductsComponent', () => {
   beforeEach(async () => {
     productService = jasmine.createSpyObj<ProductService>('ProductService', ['listProducts']);
     productService.listProducts.and.returnValue(of(page));
+    authService = jasmine.createSpyObj<AuthService>('AuthService', ['hasPermission']);
+    authService.hasPermission.and.returnValue(false);
 
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
       providers: [
-        { provide: ProductService, useValue: productService }
+        { provide: ProductService, useValue: productService },
+        { provide: AuthService, useValue: authService },
+        provideRouter([])
       ]
     }).compileComponents();
 
@@ -67,5 +74,15 @@ describe('ProductsComponent', () => {
     const latestQuery = productService.listProducts.calls.mostRecent().args[0] as ProductQuery;
     expect(latestQuery.sort).toBe('name');
     expect(latestQuery.direction).toBe('asc');
+  });
+
+  it('muestra la accion de crear solo con product manage', () => {
+    authService.hasPermission.and.returnValue(true);
+    fixture.detectChanges();
+
+    const createLink = fixture.debugElement.query(By.css('a[routerLink="/productos/nuevo"]'));
+
+    expect(createLink).not.toBeNull();
+    expect(authService.hasPermission).toHaveBeenCalledWith('product:manage');
   });
 });

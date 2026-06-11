@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Subscription, finalize } from 'rxjs';
+import { AuthService } from './auth/auth.service';
 import { Product, ProductPage, ProductQuery, ProductStatus, SortField } from './product.model';
 import { ProductService } from './product.service';
 
@@ -18,12 +20,13 @@ const DEFAULT_QUERY: ProductQuery = {
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
 export class ProductsComponent implements OnInit, OnDestroy {
   private readonly productService = inject(ProductService);
+  readonly auth = inject(AuthService);
   private productsSubscription?: Subscription;
   private searchTimer?: ReturnType<typeof setTimeout>;
 
@@ -38,8 +41,11 @@ export class ProductsComponent implements OnInit, OnDestroy {
   query: ProductQuery = { ...DEFAULT_QUERY };
   loading = false;
   errorMessage = '';
+  successMessage = '';
 
   ngOnInit(): void {
+    const navigationMessage = window.history.state?.['successMessage'];
+    this.successMessage = typeof navigationMessage === 'string' ? navigationMessage : '';
     this.loadProducts();
   }
 

@@ -1,0 +1,21 @@
+<main class="product-page">
+  <section class="page-heading">
+    <p class="eyebrow">Productos</p>
+    <h1>Crear producto</h1>
+    <p>Registra un nuevo producto y su existencia inicial en el inventario.</p>
+  </section>
+
+  <section class="form-panel" aria-labelledby="product-form-title">
+    <h2 id="product-form-title">Informacion del producto</h2>
+
+    <div *ngIf="errorMessage" class="page-message page-message-error" role="alert">
+      {{ errorMessage }}
+    </div>
+
+    <app-product-form
+      submitLabel="Crear producto"
+      [submitting]="saving"
+      (saveProduct)="createProduct($event)"
+    ></app-product-form>
+  </section>
+</main>
