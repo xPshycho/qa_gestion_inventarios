@@ -7,6 +7,10 @@ services:
     ports:
       - "${BACKEND_PORT:-8080}:8080"
 
+  keycloak:
+    ports:
+      - "${KEYCLOAK_PORT:-8081}:8080"
+
   frontend:
     ports:
       - "${FRONTEND_PORT:-5173}:8080"
