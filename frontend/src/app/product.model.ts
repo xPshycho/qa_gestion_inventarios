@@ -21,9 +21,21 @@ export interface Product {
   price: number;
   currentStock: number;
   minimumStock: number;
+  stockAlert: boolean;
   status: ProductStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProductRequest {
+  sku: string;
+  name: string;
+  description: string | null;
+  category: string;
+  price: number;
+  currentStock: number;
+  minimumStock: number;
+  status: ProductStatus;
 }
 
 export interface ProductPage {
@@ -42,4 +54,10 @@ export interface ProductQuery {
   status: ProductStatus | '';
   sort: SortField;
   direction: SortDirection;
+}
+
+export interface ApiError {
+  status: number;
+  message: string;
+  timestamp: string;
 }

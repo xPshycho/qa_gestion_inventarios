@@ -20,6 +20,7 @@ describe('ProductsComponent', () => {
         price: 68500,
         currentStock: 12,
         minimumStock: 4,
+        stockAlert: false,
         status: 'ACTIVE',
         createdAt: '2026-06-07T12:00:00Z',
         updatedAt: '2026-06-07T12:00:00Z'
