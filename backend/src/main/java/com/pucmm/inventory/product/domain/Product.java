@@ -13,8 +13,10 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import org.hibernate.envers.Audited;
 
 @Entity
+@Audited
 @Table(name = "products")
 public class Product {
     @Id
