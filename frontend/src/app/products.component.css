@@ -36,6 +36,30 @@ h1 {
   line-height: 1.1;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.primary-action {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--primary);
+  border-radius: 7px;
+  background: var(--primary);
+  color: #fff;
+  padding: 0 16px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primary-action:hover {
+  background: var(--primary-strong);
+}
+
 .metric {
   min-width: 128px;
   padding: 14px 16px;
@@ -56,6 +80,18 @@ h1 {
 
 .metric span {
   color: var(--muted);
+}
+
+.page-message {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.page-message-success {
+  border: 1px solid #a9dfc5;
+  background: var(--success-bg);
+  color: var(--primary-strong);
 }
 
 .filters {
@@ -213,6 +249,81 @@ th {
   color: var(--primary-strong);
 }
 
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.row-action {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--primary-strong);
+  padding: 0 11px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.row-action:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+
+.row-action-danger {
+  color: var(--danger);
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(22, 32, 28, 0.56);
+  padding: 20px;
+}
+
+.confirm-dialog {
+  width: min(460px, 100%);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(22, 32, 28, 0.24);
+  padding: 24px;
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.confirm-dialog > p:last-of-type {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.danger-button {
+  min-height: 42px;
+  border: 1px solid var(--danger);
+  border-radius: 7px;
+  background: var(--danger);
+  color: #fff;
+  padding: 0 14px;
+  font-weight: 800;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #8f1c13;
+}
+
 .state,
 .empty {
   padding: 24px 18px;
@@ -260,11 +371,21 @@ th {
     flex-direction: column;
   }
 
+  .header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .metric {
     text-align: left;
   }
 
   .filters {
     grid-template-columns: 1fr;
+  }
+
+  .dialog-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 }

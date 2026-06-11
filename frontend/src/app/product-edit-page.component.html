@@ -1,0 +1,31 @@
+<main class="product-page">
+  <section class="page-heading">
+    <p class="eyebrow">Productos</p>
+    <h1>Editar producto</h1>
+    <p>Actualiza la informacion general y los niveles de existencia del producto.</p>
+  </section>
+
+  <section class="form-panel" aria-labelledby="product-form-title">
+    <h2 id="product-form-title">Informacion del producto</h2>
+
+    <div *ngIf="loading" class="page-message" role="status">
+      Cargando producto...
+    </div>
+
+    <div *ngIf="errorMessage" class="page-message page-message-error" role="alert">
+      {{ errorMessage }}
+    </div>
+
+    <app-product-form
+      *ngIf="productValue && !loading"
+      submitLabel="Guardar cambios"
+      [initialValue]="productValue"
+      [submitting]="saving"
+      (saveProduct)="updateProduct($event)"
+    ></app-product-form>
+
+    <a *ngIf="!loading && !productValue" routerLink="/productos" class="secondary-action">
+      Volver al catalogo
+    </a>
+  </section>
+</main>

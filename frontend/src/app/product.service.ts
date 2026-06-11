@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ProductPage, ProductQuery } from './product.model';
+import { Product, ProductPage, ProductQuery, ProductRequest } from './product.model';
 
 @Injectable({
   providedIn: 'root'
@@ -30,5 +30,21 @@ export class ProductService {
     }
 
     return this.http.get<ProductPage>(this.apiUrl, { params });
+  }
+
+  getProduct(productId: number): Observable<Product> {
+    return this.http.get<Product>(`${this.apiUrl}/${productId}`);
+  }
+
+  createProduct(request: ProductRequest): Observable<Product> {
+    return this.http.post<Product>(this.apiUrl, request);
+  }
+
+  updateProduct(productId: number, request: ProductRequest): Observable<Product> {
+    return this.http.put<Product>(`${this.apiUrl}/${productId}`, request);
+  }
+
+  deleteProduct(productId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${productId}`);
   }
 }

@@ -1,8 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Subscription, finalize } from 'rxjs';
+import { AuthService } from './auth/auth.service';
 import { Product, ProductPage, ProductQuery, ProductStatus, SortField } from './product.model';
+import { productErrorMessage } from './product-error';
 import { ProductService } from './product.service';
 
 const DEFAULT_QUERY: ProductQuery = {
@@ -18,14 +21,17 @@ const DEFAULT_QUERY: ProductQuery = {
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
 export class ProductsComponent implements OnInit, OnDestroy {
   private readonly productService = inject(ProductService);
+  readonly auth = inject(AuthService);
   private productsSubscription?: Subscription;
   private searchTimer?: ReturnType<typeof setTimeout>;
+
+  @ViewChild('deleteConfirmButton') deleteConfirmButton?: ElementRef<HTMLButtonElement>;
 
   products: Product[] = [];
   page: ProductPage = {
@@ -38,8 +44,13 @@ export class ProductsComponent implements OnInit, OnDestroy {
   query: ProductQuery = { ...DEFAULT_QUERY };
   loading = false;
   errorMessage = '';
+  successMessage = '';
+  productPendingDelete: Product | null = null;
+  deletingProductId: number | null = null;
 
   ngOnInit(): void {
+    const navigationMessage = window.history.state?.['successMessage'];
+    this.successMessage = typeof navigationMessage === 'string' ? navigationMessage : '';
     this.loadProducts();
   }
 
@@ -115,6 +126,57 @@ export class ProductsComponent implements OnInit, OnDestroy {
   changePageSize(): void {
     this.query.page = 0;
     this.loadProducts();
+  }
+
+  requestDelete(product: Product): void {
+    this.productPendingDelete = product;
+    setTimeout(() => this.deleteConfirmButton?.nativeElement.focus());
+  }
+
+  cancelDelete(): void {
+    if (this.deletingProductId === null) {
+      this.productPendingDelete = null;
+    }
+  }
+
+  confirmDelete(): void {
+    const product = this.productPendingDelete;
+    if (!product || this.deletingProductId !== null) {
+      return;
+    }
+
+    this.deletingProductId = product.id;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    this.productService.deleteProduct(product.id)
+      .pipe(finalize(() => {
+        this.deletingProductId = null;
+      }))
+      .subscribe({
+        next: () => {
+          this.productPendingDelete = null;
+          this.successMessage = `Producto ${product.sku} eliminado correctamente.`;
+
+          if (this.products.length === 1 && this.query.page > 0) {
+            this.query.page -= 1;
+          }
+
+          this.loadProducts();
+        },
+        error: (error: unknown) => {
+          this.productPendingDelete = null;
+          this.errorMessage = productErrorMessage(
+            error,
+            'No se pudo eliminar el producto. Puede tener movimientos de inventario asociados.'
+          );
+        }
+      });
+  }
+
+  @HostListener('document:keydown.escape')
+  closeDeleteDialog(): void {
+    this.cancelDelete();
   }
 
   totalPages(): number {

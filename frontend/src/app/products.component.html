@@ -4,11 +4,24 @@
       <p class="eyebrow">Productos</p>
       <h1>Catalogo de inventario</h1>
     </div>
-    <div class="metric">
-      <strong>{{ page.totalElements }}</strong>
-      <span>registros</span>
+    <div class="header-actions">
+      <a
+        *ngIf="auth.hasPermission('product:manage')"
+        routerLink="/productos/nuevo"
+        class="primary-action"
+      >
+        Nuevo producto
+      </a>
+      <div class="metric">
+        <strong>{{ page.totalElements }}</strong>
+        <span>registros</span>
+      </div>
     </div>
   </section>
+
+  <div *ngIf="successMessage" class="page-message page-message-success" role="status">
+    {{ successMessage }}
+  </div>
 
   <section class="filters" aria-label="Filtros de productos">
     <label class="field field-wide">
@@ -115,6 +128,7 @@
                 Estado <span>{{ sortLabel('status') }}</span>
               </button>
             </th>
+            <th *ngIf="auth.hasPermission('product:manage')">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -133,9 +147,29 @@
                 {{ statusLabel(product.status) }}
               </span>
             </td>
+            <td *ngIf="auth.hasPermission('product:manage')">
+              <div class="row-actions">
+                <a [routerLink]="['/productos', product.id, 'editar']" class="row-action">
+                Editar
+                </a>
+                <button
+                  type="button"
+                  class="row-action row-action-danger"
+                  (click)="requestDelete(product)"
+                  [disabled]="deletingProductId !== null"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </td>
           </tr>
           <tr *ngIf="products.length === 0 && !errorMessage">
-            <td colspan="7" class="empty">No hay productos para los criterios seleccionados.</td>
+            <td
+              [attr.colspan]="auth.hasPermission('product:manage') ? 8 : 7"
+              class="empty"
+            >
+              No hay productos para los criterios seleccionados.
+            </td>
           </tr>
         </tbody>
       </table>
@@ -151,4 +185,47 @@
       </button>
     </div>
   </section>
+
+  <div
+    *ngIf="productPendingDelete"
+    class="dialog-backdrop"
+    role="presentation"
+    (click)="cancelDelete()"
+  >
+    <section
+      class="confirm-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-title"
+      aria-describedby="delete-description"
+      (click)="$event.stopPropagation()"
+    >
+      <p class="eyebrow">Confirmar eliminacion</p>
+      <h2 id="delete-title">Eliminar {{ productPendingDelete.name }}</h2>
+      <p id="delete-description">
+        Esta accion eliminara el producto con SKU
+        <strong>{{ productPendingDelete.sku }}</strong>. No se puede deshacer.
+      </p>
+
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="ghost-button"
+          (click)="cancelDelete()"
+          [disabled]="deletingProductId !== null"
+        >
+          Cancelar
+        </button>
+        <button
+          #deleteConfirmButton
+          type="button"
+          class="danger-button"
+          (click)="confirmDelete()"
+          [disabled]="deletingProductId !== null"
+        >
+          {{ deletingProductId !== null ? 'Eliminando...' : 'Eliminar producto' }}
+        </button>
+      </div>
+    </section>
+  </div>
 </main>
