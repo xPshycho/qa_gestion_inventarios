@@ -189,7 +189,7 @@ cd backend && TBD
 cd backend && TBD
 
 # Frontend
-cd frontend && pnpm test
+cd frontend && CHROME_BIN=/usr/bin/chromium pnpm test
 
 # Build frontend
 cd frontend && pnpm build
