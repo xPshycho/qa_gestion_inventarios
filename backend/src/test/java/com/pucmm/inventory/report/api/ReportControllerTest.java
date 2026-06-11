@@ -1,8 +1,10 @@
 package com.pucmm.inventory.report.api;
 
+import static com.pucmm.inventory.config.SecurityConfig.REPORT_VIEW;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,8 +26,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(ReportController.class)
 @Import({GlobalExceptionHandler.class, SecurityConfig.class})
@@ -42,7 +46,8 @@ class ReportControllerTest {
     void getDashboardReturnsDashboardContract() throws Exception {
         when(reportService.getDashboard()).thenReturn(dashboard());
 
-        mockMvc.perform(get("/reports/dashboard"))
+        mockMvc.perform(get("/reports/dashboard")
+                        .with(jwtWith(REPORT_VIEW)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.metrics.totalProducts").value(4))
                 .andExpect(jsonPath("$.metrics.inventoryValue").value(1728000))
@@ -57,7 +62,9 @@ class ReportControllerTest {
     void getCriticalProductsUsesRequestedLimit() throws Exception {
         when(reportService.getCriticalProducts(10)).thenReturn(List.of(criticalProduct()));
 
-        mockMvc.perform(get("/reports/critical-products").param("limit", "10"))
+        mockMvc.perform(get("/reports/critical-products")
+                        .with(jwtWith(REPORT_VIEW))
+                        .param("limit", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].sku").value("DELL-LAT-5440"));
 
@@ -68,7 +75,9 @@ class ReportControllerTest {
     void getMostMovedProductsUsesRequestedLimit() throws Exception {
         when(reportService.getMostMovedProducts(3)).thenReturn(List.of(topMovedProduct()));
 
-        mockMvc.perform(get("/reports/most-moved-products").param("limit", "3"))
+        mockMvc.perform(get("/reports/most-moved-products")
+                        .with(jwtWith(REPORT_VIEW))
+                        .param("limit", "3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].productSku").value("DELL-LAT-5440"));
 
@@ -79,7 +88,9 @@ class ReportControllerTest {
     void getRecentMovementsUsesRequestedLimit() throws Exception {
         when(reportService.getRecentMovements(4)).thenReturn(List.of(recentMovement()));
 
-        mockMvc.perform(get("/reports/recent-movements").param("limit", "4"))
+        mockMvc.perform(get("/reports/recent-movements")
+                        .with(jwtWith(REPORT_VIEW))
+                        .param("limit", "4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(10));
 
@@ -90,7 +101,8 @@ class ReportControllerTest {
     void getMetricsReturnsOperationalMetrics() throws Exception {
         when(reportService.getMetrics()).thenReturn(metrics());
 
-        mockMvc.perform(get("/reports/metrics"))
+        mockMvc.perform(get("/reports/metrics")
+                        .with(jwtWith(REPORT_VIEW)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.entryMovements").value(2))
                 .andExpect(jsonPath("$.exitMovements").value(1));
@@ -98,7 +110,9 @@ class ReportControllerTest {
 
     @Test
     void sectionEndpointsRejectInvalidLimit() throws Exception {
-        mockMvc.perform(get("/reports/critical-products").param("limit", "0"))
+        mockMvc.perform(get("/reports/critical-products")
+                        .with(jwtWith(REPORT_VIEW))
+                        .param("limit", "0"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message", containsString("must be greater than or equal to 1")));
@@ -172,5 +186,9 @@ class ReportControllerTest {
                 true,
                 TIMESTAMP
         );
+    }
+
+    private static RequestPostProcessor jwtWith(String permission) {
+        return jwt().authorities(new SimpleGrantedAuthority(permission));
     }
 }

@@ -1,9 +1,13 @@
 package com.pucmm.inventory.product.api;
 
 import static org.hamcrest.Matchers.containsString;
+import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_MANAGE;
+import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_VIEW;
+import static com.pucmm.inventory.config.SecurityConfig.STOCK_MANAGE;
+import static com.pucmm.inventory.config.SecurityConfig.STOCK_VIEW;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,8 +39,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ProductController.class)
@@ -70,6 +76,7 @@ class ProductControllerTest {
         )).thenReturn(page);
 
         mockMvc.perform(get("/products")
+                        .with(jwtWith(PRODUCT_VIEW))
                         .param("search", "latitude")
                         .param("category", "Laptops")
                         .param("status", "ACTIVE")
@@ -82,7 +89,9 @@ class ProductControllerTest {
 
     @Test
     void listProductsRejectsUnsupportedSortField() throws Exception {
-        mockMvc.perform(get("/products").param("sort", "unknown"))
+        mockMvc.perform(get("/products")
+                        .with(jwtWith(PRODUCT_VIEW))
+                        .param("sort", "unknown"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
     }
@@ -91,7 +100,8 @@ class ProductControllerTest {
     void getProductReturnsProduct() throws Exception {
         when(productService.getProduct(1L)).thenReturn(response(1L, "DELL-LAT-5440"));
 
-        mockMvc.perform(get("/products/{id}", 1L))
+        mockMvc.perform(get("/products/{id}", 1L)
+                        .with(jwtWith(PRODUCT_VIEW)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.sku").value("DELL-LAT-5440"));
@@ -101,7 +111,8 @@ class ProductControllerTest {
     void getProductReturnsNotFoundError() throws Exception {
         when(productService.getProduct(99L)).thenThrow(new ProductNotFoundException(99L));
 
-        mockMvc.perform(get("/products/{id}", 99L))
+        mockMvc.perform(get("/products/{id}", 99L)
+                        .with(jwtWith(PRODUCT_VIEW)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message", containsString("99")));
@@ -113,7 +124,7 @@ class ProductControllerTest {
         when(productService.createProduct(request)).thenReturn(response(1L, "DELL-LAT-5440"));
 
         mockMvc.perform(post("/products")
-                        .with(csrf())
+                        .with(jwtWith(PRODUCT_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -135,7 +146,7 @@ class ProductControllerTest {
         );
 
         mockMvc.perform(post("/products")
-                        .with(csrf())
+                        .with(jwtWith(PRODUCT_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -149,7 +160,7 @@ class ProductControllerTest {
         when(productService.createProduct(request)).thenThrow(new DuplicateSkuException("DELL-LAT-5440"));
 
         mockMvc.perform(post("/products")
-                        .with(csrf())
+                        .with(jwtWith(PRODUCT_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -158,11 +169,11 @@ class ProductControllerTest {
     }
 
     @Test
-    void createProductRequiresCsrfToken() throws Exception {
+    void createProductRequiresJwtToken() throws Exception {
         mockMvc.perform(post("/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request("DELL-LAT-5440"))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -171,7 +182,7 @@ class ProductControllerTest {
         when(productService.updateProduct(1L, request)).thenReturn(response(1L, "LEN-T14-G4"));
 
         mockMvc.perform(put("/products/{id}", 1L)
-                        .with(csrf())
+                        .with(jwtWith(PRODUCT_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -180,7 +191,7 @@ class ProductControllerTest {
 
     @Test
     void deleteProductReturnsNoContent() throws Exception {
-        mockMvc.perform(delete("/products/{id}", 1L).with(csrf()))
+        mockMvc.perform(delete("/products/{id}", 1L).with(jwtWith(PRODUCT_MANAGE)))
                 .andExpect(status().isNoContent());
 
         verify(productService).deleteProduct(1L);
@@ -192,7 +203,7 @@ class ProductControllerTest {
         when(stockService.registerEntry(1L, request)).thenReturn(movement(1L, StockMovementType.ENTRY, 12, 15, 3));
 
         mockMvc.perform(post("/products/{id}/stock/entries", 1L)
-                        .with(csrf())
+                        .with(jwtWith(STOCK_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -208,7 +219,7 @@ class ProductControllerTest {
         when(stockService.registerExit(1L, request)).thenThrow(new InsufficientStockException(1L, 12, 20));
 
         mockMvc.perform(post("/products/{id}/stock/exits", 1L)
-                        .with(csrf())
+                        .with(jwtWith(STOCK_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -222,7 +233,7 @@ class ProductControllerTest {
         when(stockService.adjustStock(1L, request)).thenReturn(movement(1L, StockMovementType.ADJUSTMENT, 12, 4, -8));
 
         mockMvc.perform(post("/products/{id}/stock/adjustments", 1L)
-                        .with(csrf())
+                        .with(jwtWith(STOCK_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -235,7 +246,7 @@ class ProductControllerTest {
         StockMovementRequest request = new StockMovementRequest(0, null, "Cantidad invalida");
 
         mockMvc.perform(post("/products/{id}/stock/entries", 1L)
-                        .with(csrf())
+                        .with(jwtWith(STOCK_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -244,18 +255,19 @@ class ProductControllerTest {
     }
 
     @Test
-    void stockEntryRequiresCsrfToken() throws Exception {
+    void stockEntryRequiresJwtToken() throws Exception {
         mockMvc.perform(post("/products/{id}/stock/entries", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new StockMovementRequest(1, null, null))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void listStockMovementsReturnsHistory() throws Exception {
         when(stockService.findMovements(1L)).thenReturn(List.of(movement(1L, StockMovementType.EXIT, 12, 9, -3)));
 
-        mockMvc.perform(get("/products/{id}/stock-movements", 1L))
+        mockMvc.perform(get("/products/{id}/stock-movements", 1L)
+                        .with(jwtWith(STOCK_VIEW)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].movementType").value("EXIT"))
                 .andExpect(jsonPath("$[0].previousQuantity").value(12))
@@ -315,5 +327,9 @@ class ProductControllerTest {
                 newQuantity <= 4,
                 TIMESTAMP
         );
+    }
+
+    private static RequestPostProcessor jwtWith(String permission) {
+        return jwt().authorities(new SimpleGrantedAuthority(permission));
     }
 }
