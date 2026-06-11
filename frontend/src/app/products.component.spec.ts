@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 import { ProductPage, ProductQuery } from './product.model';
 import { ProductService } from './product.service';
@@ -9,6 +9,7 @@ import { ProductsComponent } from './products.component';
 
 describe('ProductsComponent', () => {
   let fixture: ComponentFixture<ProductsComponent>;
+  let component: ProductsComponent;
   let productService: jasmine.SpyObj<ProductService>;
   let authService: jasmine.SpyObj<AuthService>;
 
@@ -36,8 +37,12 @@ describe('ProductsComponent', () => {
   };
 
   beforeEach(async () => {
-    productService = jasmine.createSpyObj<ProductService>('ProductService', ['listProducts']);
+    productService = jasmine.createSpyObj<ProductService>(
+      'ProductService',
+      ['listProducts', 'deleteProduct']
+    );
     productService.listProducts.and.returnValue(of(page));
+    productService.deleteProduct.and.returnValue(of(void 0));
     authService = jasmine.createSpyObj<AuthService>('AuthService', ['hasPermission']);
     authService.hasPermission.and.returnValue(false);
 
@@ -51,6 +56,7 @@ describe('ProductsComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProductsComponent);
+    component = fixture.componentInstance;
     fixture.detectChanges();
   });
 
@@ -94,5 +100,47 @@ describe('ProductsComponent', () => {
 
     expect(editLink).not.toBeNull();
     expect(editLink.attributes['ng-reflect-router-link']).toContain('1');
+  });
+
+  it('permite cancelar la eliminacion sin llamar a la api', () => {
+    component.requestDelete(page.content[0]);
+
+    component.cancelDelete();
+
+    expect(component.productPendingDelete).toBeNull();
+    expect(productService.deleteProduct).not.toHaveBeenCalled();
+  });
+
+  it('elimina el producto confirmado y actualiza el listado', () => {
+    component.requestDelete(page.content[0]);
+    productService.listProducts.calls.reset();
+
+    component.confirmDelete();
+
+    expect(productService.deleteProduct).toHaveBeenCalledWith(1);
+    expect(component.successMessage).toBe('Producto DELL-LAT-5440 eliminado correctamente.');
+    expect(component.productPendingDelete).toBeNull();
+    expect(productService.listProducts).toHaveBeenCalled();
+  });
+
+  it('retrocede una pagina si elimina el ultimo producto de la pagina actual', () => {
+    component.query.page = 1;
+    component.products = [page.content[0]];
+    component.requestDelete(page.content[0]);
+
+    component.confirmDelete();
+
+    expect(component.query.page).toBe(0);
+  });
+
+  it('muestra error y conserva el listado cuando la api rechaza la eliminacion', () => {
+    productService.deleteProduct.and.returnValue(throwError(() => new Error('delete failed')));
+    component.requestDelete(page.content[0]);
+
+    component.confirmDelete();
+
+    expect(component.products).toEqual(page.content);
+    expect(component.errorMessage).toContain('movimientos de inventario asociados');
+    expect(component.productPendingDelete).toBeNull();
   });
 });

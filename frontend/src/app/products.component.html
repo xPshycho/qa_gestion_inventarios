@@ -148,9 +148,19 @@
               </span>
             </td>
             <td *ngIf="auth.hasPermission('product:manage')">
-              <a [routerLink]="['/productos', product.id, 'editar']" class="row-action">
+              <div class="row-actions">
+                <a [routerLink]="['/productos', product.id, 'editar']" class="row-action">
                 Editar
-              </a>
+                </a>
+                <button
+                  type="button"
+                  class="row-action row-action-danger"
+                  (click)="requestDelete(product)"
+                  [disabled]="deletingProductId !== null"
+                >
+                  Eliminar
+                </button>
+              </div>
             </td>
           </tr>
           <tr *ngIf="products.length === 0 && !errorMessage">
@@ -175,4 +185,47 @@
       </button>
     </div>
   </section>
+
+  <div
+    *ngIf="productPendingDelete"
+    class="dialog-backdrop"
+    role="presentation"
+    (click)="cancelDelete()"
+  >
+    <section
+      class="confirm-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-title"
+      aria-describedby="delete-description"
+      (click)="$event.stopPropagation()"
+    >
+      <p class="eyebrow">Confirmar eliminacion</p>
+      <h2 id="delete-title">Eliminar {{ productPendingDelete.name }}</h2>
+      <p id="delete-description">
+        Esta accion eliminara el producto con SKU
+        <strong>{{ productPendingDelete.sku }}</strong>. No se puede deshacer.
+      </p>
+
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="ghost-button"
+          (click)="cancelDelete()"
+          [disabled]="deletingProductId !== null"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="danger-button"
+          (click)="confirmDelete()"
+          [disabled]="deletingProductId !== null"
+          autofocus
+        >
+          {{ deletingProductId !== null ? 'Eliminando...' : 'Eliminar producto' }}
+        </button>
+      </div>
+    </section>
+  </div>
 </main>
