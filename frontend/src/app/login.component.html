@@ -1,0 +1,34 @@
+<main class="login-page">
+  <section class="login-panel" aria-labelledby="login-title">
+    <p class="eyebrow">Acceso seguro</p>
+    <h1 id="login-title">Gestion de inventarios</h1>
+    <p class="login-description">
+      Inicia sesion con tu cuenta empresarial para acceder a los modulos autorizados.
+    </p>
+
+    <div *ngIf="sessionExpired" class="login-message login-message-warning" role="alert">
+      Tu sesion expiro. Inicia sesion nuevamente para continuar.
+    </div>
+
+    <div *ngIf="authenticationUnavailable" class="login-message login-message-error" role="alert">
+      El servicio de autenticacion no esta disponible. Verifica la configuracion de Keycloak.
+    </div>
+
+    <div *ngIf="loginError" class="login-message login-message-error" role="alert">
+      {{ loginError }}
+    </div>
+
+    <button
+      type="button"
+      class="login-button"
+      (click)="login()"
+      [disabled]="loginInProgress || authenticationUnavailable"
+    >
+      {{ loginInProgress ? 'Redirigiendo...' : 'Iniciar sesion con Keycloak' }}
+    </button>
+
+    <p class="login-note">
+      La autenticacion utiliza OAuth2, OpenID Connect y PKCE. Los tokens no se guardan en el navegador.
+    </p>
+  </section>
+</main>

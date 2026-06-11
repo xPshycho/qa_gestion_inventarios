@@ -1,0 +1,76 @@
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-panel {
+  width: min(100%, 480px);
+  padding: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 6vw, 2.7rem);
+}
+
+.login-description,
+.login-note {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.login-description {
+  margin: 16px 0 24px;
+}
+
+.login-note {
+  margin: 18px 0 0;
+  font-size: 0.86rem;
+}
+
+.login-message {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 7px;
+  line-height: 1.45;
+}
+
+.login-message-warning {
+  border-color: #f2c94c;
+  background: var(--warning-bg);
+}
+
+.login-message-error {
+  border-color: #ffd5d2;
+  background: #fff1f0;
+  color: var(--danger);
+}
+
+.login-button {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--primary);
+  border-radius: 7px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+}
+
+.login-button:hover:not(:disabled) {
+  background: var(--primary-strong);
+}

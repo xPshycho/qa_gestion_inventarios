@@ -1,156 +1,34 @@
-<main class="inventory-page">
-  <section class="header-band">
-    <div>
-      <p class="eyebrow">Dashboard</p>
-      <h1>Inventario operativo</h1>
-    </div>
-    <div class="metric">
-      <strong>{{ page.totalElements }}</strong>
-      <span>registros</span>
-    </div>
-  </section>
+<header *ngIf="auth.isAuthenticated()" class="application-header">
+  <div class="header-content">
+    <a class="brand" routerLink="/">Inventario empresarial</a>
 
-  <app-dashboard (refreshProducts)="loadProducts()"></app-dashboard>
-
-  <section class="filters" aria-label="Filtros de productos">
-    <label class="field field-wide">
-      <span>Busqueda por nombre o SKU</span>
-      <input
-        type="search"
-        name="search"
-        [(ngModel)]="query.search"
-        (input)="queueSearch()"
-        placeholder="Ej. Latitude o DELL-LAT"
+    <nav aria-label="Modulos principales">
+      <a
+        *ngIf="auth.hasPermission('report:view')"
+        routerLink="/dashboard"
+        routerLinkActive="active-link"
       >
-    </label>
-
-    <label class="field">
-      <span>Categoria</span>
-      <input
-        type="text"
-        name="category"
-        [(ngModel)]="query.category"
-        (input)="queueSearch()"
-        placeholder="Ej. Laptops"
+        Dashboard
+      </a>
+      <a
+        *ngIf="auth.hasPermission('product:view')"
+        routerLink="/productos"
+        routerLinkActive="active-link"
       >
-    </label>
+        Productos
+      </a>
+    </nav>
 
-    <label class="field">
-      <span>Estado</span>
-      <select name="status" [(ngModel)]="query.status" (change)="applyFilters()">
-        <option value="">Todos</option>
-        <option value="ACTIVE">Activo</option>
-        <option value="INACTIVE">Inactivo</option>
-      </select>
-    </label>
-
-    <label class="field field-compact">
-      <span>Filas</span>
-      <select name="size" [(ngModel)]="query.size" (change)="changePageSize()">
-        <option [ngValue]="5">5</option>
-        <option [ngValue]="10">10</option>
-        <option [ngValue]="20">20</option>
-        <option [ngValue]="50">50</option>
-      </select>
-    </label>
-
-    <button class="ghost-button" type="button" (click)="clearFilters()" [disabled]="!hasFilters()">
-      Limpiar
-    </button>
-  </section>
-
-  <section class="table-panel" aria-label="Listado de productos">
-    <div class="table-toolbar">
+    <div class="user-session">
       <div>
-        <strong>Listado</strong>
-        <span>{{ firstItem() }}-{{ lastItem() }} de {{ page.totalElements }}</span>
+        <strong>{{ auth.user()?.displayName }}</strong>
+        <span>{{ auth.user()?.username }}</span>
       </div>
-      <button class="refresh-button" type="button" (click)="loadProducts()" [disabled]="loading">
-        Actualizar
+      <button type="button" (click)="logout()" [disabled]="logoutInProgress">
+        {{ logoutInProgress ? 'Cerrando...' : 'Cerrar sesion' }}
       </button>
     </div>
+  </div>
+</header>
 
-    <div *ngIf="errorMessage" class="state state-error" role="alert">
-      {{ errorMessage }}
-    </div>
-
-    <div *ngIf="loading" class="state">
-      Cargando productos...
-    </div>
-
-    <div class="table-scroll" *ngIf="!loading">
-      <table>
-        <thead>
-          <tr>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('sku')">
-                SKU <span>{{ sortLabel('sku') }}</span>
-              </button>
-            </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('name')">
-                Nombre <span>{{ sortLabel('name') }}</span>
-              </button>
-            </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('category')">
-                Categoria <span>{{ sortLabel('category') }}</span>
-              </button>
-            </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('price')">
-                Precio <span>{{ sortLabel('price') }}</span>
-              </button>
-            </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('currentStock')">
-                Stock <span>{{ sortLabel('currentStock') }}</span>
-              </button>
-            </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('minimumStock')">
-                Minimo <span>{{ sortLabel('minimumStock') }}</span>
-              </button>
-            </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('status')">
-                Estado <span>{{ sortLabel('status') }}</span>
-              </button>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let product of products; trackBy: trackByProductId">
-            <td class="sku">{{ product.sku }}</td>
-            <td>
-              <strong>{{ product.name }}</strong>
-              <span class="description">{{ product.description || 'Sin descripcion' }}</span>
-            </td>
-            <td>{{ product.category }}</td>
-            <td>{{ product.price | currency:'DOP':'symbol':'1.2-2' }}</td>
-            <td>{{ product.currentStock }}</td>
-            <td>{{ product.minimumStock }}</td>
-            <td>
-              <span class="status" [class.status-active]="product.status === 'ACTIVE'">
-                {{ statusLabel(product.status) }}
-              </span>
-            </td>
-          </tr>
-          <tr *ngIf="products.length === 0 && !errorMessage">
-            <td colspan="7" class="empty">No hay productos para los criterios seleccionados.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="pagination">
-      <button type="button" (click)="changePage(query.page - 1)" [disabled]="query.page === 0 || loading">
-        Anterior
-      </button>
-      <span>Pagina {{ page.page + 1 }} de {{ totalPages() }}</span>
-      <button type="button" (click)="changePage(query.page + 1)" [disabled]="query.page + 1 >= totalPages() || loading">
-        Siguiente
-      </button>
-    </div>
-  </section>
-</main>
+<router-outlet></router-outlet>

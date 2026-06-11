@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnDestroy, OnInit, Output, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Subscription, finalize } from 'rxjs';
 import {
   CriticalProduct,
@@ -20,8 +20,6 @@ import { DashboardService } from './dashboard.service';
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly dashboardService = inject(DashboardService);
   private dashboardSubscription?: Subscription;
-
-  @Output() refreshProducts = new EventEmitter<void>();
 
   dashboard?: DashboardResponse;
   dashboardLoading = false;
@@ -54,9 +52,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  refreshDashboardAndProducts(): void {
+  refreshDashboard(): void {
     this.loadDashboard();
-    this.refreshProducts.emit();
   }
 
   movementTypeLabel(type: StockMovementType): string {
