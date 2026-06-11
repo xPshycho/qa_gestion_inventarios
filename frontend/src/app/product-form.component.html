@@ -1,0 +1,108 @@
+<form class="product-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div class="form-grid">
+    <label class="form-field">
+      <span>SKU</span>
+      <input
+        type="text"
+        formControlName="sku"
+        maxlength="64"
+        autocomplete="off"
+        [attr.aria-invalid]="fieldError('sku') ? true : null"
+      >
+      <small *ngIf="fieldError('sku')" class="field-error">{{ fieldError('sku') }}</small>
+    </label>
+
+    <label class="form-field">
+      <span>Nombre</span>
+      <input
+        type="text"
+        formControlName="name"
+        maxlength="160"
+        autocomplete="off"
+        [attr.aria-invalid]="fieldError('name') ? true : null"
+      >
+      <small *ngIf="fieldError('name')" class="field-error">{{ fieldError('name') }}</small>
+    </label>
+
+    <label class="form-field">
+      <span>Categoria</span>
+      <input
+        type="text"
+        formControlName="category"
+        maxlength="100"
+        autocomplete="off"
+        [attr.aria-invalid]="fieldError('category') ? true : null"
+      >
+      <small *ngIf="fieldError('category')" class="field-error">{{ fieldError('category') }}</small>
+    </label>
+
+    <label class="form-field">
+      <span>Estado</span>
+      <select formControlName="status">
+        <option value="ACTIVE">Activo</option>
+        <option value="INACTIVE">Inactivo</option>
+      </select>
+    </label>
+
+    <label class="form-field">
+      <span>Precio</span>
+      <input
+        type="number"
+        formControlName="price"
+        min="0"
+        max="9999999999.99"
+        step="0.01"
+        [attr.aria-invalid]="fieldError('price') ? true : null"
+      >
+      <small *ngIf="fieldError('price')" class="field-error">{{ fieldError('price') }}</small>
+    </label>
+
+    <label class="form-field">
+      <span>Stock actual</span>
+      <input
+        type="number"
+        formControlName="currentStock"
+        min="0"
+        step="1"
+        [attr.aria-invalid]="fieldError('currentStock') ? true : null"
+      >
+      <small *ngIf="fieldError('currentStock')" class="field-error">
+        {{ fieldError('currentStock') }}
+      </small>
+    </label>
+
+    <label class="form-field">
+      <span>Stock minimo</span>
+      <input
+        type="number"
+        formControlName="minimumStock"
+        min="0"
+        step="1"
+        [attr.aria-invalid]="fieldError('minimumStock') ? true : null"
+      >
+      <small *ngIf="fieldError('minimumStock')" class="field-error">
+        {{ fieldError('minimumStock') }}
+      </small>
+    </label>
+
+    <label class="form-field form-field-wide">
+      <span>Descripcion</span>
+      <textarea
+        formControlName="description"
+        maxlength="500"
+        rows="5"
+        [attr.aria-invalid]="fieldError('description') ? true : null"
+      ></textarea>
+      <small *ngIf="fieldError('description')" class="field-error">
+        {{ fieldError('description') }}
+      </small>
+    </label>
+  </div>
+
+  <div class="form-actions">
+    <a routerLink="/productos" class="secondary-action">Cancelar</a>
+    <button type="submit" class="primary-action" [disabled]="submitting">
+      {{ submitting ? 'Guardando...' : submitLabel }}
+    </button>
+  </div>
+</form>
