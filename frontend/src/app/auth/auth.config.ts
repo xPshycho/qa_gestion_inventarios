@@ -1,8 +1,31 @@
+import { InjectionToken } from '@angular/core';
+import Keycloak, { KeycloakConfig } from 'keycloak-js';
+
 export interface AuthRuntimeConfig {
   url: string;
   realm: string;
   clientId: string;
 }
+
+export type KeycloakFactory = (config: KeycloakConfig) => Keycloak;
+
+export interface SessionNavigator {
+  assign(url: string): void;
+  replace(url: string): void;
+}
+
+export const KEYCLOAK_FACTORY = new InjectionToken<KeycloakFactory>('KEYCLOAK_FACTORY', {
+  providedIn: 'root',
+  factory: () => (config) => new Keycloak(config)
+});
+
+export const SESSION_NAVIGATOR = new InjectionToken<SessionNavigator>('SESSION_NAVIGATOR', {
+  providedIn: 'root',
+  factory: () => ({
+    assign: (url) => window.location.assign(url),
+    replace: (url) => window.location.replace(url)
+  })
+});
 
 const AUTH_CONFIG_URL = '/auth-config.json';
 

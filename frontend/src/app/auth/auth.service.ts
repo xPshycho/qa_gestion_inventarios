@@ -1,6 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import Keycloak, { KeycloakTokenParsed } from 'keycloak-js';
-import { loadAuthRuntimeConfig } from './auth.config';
+import { KEYCLOAK_FACTORY, SESSION_NAVIGATOR, loadAuthRuntimeConfig } from './auth.config';
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'anonymous' | 'expired' | 'error';
 
@@ -25,6 +25,8 @@ const TOKEN_MIN_VALIDITY_SECONDS = 60;
   providedIn: 'root'
 })
 export class AuthService {
+  private readonly createKeycloak = inject(KEYCLOAK_FACTORY);
+  private readonly sessionNavigator = inject(SESSION_NAVIGATOR);
   private keycloak?: Keycloak;
   private refreshPromise?: Promise<string | null>;
   private refreshTimer?: ReturnType<typeof setTimeout>;
@@ -48,7 +50,7 @@ export class AuthService {
 
     try {
       const config = await loadAuthRuntimeConfig();
-      this.keycloak = new Keycloak(config);
+      this.keycloak = this.createKeycloak(config);
       this.registerCallbacks(this.keycloak);
 
       const authenticated = await this.keycloak.init({
@@ -93,7 +95,7 @@ export class AuthService {
   async logout(): Promise<void> {
     if (!this.keycloak) {
       this.clearSession('anonymous');
-      window.location.assign('/login');
+      this.sessionNavigator.assign('/login');
       return;
     }
 
@@ -103,7 +105,7 @@ export class AuthService {
       });
     } catch {
       this.clearSession('anonymous');
-      window.location.assign('/login');
+      this.sessionNavigator.assign('/login');
     }
   }
 
@@ -219,7 +221,7 @@ export class AuthService {
     this.clearSession('expired');
 
     if (window.location.pathname !== '/login') {
-      window.location.replace('/login?reason=expired');
+      this.sessionNavigator.replace('/login?reason=expired');
     }
   }
 
