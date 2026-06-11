@@ -13,6 +13,12 @@ import com.pucmm.inventory.product.domain.Product;
 import com.pucmm.inventory.product.domain.ProductData;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.repository.ProductRepository;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -62,6 +68,43 @@ class ProductServiceTest {
         assertThat(pageableCaptor.getValue().getSort().getOrderFor("name"))
                 .extracting(Sort.Order::getDirection)
                 .isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void findProductsSpecificationAppliesAllFilters() {
+        Product product = productWithId(1L, "DELL-LAT-5440");
+        when(productRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1));
+        CriteriaMocks criteria = CriteriaMocks.create();
+
+        productService.findProducts(0, 20, " Latitude ", " Laptops ", ProductStatus.ACTIVE, "name", "asc");
+
+        Specification<Product> specification = captureSpecification();
+        Predicate predicate = specification.toPredicate(criteria.root, criteria.query, criteria.builder);
+
+        assertThat(predicate).isSameAs(criteria.combinedPredicate);
+        verify(criteria.builder).like(criteria.lowerName, "%latitude%");
+        verify(criteria.builder).like(criteria.lowerSku, "%latitude%");
+        verify(criteria.builder).like(criteria.lowerDescription, "%latitude%");
+        verify(criteria.builder).equal(criteria.lowerCategory, "laptops");
+        verify(criteria.builder).equal(criteria.statusPath, ProductStatus.ACTIVE);
+        verify(criteria.builder).and(criteria.searchPredicate, criteria.categoryPredicate, criteria.statusPredicate);
+    }
+
+    @Test
+    void findProductsSpecificationIgnoresBlankFilters() {
+        Product product = productWithId(1L, "DELL-LAT-5440");
+        when(productRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1));
+        CriteriaMocks criteria = CriteriaMocks.create();
+
+        productService.findProducts(0, 20, "   ", "", null, "name", "asc");
+
+        Specification<Product> specification = captureSpecification();
+        Predicate predicate = specification.toPredicate(criteria.root, criteria.query, criteria.builder);
+
+        assertThat(predicate).isSameAs(criteria.combinedPredicate);
+        verify(criteria.builder).and();
     }
 
     @Test
@@ -181,5 +224,112 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(product, "id", id);
         ReflectionTestUtils.setField(product, "createdAt", now);
         ReflectionTestUtils.setField(product, "updatedAt", now);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Specification<Product> captureSpecification() {
+        ArgumentCaptor<Specification<Product>> specificationCaptor = ArgumentCaptor.forClass(Specification.class);
+        verify(productRepository).findAll(specificationCaptor.capture(), any(Pageable.class));
+        return specificationCaptor.getValue();
+    }
+
+    private static final class CriteriaMocks {
+        private final Root<Product> root;
+        private final CriteriaQuery<?> query;
+        private final CriteriaBuilder builder;
+        private final Expression<String> lowerName;
+        private final Expression<String> lowerSku;
+        private final Expression<String> lowerDescription;
+        private final Expression<String> lowerCategory;
+        private final Path<ProductStatus> statusPath;
+        private final Predicate searchPredicate;
+        private final Predicate categoryPredicate;
+        private final Predicate statusPredicate;
+        private final Predicate combinedPredicate;
+
+        private CriteriaMocks(
+                Root<Product> root,
+                CriteriaQuery<?> query,
+                CriteriaBuilder builder,
+                Expression<String> lowerName,
+                Expression<String> lowerSku,
+                Expression<String> lowerDescription,
+                Expression<String> lowerCategory,
+                Path<ProductStatus> statusPath,
+                Predicate searchPredicate,
+                Predicate categoryPredicate,
+                Predicate statusPredicate,
+                Predicate combinedPredicate
+        ) {
+            this.root = root;
+            this.query = query;
+            this.builder = builder;
+            this.lowerName = lowerName;
+            this.lowerSku = lowerSku;
+            this.lowerDescription = lowerDescription;
+            this.lowerCategory = lowerCategory;
+            this.statusPath = statusPath;
+            this.searchPredicate = searchPredicate;
+            this.categoryPredicate = categoryPredicate;
+            this.statusPredicate = statusPredicate;
+            this.combinedPredicate = combinedPredicate;
+        }
+
+        @SuppressWarnings("unchecked")
+        private static CriteriaMocks create() {
+            Root<Product> root = org.mockito.Mockito.mock(Root.class);
+            CriteriaQuery<?> query = org.mockito.Mockito.mock(CriteriaQuery.class);
+            CriteriaBuilder builder = org.mockito.Mockito.mock(CriteriaBuilder.class);
+            Path<String> namePath = org.mockito.Mockito.mock(Path.class);
+            Path<String> skuPath = org.mockito.Mockito.mock(Path.class);
+            Path<String> descriptionPath = org.mockito.Mockito.mock(Path.class);
+            Path<String> categoryPath = org.mockito.Mockito.mock(Path.class);
+            Path<ProductStatus> statusPath = org.mockito.Mockito.mock(Path.class);
+            Expression<String> lowerName = org.mockito.Mockito.mock(Expression.class);
+            Expression<String> lowerSku = org.mockito.Mockito.mock(Expression.class);
+            Expression<String> lowerDescription = org.mockito.Mockito.mock(Expression.class);
+            Expression<String> lowerCategory = org.mockito.Mockito.mock(Expression.class);
+            Predicate namePredicate = org.mockito.Mockito.mock(Predicate.class);
+            Predicate skuPredicate = org.mockito.Mockito.mock(Predicate.class);
+            Predicate descriptionPredicate = org.mockito.Mockito.mock(Predicate.class);
+            Predicate searchPredicate = org.mockito.Mockito.mock(Predicate.class);
+            Predicate categoryPredicate = org.mockito.Mockito.mock(Predicate.class);
+            Predicate statusPredicate = org.mockito.Mockito.mock(Predicate.class);
+            Predicate combinedPredicate = org.mockito.Mockito.mock(Predicate.class);
+
+            org.mockito.Mockito.lenient().when(root.<String>get("name")).thenReturn(namePath);
+            org.mockito.Mockito.lenient().when(root.<String>get("sku")).thenReturn(skuPath);
+            org.mockito.Mockito.lenient().when(root.<String>get("description")).thenReturn(descriptionPath);
+            org.mockito.Mockito.lenient().when(root.<String>get("category")).thenReturn(categoryPath);
+            org.mockito.Mockito.lenient().when(root.<ProductStatus>get("status")).thenReturn(statusPath);
+            org.mockito.Mockito.lenient().when(builder.lower(namePath)).thenReturn(lowerName);
+            org.mockito.Mockito.lenient().when(builder.lower(skuPath)).thenReturn(lowerSku);
+            org.mockito.Mockito.lenient().when(builder.lower(descriptionPath)).thenReturn(lowerDescription);
+            org.mockito.Mockito.lenient().when(builder.lower(categoryPath)).thenReturn(lowerCategory);
+            org.mockito.Mockito.lenient().when(builder.like(lowerName, "%latitude%")).thenReturn(namePredicate);
+            org.mockito.Mockito.lenient().when(builder.like(lowerSku, "%latitude%")).thenReturn(skuPredicate);
+            org.mockito.Mockito.lenient().when(builder.like(lowerDescription, "%latitude%")).thenReturn(descriptionPredicate);
+            org.mockito.Mockito.lenient().when(builder.or(namePredicate, skuPredicate, descriptionPredicate))
+                    .thenReturn(searchPredicate);
+            org.mockito.Mockito.lenient().when(builder.equal(lowerCategory, "laptops")).thenReturn(categoryPredicate);
+            org.mockito.Mockito.lenient().when(builder.equal(statusPath, ProductStatus.ACTIVE)).thenReturn(statusPredicate);
+            org.mockito.Mockito.when(builder.and(org.mockito.ArgumentMatchers.any(Predicate[].class)))
+                    .thenReturn(combinedPredicate);
+
+            return new CriteriaMocks(
+                    root,
+                    query,
+                    builder,
+                    lowerName,
+                    lowerSku,
+                    lowerDescription,
+                    lowerCategory,
+                    statusPath,
+                    searchPredicate,
+                    categoryPredicate,
+                    statusPredicate,
+                    combinedPredicate
+            );
+        }
     }
 }
