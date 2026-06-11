@@ -85,4 +85,14 @@ describe('ProductsComponent', () => {
     expect(createLink).not.toBeNull();
     expect(authService.hasPermission).toHaveBeenCalledWith('product:manage');
   });
+
+  it('muestra la accion de editar solo con product manage', () => {
+    authService.hasPermission.and.returnValue(true);
+    fixture.detectChanges();
+
+    const editLink = fixture.debugElement.query(By.css('a.row-action'));
+
+    expect(editLink).not.toBeNull();
+    expect(editLink.attributes['ng-reflect-router-link']).toContain('1');
+  });
 });

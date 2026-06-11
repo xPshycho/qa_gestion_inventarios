@@ -12,7 +12,7 @@ import { ProductService } from './product.service';
   standalone: true,
   imports: [CommonModule, ProductFormComponent],
   templateUrl: './product-create-page.component.html',
-  styleUrl: './product-create-page.component.css'
+  styleUrl: './product-form.component.css'
 })
 export class ProductCreatePageComponent {
   private readonly productService = inject(ProductService);
