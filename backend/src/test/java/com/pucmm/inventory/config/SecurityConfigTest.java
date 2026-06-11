@@ -1,16 +1,21 @@
 package com.pucmm.inventory.config;
 
 import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_VIEW;
+import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_MANAGE;
 import static com.pucmm.inventory.config.SecurityConfig.REPORT_VIEW;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pucmm.inventory.common.api.GlobalExceptionHandler;
 import com.pucmm.inventory.product.api.ProductController;
+import com.pucmm.inventory.product.api.dto.ProductRequest;
 import com.pucmm.inventory.product.api.dto.ProductResponse;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.service.ProductService;
@@ -23,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -40,6 +46,9 @@ class SecurityConfigTest {
 
     @Autowired
     private JwtAuthenticationConverter jwtAuthenticationConverter;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private ProductService productService;
@@ -68,6 +77,19 @@ class SecurityConfigTest {
                         .with(jwt().authorities(new SimpleGrantedAuthority(PRODUCT_VIEW))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sku").value("DELL-LAT-5440"));
+    }
+
+    @Test
+    void mutatingRequestWithJwtDoesNotRequireCsrfToken() throws Exception {
+        ProductRequest request = request();
+        when(productService.createProduct(request)).thenReturn(response());
+
+        mockMvc.perform(post("/products")
+                        .with(jwt().authorities(new SimpleGrantedAuthority(PRODUCT_MANAGE)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "/products/1"));
     }
 
     @Test
@@ -103,6 +125,19 @@ class SecurityConfigTest {
                 ProductStatus.ACTIVE,
                 TIMESTAMP,
                 TIMESTAMP
+        );
+    }
+
+    private ProductRequest request() {
+        return new ProductRequest(
+                "DELL-LAT-5440",
+                "Dell Latitude 5440",
+                "Laptop empresarial Dell Latitude 5440 con pantalla de 14 pulgadas",
+                "Laptops",
+                new BigDecimal("68500.00"),
+                12,
+                4,
+                ProductStatus.ACTIVE
         );
     }
 }

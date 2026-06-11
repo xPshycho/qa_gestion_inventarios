@@ -26,6 +26,7 @@ public class SecurityConfig {
     public static final String AUDIT_VIEW = "audit:view";
 
     @Bean
+    @SuppressWarnings("java:S4502")
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
