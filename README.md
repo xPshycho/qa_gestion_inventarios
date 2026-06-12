@@ -194,12 +194,63 @@ cd frontend && CHROME_BIN=/usr/bin/chromium pnpm test
 # Build frontend
 cd frontend && pnpm build
 
+# E2E con Playwright, Keycloak y base de datos real
+cd tests/e2e
+npx --yes pnpm@10.12.1 install
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx --yes pnpm@10.12.1 test
+
 # Performance tests
 TBD
 
 # Security scan
 TBD
 ```
+
+### Pruebas E2E con Playwright
+
+La suite E2E valida flujos reales de usuario contra el frontend Angular, backend Spring Boot,
+PostgreSQL y Keycloak. Cubre disponibilidad del entorno, login/logout, CRUD de productos,
+permisos por rol y una verificacion responsive en vista movil.
+
+Antes de ejecutar la suite despues de cambiar de rama, reconstruir el stack para evitar imagenes
+Docker desactualizadas:
+
+```bash
+docker compose up --build -d
+```
+
+Comandos principales:
+
+```bash
+cd tests/e2e
+
+# Instalar dependencias
+npx --yes pnpm@10.12.1 install
+
+# Ejecutar toda la suite
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx --yes pnpm@10.12.1 test
+
+# Ejecutar una prueba especifica
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+  ./node_modules/.bin/playwright test specs/products-crud.spec.ts
+
+# Abrir el reporte HTML generado
+./node_modules/.bin/playwright show-report
+```
+
+Variables opcionales:
+
+| Variable | Valor por defecto | Uso |
+|----------|-------------------|-----|
+| `E2E_BASE_URL` | `http://localhost:5173` | URL del frontend |
+| `E2E_BACKEND_URL` | `http://localhost:8080` | URL del backend |
+| `E2E_KEYCLOAK_URL` | `http://localhost:8081` | URL publica de Keycloak |
+| `E2E_MANAGE_STACK` | `true` | Permite iniciar Docker Compose si los servicios no responden |
+| `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` | Detectado por Playwright | Ruta de Chromium local |
+
+Playwright genera capturas, trazas, videos y el reporte en `tests/e2e/test-results/` y
+`tests/e2e/playwright-report/`. Esos artefactos no se versionan; se adjuntan como evidencia en el
+Pull Request cuando corresponda.
 
 ## Observabilidad
 
