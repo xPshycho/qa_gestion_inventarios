@@ -183,10 +183,13 @@ Ejemplo: `feat(products): add product search by SKU`
 
 ```bash
 # Unit tests
-cd backend && TBD
+cd backend && ./gradlew test
 
 # Integration tests (requiere Docker)
-cd backend && TBD
+cd backend && ./gradlew integrationTest
+
+# Verificacion backend completa
+cd backend && ./gradlew check
 
 # Frontend
 cd frontend && CHROME_BIN=/usr/bin/chromium pnpm test
@@ -200,6 +203,10 @@ TBD
 # Security scan
 TBD
 ```
+
+Las pruebas de integracion levantan PostgreSQL 16 y Keycloak 26.6.3 con Testcontainers. Los
+resultados se generan en `backend/build/reports/tests/integrationTest` y la cobertura en
+`backend/build/reports/jacoco/integrationTest`.
 
 ## Observabilidad
 
