@@ -3,6 +3,7 @@ package com.pucmm.inventory.audit.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.pucmm.inventory.audit.api.dto.AuditRevisionResponse;
+import com.pucmm.inventory.integration.PostgreSqlIntegrationTest;
 import com.pucmm.inventory.product.domain.Product;
 import com.pucmm.inventory.product.domain.ProductData;
 import com.pucmm.inventory.product.domain.ProductStatus;
@@ -17,18 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
-@Testcontainers
-class AuditServiceIntegrationTest {
-    @Container
-    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
-
+class AuditServiceIntegrationTest extends PostgreSqlIntegrationTest {
     @Autowired
     private ProductRepository productRepository;
 
@@ -40,13 +32,6 @@ class AuditServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @DynamicPropertySource
-    static void configureDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Test
     @WithMockUser(username = "auditor")
