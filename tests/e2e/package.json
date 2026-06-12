@@ -1,0 +1,17 @@
+{
+  "name": "qa-gestion-inventarios-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "stack:ready": "node scripts/ensure-stack.mjs",
+    "test": "node scripts/ensure-stack.mjs && playwright test",
+    "test:headed": "node scripts/ensure-stack.mjs && playwright test --headed",
+    "test:ui": "node scripts/ensure-stack.mjs && playwright test --ui",
+    "test:list": "playwright test --list",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0"
+  }
+}
