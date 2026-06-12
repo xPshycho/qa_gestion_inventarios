@@ -27,6 +27,7 @@ sourceSets {
     integrationTest {
         java.srcDir 'src/integrationTest/java'
         resources.srcDir 'src/integrationTest/resources'
+        resources.srcDir '../infra/keycloak'
         compileClasspath += sourceSets.main.output
         runtimeClasspath += output + compileClasspath
     }
