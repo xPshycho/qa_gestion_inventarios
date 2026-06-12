@@ -31,3 +31,10 @@ frontend/coverage/
 frontend/dist/
 frontend/node_modules/
 frontend/.pnpm-store/
+
+tests/e2e/node_modules/
+tests/e2e/playwright-report/
+tests/e2e/test-results/
+tests/e2e/blob-report/
+
+.env

@@ -197,6 +197,11 @@ cd frontend && CHROME_BIN=/usr/bin/chromium pnpm test
 # Build frontend
 cd frontend && pnpm build
 
+# E2E con Playwright, Keycloak y base de datos real
+cd tests/e2e
+npx --yes pnpm@10.12.1 install
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx --yes pnpm@10.12.1 test
+
 # Performance tests
 TBD
 
