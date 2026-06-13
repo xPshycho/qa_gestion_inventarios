@@ -107,7 +107,7 @@ docker compose exec postgres \
 │   ├── workflows/              # GitHub Actions pipelines
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── backend/                    # API REST Spring Boot
-├── frontend/                   # Interfaz React
+├── frontend/                   # Interfaz Angular
 ├── infra/
 │   ├── docker/                 # Dockerfiles y compose
 │   ├── keycloak/               # Realm export y configuracion
