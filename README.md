@@ -182,8 +182,14 @@ Ejemplo: `feat(products): add product search by SKU`
 ## Ejecutar pruebas
 
 ```bash
+# Build backend
+cd backend && ./gradlew clean assemble
+
 # Unit tests
 cd backend && ./gradlew test
+
+# Unit tests + JaCoCo + quality gate de cobertura
+cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification
 
 # Integration tests (requiere Docker)
 cd backend && ./gradlew integrationTest
@@ -203,15 +209,43 @@ npx --yes pnpm@10.12.1 install
 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx --yes pnpm@10.12.1 test
 
 # Performance tests
-TBD
+# Pendiente de suite dedicada
 
 # Security scan
-TBD
+# Pendiente de suite dedicada
 ```
 
-Las pruebas de integracion levantan PostgreSQL 16 y Keycloak 26.6.3 con Testcontainers. Los
-resultados se generan en `backend/build/reports/tests/integrationTest` y la cobertura en
-`backend/build/reports/jacoco/integrationTest`.
+Las pruebas de integracion levantan PostgreSQL 16 y Keycloak 26.6.3 con Testcontainers. Si el
+entorno de Keycloak/Testcontainers bloquea `integrationTest`, el reporte HTML y los resultados
+XML quedan disponibles para diagnostico.
+
+## Evidencias de pruebas y cobertura
+
+El workflow automatico `Backend CI` ejecuta build, unit tests, quality gate de cobertura e
+integration tests en GitHub Actions para `main`, `develop`, `staging`, ramas `test/**`, ramas
+`ci/**` y Pull Requests hacia `main`, `develop` o `staging`. Los reportes se publican como
+artifacts aun cuando un job de pruebas falle, para conservar logs y HTML de diagnostico.
+
+El quality gate de backend exige cobertura de lineas >= 60% mediante JaCoCo. Los reportes de
+SonarCloud consumen los XML de JaCoCo generados por Gradle.
+
+| Evidencia | Comando local | Reporte local | Artifact CI |
+|-----------|---------------|---------------|-------------|
+| Build backend | `cd backend && ./gradlew clean assemble` | `backend/build/libs/*.jar` | `backend-build-*` |
+| Unit tests | `cd backend && ./gradlew test` | `backend/build/reports/tests/test/index.html` | `backend-unit-test-reports-*` |
+| Cobertura unit tests | `cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification` | `backend/build/reports/jacoco/test/html/index.html` | `backend-unit-test-reports-*` |
+| Integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/tests/integrationTest/index.html` | `backend-integration-test-reports-*` |
+| Cobertura integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/jacoco/integrationTest/html/index.html` | `backend-integration-test-reports-*` |
+| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html` | Pendiente de CI dedicado |
+
+Estado de automatizacion de testing:
+
+| Tipo | Estado | Detalle |
+|------|--------|---------|
+| Unit | Automatizada en CI | JUnit/Mockito ejecutado por `./gradlew test` y publicado con JaCoCo. |
+| Integration | Automatizada | Testcontainers ejecutado por `./gradlew integrationTest`; los reportes se publican para diagnosticar fallos de entorno. |
+| API | Cubierta por controller tests | Los controladores backend y reglas de seguridad se validan en `backend/src/test`; la suite API/contract dedicada se mantiene separada. |
+| E2E | Reproducible localmente | Playwright cubre login, CRUD de productos, roles y responsive en `tests/e2e`; la ejecucion CI dedicada se mantiene separada. |
 
 ## Observabilidad
 
