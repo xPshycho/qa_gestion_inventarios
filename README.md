@@ -64,12 +64,13 @@ docker compose ps
 | Frontend | http://localhost:5173 | Interfaz Angular de gestion de productos |
 | Backend | http://localhost:8080/health | Healthcheck HTTP del stub de API |
 | Keycloak | http://localhost:8081 | Realm `inventory` para OAuth2/JWT |
-| PostgreSQL | localhost:5432 | Base de datos local para desarrollo |
+| PostgreSQL | localhost:55432 | Base de datos local para desarrollo |
 | Flyway | Servicio interno | Aplica migraciones antes de iniciar el backend |
 
 Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT`, `KEYCLOAK_PORT`
 y `POSTGRES_PORT`.
-Si el puerto local `5432` ya esta ocupado, usar por ejemplo `POSTGRES_PORT=55432`.
+El puerto local por defecto de PostgreSQL es `55432` para evitar conflictos con instalaciones
+locales que ya usan `5432`. Si se necesita usar otro puerto, definir `POSTGRES_PORT`.
 La interfaz Angular consume la API del backend mediante la ruta `/api`.
 
 ## Migraciones de base de datos
@@ -79,17 +80,17 @@ El servicio `backend` inicia despues de que Flyway aplica correctamente los scri
 
 ```bash
 # Levantar PostgreSQL, ejecutar migraciones y dejar el entorno local arriba
-POSTGRES_PORT=55432 docker compose up --build -d
+docker compose up --build -d
 
 # Ver estado de servicios y confirmar que Flyway completo su ejecucion
-POSTGRES_PORT=55432 docker compose ps
+docker compose ps
 
 # Validar datos iniciales de productos
-POSTGRES_PORT=55432 docker compose exec postgres \
+docker compose exec postgres \
   psql -U inventory_user -d inventory -c "SELECT sku, name, current_stock FROM products ORDER BY sku;"
 
 # Validar permisos y roles iniciales
-POSTGRES_PORT=55432 docker compose exec postgres \
+docker compose exec postgres \
   psql -U inventory_user -d inventory -c "SELECT code, module FROM permissions ORDER BY code;"
 ```
 
