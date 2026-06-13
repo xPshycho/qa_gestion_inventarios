@@ -191,7 +191,7 @@ cd backend && ./gradlew test
 # Unit tests + JaCoCo + quality gate de cobertura
 cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification
 
-# Integration tests (requiere Docker)
+# Integration tests (requiere Docker y Java 21)
 cd backend && ./gradlew integrationTest
 
 # Verificacion backend completa
@@ -218,6 +218,11 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx --yes pnpm@10.12.1 tes
 Las pruebas de integracion levantan PostgreSQL 16 y Keycloak 26.6.3 con Testcontainers. Si el
 entorno de Keycloak/Testcontainers bloquea `integrationTest`, el reporte HTML y los resultados
 XML quedan disponibles para diagnostico.
+
+El diagnostico del bug #48 esta documentado en
+`docs/testing/keycloak-testcontainers-issue-48.md`. La suite paso localmente con JDK 21 y Docker:
+11 pruebas de integracion, 0 fallos y 0 errores. Si la maquina tiene una version distinta de Java,
+usar la alternativa Docker JDK 21 descrita en esa guia.
 
 ## Evidencias de pruebas y cobertura
 
