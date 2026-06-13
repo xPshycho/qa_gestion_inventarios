@@ -73,6 +73,10 @@ El puerto local por defecto de PostgreSQL es `55432` para evitar conflictos con 
 locales que ya usan `5432`. Si se necesita usar otro puerto, definir `POSTGRES_PORT`.
 La interfaz Angular consume la API del backend mediante la ruta `/api`.
 
+OpenTelemetry queda deshabilitado por defecto en Docker Compose con `OTEL_SDK_DISABLED=true`
+porque el stack local todavia no incluye collector OTLP en `4318`. Cuando se agregue el stack de
+observabilidad, se debe definir `OTEL_SDK_DISABLED=false` y configurar el endpoint OTLP del collector.
+
 ## Migraciones de base de datos
 
 Flyway ejecuta las migraciones versionadas ubicadas en `backend/src/main/resources/db/migration`.
