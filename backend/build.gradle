@@ -112,10 +112,27 @@ jacocoTestReport {
     }
 }
 
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+        }
+    }
+}
+
 tasks.register('jacocoIntegrationTestReport', JacocoReport) {
-    dependsOn tasks.named('integrationTest')
+    mustRunAfter tasks.named('integrationTest')
     executionData layout.buildDirectory.file('jacoco/integrationTest.exec')
     sourceSets sourceSets.main
+
+    onlyIf {
+        executionData.files.any { it.exists() }
+    }
 
     reports {
         xml.required = true
@@ -129,6 +146,7 @@ tasks.register('jacocoIntegrationTestReport', JacocoReport) {
 
 tasks.named('check') {
     dependsOn tasks.named('integrationTest')
+    dependsOn tasks.named('jacocoTestCoverageVerification')
 }
 
 sonar {
