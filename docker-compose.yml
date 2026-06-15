@@ -70,6 +70,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cambiar}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${KEYCLOAK_URL:-http://localhost:8081}/realms/${KEYCLOAK_REALM:-inventory}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-inventory}/protocol/openid-connect/certs
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
     expose:
       - "8080"
     healthcheck:
