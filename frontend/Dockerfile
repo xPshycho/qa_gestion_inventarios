@@ -2,9 +2,15 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-RUN corepack enable
+ARG PNPM_VERSION=10.12.1
 
-COPY package.json pnpm-lock.yaml ./
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-factor 2 \
+    && npm config set fetch-retry-mintimeout 10000 \
+    && npm config set fetch-retry-maxtimeout 60000 \
+    && npm install -g "pnpm@${PNPM_VERSION}" --ignore-scripts
+
+COPY package.json pnpm-lock.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY angular.json tsconfig.json tsconfig.app.json ./
