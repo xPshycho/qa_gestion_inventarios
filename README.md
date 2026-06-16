@@ -234,6 +234,9 @@ artifacts aun cuando un job de pruebas falle, para conservar logs y HTML de diag
 El quality gate de backend exige cobertura de lineas >= 60% mediante JaCoCo. Los reportes de
 SonarCloud consumen los XML de JaCoCo generados por Gradle.
 
+El pipeline Jenkins esta documentado en `docs/ci/jenkins.md`. Ejecuta checkout, build, pruebas,
+analisis de calidad, build Docker, despliegue preview con Docker Compose y E2E con Playwright.
+
 | Evidencia | Comando local | Reporte local | Artifact CI |
 |-----------|---------------|---------------|-------------|
 | Build backend | `cd backend && ./gradlew clean assemble` | `backend/build/libs/*.jar` | `backend-build-*` |
@@ -241,7 +244,7 @@ SonarCloud consumen los XML de JaCoCo generados por Gradle.
 | Cobertura unit tests | `cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification` | `backend/build/reports/jacoco/test/html/index.html` | `backend-unit-test-reports-*` |
 | Integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/tests/integrationTest/index.html` | `backend-integration-test-reports-*` |
 | Cobertura integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/jacoco/integrationTest/html/index.html` | `backend-integration-test-reports-*` |
-| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html` | Pendiente de CI dedicado |
+| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html` | Jenkins Pipeline |
 
 Estado de automatizacion de testing:
 
@@ -250,7 +253,7 @@ Estado de automatizacion de testing:
 | Unit | Automatizada en CI | JUnit/Mockito ejecutado por `./gradlew test` y publicado con JaCoCo. |
 | Integration | Automatizada | Testcontainers ejecutado por `./gradlew integrationTest`; los reportes se publican para diagnosticar fallos de entorno. |
 | API | Cubierta por controller tests | Los controladores backend y reglas de seguridad se validan en `backend/src/test`; la suite API/contract dedicada se mantiene separada. |
-| E2E | Reproducible localmente | Playwright cubre login, CRUD de productos, roles y responsive en `tests/e2e`; la ejecucion CI dedicada se mantiene separada. |
+| E2E | Automatizada en Jenkins | Playwright cubre login, CRUD de productos, roles y responsive en `tests/e2e`; Jenkins publica resultado JUnit del flujo E2E. |
 
 ## Observabilidad
 
