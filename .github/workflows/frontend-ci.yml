@@ -1,0 +1,82 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+      - 'feature/**'
+      - 'test/**'
+      - 'ci/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  build-and-test:
+    name: Build and Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm 10.12.1
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.12.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm build
+
+      - name: Resolve Chromium binary
+        run: |
+          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -z "$CHROME_PATH" ]; then
+            echo "No Chrome or Chromium binary was found on the runner." >&2
+            exit 1
+          fi
+          echo "CHROME_BIN=${CHROME_PATH}" >> "$GITHUB_ENV"
+
+      - name: Run unit tests
+        run: pnpm exec ng test --watch=false --browsers=ChromeHeadlessNoSandbox
+
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-${{ github.run_number }}
+          path: frontend/coverage/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload frontend diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-diagnostics-${{ github.run_number }}
+          path: |
+            frontend/dist/**
+            frontend/npm-debug.log*
+            frontend/pnpm-debug.log*
+            frontend/.angular/cache/**/*.log
+          if-no-files-found: ignore
+          retention-days: 14

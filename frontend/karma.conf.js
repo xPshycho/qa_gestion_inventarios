@@ -27,6 +27,12 @@ module.exports = function configureKarma(config) {
       ]
     },
     reporters: ['progress', 'kjhtml'],
+    customLaunchers: {
+      ChromeHeadlessNoSandbox: {
+        base: 'ChromeHeadless',
+        flags: ['--no-sandbox', '--disable-setuid-sandbox']
+      }
+    },
     browsers: ['ChromeHeadless'],
     restartOnFileChange: true
   });

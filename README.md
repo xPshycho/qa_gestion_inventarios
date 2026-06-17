@@ -216,6 +216,13 @@ cd tests/e2e
 npx --yes pnpm@10.12.1 install
 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx --yes pnpm@10.12.1 test
 
+# E2E usando un stack Docker Compose ya levantado
+cd "$(git rev-parse --show-toplevel)"
+docker compose up --build --wait --wait-timeout 240 -d
+cd tests/e2e
+E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 run stack:ready
+E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 exec playwright test
+
 # Performance tests
 # Pendiente de suite dedicada
 
@@ -237,8 +244,9 @@ artifacts aun cuando un job de pruebas falle, para conservar logs y HTML de diag
 El quality gate de backend exige cobertura de lineas >= 60% mediante JaCoCo. Los reportes de
 SonarCloud consumen los XML de JaCoCo generados por Gradle.
 
-El pipeline Jenkins esta documentado en `docs/ci/jenkins.md`. Ejecuta checkout, build, pruebas,
-analisis de calidad, build Docker, despliegue preview con Docker Compose y E2E con Playwright.
+El pipeline Jenkins se mantiene como flujo complementario y esta documentado en
+`docs/ci/jenkins.md`. Ejecuta checkout, build, pruebas, analisis de calidad, build Docker,
+despliegue preview con Docker Compose y E2E con Playwright.
 
 | Evidencia | Comando local | Reporte local | Artifact CI |
 |-----------|---------------|---------------|-------------|
