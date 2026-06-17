@@ -5,6 +5,7 @@ import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_MANAGE;
 import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_VIEW;
 import static com.pucmm.inventory.config.SecurityConfig.STOCK_MANAGE;
 import static com.pucmm.inventory.config.SecurityConfig.STOCK_VIEW;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -30,6 +31,7 @@ import com.pucmm.inventory.stock.api.dto.StockAdjustmentRequest;
 import com.pucmm.inventory.stock.api.dto.StockMovementRequest;
 import com.pucmm.inventory.stock.api.dto.StockMovementResponse;
 import com.pucmm.inventory.stock.domain.StockMovementType;
+import com.pucmm.inventory.stock.service.AuthenticatedInventoryUserResolver;
 import com.pucmm.inventory.stock.service.InsufficientStockException;
 import com.pucmm.inventory.stock.service.StockService;
 import java.math.BigDecimal;
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -61,6 +64,9 @@ class ProductControllerTest {
 
     @MockitoBean
     private StockService stockService;
+
+    @MockitoBean
+    private AuthenticatedInventoryUserResolver authenticatedInventoryUserResolver;
 
     @Test
     void listProductsReturnsPage() throws Exception {
@@ -199,24 +205,36 @@ class ProductControllerTest {
 
     @Test
     void registerStockEntryReturnsMovement() throws Exception {
-        StockMovementRequest request = new StockMovementRequest(3, 2L, "Recepcion de mercancia");
-        when(stockService.registerEntry(1L, request)).thenReturn(movement(1L, StockMovementType.ENTRY, 12, 15, 3));
+        StockMovementRequest request = new StockMovementRequest(3, "Recepcion de mercancia");
+        when(authenticatedInventoryUserResolver.resolveUsername(any(Authentication.class))).thenReturn("edwin");
+        when(stockService.registerEntry(1L, request, "edwin"))
+                .thenReturn(movement(1L, StockMovementType.ENTRY, 12, 15, 3));
 
         mockMvc.perform(post("/products/{id}/stock/entries", 1L)
                         .with(jwtWith(STOCK_MANAGE))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content("""
+                                {
+                                  "quantity": 3,
+                                  "userId": 999,
+                                  "observations": "Recepcion de mercancia"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movementType").value("ENTRY"))
                 .andExpect(jsonPath("$.previousQuantity").value(12))
                 .andExpect(jsonPath("$.newQuantity").value(15))
                 .andExpect(jsonPath("$.deltaQuantity").value(3));
+
+        verify(stockService).registerEntry(1L, request, "edwin");
     }
 
     @Test
     void registerStockExitReturnsBadRequestWhenStockWouldBeNegative() throws Exception {
-        StockMovementRequest request = new StockMovementRequest(20, 2L, "Salida");
-        when(stockService.registerExit(1L, request)).thenThrow(new InsufficientStockException(1L, 12, 20));
+        StockMovementRequest request = new StockMovementRequest(20, "Salida");
+        when(authenticatedInventoryUserResolver.resolveUsername(any(Authentication.class))).thenReturn("edwin");
+        when(stockService.registerExit(1L, request, "edwin"))
+                .thenThrow(new InsufficientStockException(1L, 12, 20));
 
         mockMvc.perform(post("/products/{id}/stock/exits", 1L)
                         .with(jwtWith(STOCK_MANAGE))
@@ -229,8 +247,10 @@ class ProductControllerTest {
 
     @Test
     void adjustStockReturnsMovement() throws Exception {
-        StockAdjustmentRequest request = new StockAdjustmentRequest(4, null, "Conteo fisico");
-        when(stockService.adjustStock(1L, request)).thenReturn(movement(1L, StockMovementType.ADJUSTMENT, 12, 4, -8));
+        StockAdjustmentRequest request = new StockAdjustmentRequest(4, "Conteo fisico");
+        when(authenticatedInventoryUserResolver.resolveUsername(any(Authentication.class))).thenReturn("edwin");
+        when(stockService.adjustStock(1L, request, "edwin"))
+                .thenReturn(movement(1L, StockMovementType.ADJUSTMENT, 12, 4, -8));
 
         mockMvc.perform(post("/products/{id}/stock/adjustments", 1L)
                         .with(jwtWith(STOCK_MANAGE))
@@ -243,7 +263,7 @@ class ProductControllerTest {
 
     @Test
     void stockMovementRequiresValidBody() throws Exception {
-        StockMovementRequest request = new StockMovementRequest(0, null, "Cantidad invalida");
+        StockMovementRequest request = new StockMovementRequest(0, "Cantidad invalida");
 
         mockMvc.perform(post("/products/{id}/stock/entries", 1L)
                         .with(jwtWith(STOCK_MANAGE))
@@ -258,7 +278,7 @@ class ProductControllerTest {
     void stockEntryRequiresJwtToken() throws Exception {
         mockMvc.perform(post("/products/{id}/stock/entries", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new StockMovementRequest(1, null, null))))
+                        .content(objectMapper.writeValueAsString(new StockMovementRequest(1, null))))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -330,6 +350,8 @@ class ProductControllerTest {
     }
 
     private static RequestPostProcessor jwtWith(String permission) {
-        return jwt().authorities(new SimpleGrantedAuthority(permission));
+        return jwt()
+                .jwt(jwt -> jwt.claim("preferred_username", "edwin"))
+                .authorities(new SimpleGrantedAuthority(permission));
     }
 }

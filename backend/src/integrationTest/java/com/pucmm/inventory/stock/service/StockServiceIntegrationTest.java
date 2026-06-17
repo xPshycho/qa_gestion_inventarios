@@ -42,15 +42,18 @@ class StockServiceIntegrationTest extends PostgreSqlIntegrationTest {
 
         StockMovementResponse entry = stockService.registerEntry(
                 product.getId(),
-                new StockMovementRequest(5, user.getId(), "Recepcion de inventario")
+                new StockMovementRequest(5, "Recepcion de inventario"),
+                user.getUsername()
         );
         StockMovementResponse exit = stockService.registerExit(
                 product.getId(),
-                new StockMovementRequest(3, user.getId(), "Entrega a sucursal")
+                new StockMovementRequest(3, "Entrega a sucursal"),
+                user.getUsername()
         );
         StockMovementResponse adjustment = stockService.adjustStock(
                 product.getId(),
-                new StockAdjustmentRequest(4, user.getId(), "Conteo fisico")
+                new StockAdjustmentRequest(4, "Conteo fisico"),
+                user.getUsername()
         );
         List<StockMovementResponse> history = stockService.findMovements(product.getId());
 
@@ -103,7 +106,8 @@ class StockServiceIntegrationTest extends PostgreSqlIntegrationTest {
 
         assertThatThrownBy(() -> stockService.registerExit(
                 product.getId(),
-                new StockMovementRequest(3, user.getId(), "Salida invalida")
+                new StockMovementRequest(3, "Salida invalida"),
+                user.getUsername()
         )).isInstanceOf(InsufficientStockException.class);
 
         assertThat(productRepository.findById(product.getId()))
