@@ -19,11 +19,20 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    apiTestImplementation.extendsFrom testImplementation
+    apiTestRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
+    apiTest {
+        java.srcDir 'src/apiTest/java'
+        resources.srcDir 'src/apiTest/resources'
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += output + compileClasspath
+    }
+
     integrationTest {
         java.srcDir 'src/integrationTest/java'
         resources.srcDir 'src/integrationTest/resources'
@@ -73,6 +82,7 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'io.rest-assured:spring-mock-mvc'
 }
 
 dependencyManagement {
@@ -87,12 +97,21 @@ tasks.named('test') {
     finalizedBy jacocoTestReport
 }
 
+tasks.register('apiTest', Test) {
+    description = 'Ejecuta la suite dedicada de API testing con RestAssured'
+    group = 'verification'
+    testClassesDirs = sourceSets.apiTest.output.classesDirs
+    classpath = sourceSets.apiTest.runtimeClasspath
+    shouldRunAfter tasks.named('test')
+    useJUnitPlatform()
+}
+
 tasks.register('integrationTest', Test) {
     description = 'Ejecuta las pruebas de integracion con dependencias reales'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    shouldRunAfter tasks.named('test')
+    shouldRunAfter tasks.named('apiTest')
     useJUnitPlatform()
     jacoco {
         destinationFile = layout.buildDirectory.file('jacoco/integrationTest.exec').get().asFile
@@ -145,6 +164,7 @@ tasks.register('jacocoIntegrationTestReport', JacocoReport) {
 }
 
 tasks.named('check') {
+    dependsOn tasks.named('apiTest')
     dependsOn tasks.named('integrationTest')
     dependsOn tasks.named('jacocoTestCoverageVerification')
 }
