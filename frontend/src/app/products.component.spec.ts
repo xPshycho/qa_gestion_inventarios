@@ -104,13 +104,13 @@ describe('ProductsComponent', () => {
     expect(editLink?.attributes['ng-reflect-router-link']).toContain('1');
   });
 
-  it('muestra la accion de movimientos solo con stock view', () => {
-    authService.hasPermission.and.callFake((permission) => permission === 'stock:view');
+  it('muestra la accion de auditoria solo con audit view', () => {
+    authService.hasPermission.and.callFake((permission) => permission === 'audit:view');
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.textContent).toContain('Movimientos');
+    expect(compiled.textContent).toContain('Auditoria');
     expect(compiled.textContent).not.toContain('Editar');
     expect(compiled.textContent).not.toContain('Eliminar');
   });

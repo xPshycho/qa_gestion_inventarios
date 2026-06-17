@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AuditPageComponent } from './audit-page.component';
 import { authGuard, homeGuard, loginGuard, permissionGuard } from './auth/auth.guards';
 import { DashboardPageComponent } from './dashboard-page.component';
 import { ForbiddenComponent } from './forbidden.component';
@@ -45,6 +46,12 @@ export const routes: Routes = [
     component: ProductEditPageComponent,
     canActivate: [permissionGuard],
     data: { permission: 'product:manage' }
+  },
+  {
+    path: 'productos/:id/auditoria',
+    component: AuditPageComponent,
+    canActivate: [permissionGuard],
+    data: { permission: 'audit:view' }
   },
   {
     path: 'productos/:id/stock',

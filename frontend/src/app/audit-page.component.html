@@ -1,0 +1,116 @@
+<main class="audit-page">
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">Auditoria</p>
+      <h1>Historial de producto y stock</h1>
+      <p *ngIf="product">{{ product.sku }} - {{ product.name }}</p>
+    </div>
+    <div class="heading-actions">
+      <button type="button" class="refresh-button" (click)="refreshAudit()" [disabled]="loading">
+        Actualizar
+      </button>
+      <a routerLink="/productos" class="secondary-action">Volver al catalogo</a>
+    </div>
+  </section>
+
+  <div *ngIf="errorMessage" class="page-message page-message-error" role="alert">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="loading" class="state">
+    Cargando auditoria...
+  </div>
+
+  <ng-container *ngIf="!loading && product">
+    <section class="summary-grid" aria-label="Resumen de auditoria">
+      <article class="summary-card">
+        <span>Revisiones producto</span>
+        <strong>{{ productRevisions.length }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Revisiones stock</span>
+        <strong>{{ stockMovementRevisions.length }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Stock actual</span>
+        <strong>{{ product.currentStock }}</strong>
+      </article>
+      <article class="summary-card" [class.summary-card-warning]="product.stockAlert">
+        <span>Estado stock</span>
+        <strong>{{ product.stockAlert ? 'Critico' : 'Normal' }}</strong>
+      </article>
+    </section>
+
+    <section class="audit-grid">
+      <article class="audit-panel">
+        <div class="panel-heading">
+          <strong>Cambios del producto</strong>
+          <span>{{ productRevisions.length }} revisiones</span>
+        </div>
+
+        <div *ngIf="productRevisions.length > 0; else emptyProductAudit" class="revision-list">
+          <section
+            class="revision-item"
+            *ngFor="let revision of productRevisions; trackBy: trackByRevision"
+          >
+            <div class="revision-header">
+              <div>
+                <span class="revision-type">{{ revisionTypeLabel(revision.revisionType) }}</span>
+                <strong>{{ entityLabel(revision.entityName) }} #{{ revision.entityId }}</strong>
+                <small>Revision {{ revision.revision }} - {{ actorLabel(revision) }}</small>
+              </div>
+              <time>{{ revision.changedAt | date:'short' }}</time>
+            </div>
+
+            <div class="change-list">
+              <div class="change-row" *ngFor="let change of changesFor(revision); trackBy: trackByField">
+                <strong>{{ fieldLabel(change.field) }}</strong>
+                <span>{{ formatValue(change.previousValue) }}</span>
+                <span>{{ formatValue(change.currentValue) }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <ng-template #emptyProductAudit>
+          <p class="empty">No hay revisiones del producto para mostrar.</p>
+        </ng-template>
+      </article>
+
+      <article class="audit-panel">
+        <div class="panel-heading">
+          <strong>Revisiones de movimientos de stock</strong>
+          <span>{{ stockMovementRevisions.length }} revisiones</span>
+        </div>
+
+        <div *ngIf="stockMovementRevisions.length > 0; else emptyStockAudit" class="revision-list">
+          <section
+            class="revision-item"
+            *ngFor="let revision of stockMovementRevisions; trackBy: trackByRevision"
+          >
+            <div class="revision-header">
+              <div>
+                <span class="revision-type">{{ revisionTypeLabel(revision.revisionType) }}</span>
+                <strong>{{ entityLabel(revision.entityName) }} #{{ revision.entityId }}</strong>
+                <small>Revision {{ revision.revision }} - {{ actorLabel(revision) }}</small>
+              </div>
+              <time>{{ revision.changedAt | date:'short' }}</time>
+            </div>
+
+            <div class="change-list">
+              <div class="change-row" *ngFor="let change of changesFor(revision); trackBy: trackByField">
+                <strong>{{ fieldLabel(change.field) }}</strong>
+                <span>{{ formatValue(change.previousValue) }}</span>
+                <span>{{ formatValue(change.currentValue) }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <ng-template #emptyStockAudit>
+          <p class="empty">No hay revisiones de movimientos de stock para este producto.</p>
+        </ng-template>
+      </article>
+    </section>
+  </ng-container>
+</main>
