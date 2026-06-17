@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/prometheus").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/*/stock-movements").hasAuthority(STOCK_VIEW)
                         .requestMatchers(HttpMethod.GET, "/products", "/products/*").hasAuthority(PRODUCT_VIEW)
                         .requestMatchers(HttpMethod.POST, "/products/*/stock/**").hasAuthority(STOCK_MANAGE)

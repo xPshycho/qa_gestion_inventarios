@@ -62,20 +62,22 @@ docker compose ps
 | Servicio | URL / puerto | Descripcion |
 |----------|--------------|-------------|
 | Frontend | http://localhost:5173 | Interfaz Angular de gestion de productos |
-| Backend | http://localhost:8080/health | Healthcheck HTTP del stub de API |
+| Backend | http://localhost:8080/actuator/health | Healthcheck HTTP del API |
 | Keycloak | http://localhost:8081 | Realm `inventory` para OAuth2/JWT |
 | PostgreSQL | localhost:55432 | Base de datos local para desarrollo |
 | Flyway | Servicio interno | Aplica migraciones antes de iniciar el backend |
+| Prometheus | http://localhost:9090 | Scraping de metricas del backend y Keycloak |
+| Grafana | http://localhost:3000 | Dashboard operativo con datasource Prometheus |
 
 Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT`, `KEYCLOAK_PORT`
-y `POSTGRES_PORT`.
+y `POSTGRES_PORT`, `PROMETHEUS_PORT` y `GRAFANA_PORT`.
 El puerto local por defecto de PostgreSQL es `55432` para evitar conflictos con instalaciones
 locales que ya usan `5432`. Si se necesita usar otro puerto, definir `POSTGRES_PORT`.
 La interfaz Angular consume la API del backend mediante la ruta `/api`.
 
-OpenTelemetry queda deshabilitado por defecto en Docker Compose con `OTEL_SDK_DISABLED=true`
-porque el stack local todavia no incluye collector OTLP en `4318`. Cuando se agregue el stack de
-observabilidad, se debe definir `OTEL_SDK_DISABLED=false` y configurar el endpoint OTLP del collector.
+OpenTelemetry queda deshabilitado por defecto en Docker Compose con `OTEL_SDK_DISABLED=true`.
+Las metricas operativas se exponen por Actuator en `/actuator/prometheus` y Prometheus las
+scrapea desde la red interna de Docker Compose.
 
 ## Migraciones de base de datos
 

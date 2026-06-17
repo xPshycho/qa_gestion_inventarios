@@ -14,3 +14,11 @@ services:
   frontend:
     ports:
       - "${FRONTEND_PORT:-5173}:8080"
+
+  prometheus:
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  grafana:
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"

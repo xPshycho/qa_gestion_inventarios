@@ -63,6 +63,12 @@ class SecurityConfigTest {
     }
 
     @Test
+    void prometheusEndpointDoesNotRequireJwt() throws Exception {
+        mockMvc.perform(get("/actuator/prometheus"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void jwtWithoutRequiredPermissionReturnsForbidden() throws Exception {
         mockMvc.perform(get("/products/{id}", 1L)
                         .with(jwt().authorities(new SimpleGrantedAuthority(REPORT_VIEW))))
