@@ -63,6 +63,7 @@ jobs:
       - name: Run Playwright tests
         env:
           E2E_MANAGE_STACK: 'false'
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME: test-results/playwright-results.xml
         run: pnpm exec playwright test
 
       - name: Collect Docker Compose diagnostics
@@ -83,6 +84,19 @@ jobs:
             tests/e2e/test-results/**
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Summarize Playwright evidence
+        if: always()
+        run: |
+          {
+            echo "## Playwright evidence"
+            echo ""
+            echo "- Command: \`pnpm exec playwright test\`"
+            echo "- HTML report: \`tests/e2e/playwright-report/index.html\`"
+            echo "- JUnit report: \`tests/e2e/test-results/playwright-results.xml\`"
+            echo "- Failure assets: \`tests/e2e/test-results/**\`"
+            echo "- Artifact: \`playwright-e2e-${{ github.run_number }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Stop Docker Compose stack
         if: always()
