@@ -49,7 +49,7 @@ El token se inyecta con `withCredentials` y no debe imprimirse en logs. Las cred
 - `Backend Build`: compila el backend con Gradle.
 - `Unit Tests + Coverage Gate`: ejecuta unit tests y JaCoCo con umbral minimo.
 - `Integration Tests`: ejecuta Testcontainers con PostgreSQL y Keycloak.
-- `API Tests`: ejecuta los controller tests actuales como gate de API.
+- `API Tests`: ejecuta la suite dedicada `apiTest` con RestAssured para contratos, errores y permisos.
 - `Frontend Build`: instala dependencias del frontend y genera build Angular.
 - `Security Scan`: ejecuta `pnpm audit --prod` y SonarCloud. El audit frontend marca el build como `UNSTABLE` si encuentra vulnerabilidades y conserva `frontend-audit.json`.
 - `Docker Build`: construye imagenes backend y frontend.
@@ -63,6 +63,7 @@ Jenkins publica siempre los resultados disponibles, incluso cuando falla un stag
 - JUnit XML: `backend/build/test-results/**/*.xml`
 - Unit test HTML
 - Integration test HTML
+- API test HTML
 - JaCoCo unit coverage
 - JaCoCo integration coverage
 - JAR backend
@@ -78,6 +79,7 @@ No se archiva el workspace completo, `.env`, `.gradle`, `node_modules`, dumps, t
 ```bash
 cd backend && ./gradlew clean assemble
 cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification
+cd backend && ./gradlew apiTest
 cd backend && ./gradlew integrationTest
 
 cd frontend && pnpm install --frozen-lockfile && pnpm build

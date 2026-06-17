@@ -199,6 +199,9 @@ cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification
 # Integration tests (requiere Docker y Java 21)
 cd backend && ./gradlew integrationTest
 
+# API tests con RestAssured
+cd backend && ./gradlew apiTest
+
 # Verificacion backend completa
 cd backend && ./gradlew check
 
@@ -233,21 +236,10 @@ XML quedan disponibles para diagnostico.
 
 ## Evidencias de pruebas y cobertura
 
-Los workflows automaticos de GitHub Actions cubren backend, frontend y E2E:
-
-- `Backend CI` ejecuta build, unit tests, quality gate de cobertura e integration tests para
-  `main`, `develop`, `staging`, ramas `test/**`, ramas `ci/**` y Pull Requests hacia `main`,
-  `develop` o `staging`.
-- `Frontend CI` ejecuta `pnpm install --frozen-lockfile`, `pnpm build`, resuelve el binario
-  disponible de Chrome/Chromium y corre los unit tests con el launcher
-  `ChromeHeadlessNoSandbox` en `frontend/` para `main`, `develop`, `staging`, ramas
-  `feature/**`, `test/**`, `ci/**` y Pull Requests hacia `main`, `develop` o `staging`.
-- `Playwright E2E` se ejecuta automaticamente en los mismos eventos de frontend y tambien por
-  `workflow_dispatch`. Levanta PostgreSQL, Keycloak, backend y frontend con Docker Compose,
-  espera el stack con `pnpm run stack:ready` y corre `pnpm exec playwright test`.
-
-Los reportes se publican como artifacts aun cuando un job de pruebas falle, para conservar logs,
-HTML de diagnostico, trazas, videos y capturas cuando existan.
+El workflow automatico `Backend CI` ejecuta build, unit tests, API tests, quality gate de cobertura e
+integration tests en GitHub Actions para `main`, `develop`, `staging`, ramas `test/**`, ramas
+`ci/**` y Pull Requests hacia `main`, `develop` o `staging`. Los reportes se publican como
+artifacts aun cuando un job de pruebas falle, para conservar logs y HTML de diagnostico.
 
 El quality gate de backend exige cobertura de lineas >= 60% mediante JaCoCo. Los reportes de
 SonarCloud consumen los XML de JaCoCo generados por Gradle.
@@ -263,9 +255,8 @@ despliegue preview con Docker Compose y E2E con Playwright.
 | Cobertura unit tests | `cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification` | `backend/build/reports/jacoco/test/html/index.html` | `backend-unit-test-reports-*` |
 | Integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/tests/integrationTest/index.html` | `backend-integration-test-reports-*` |
 | Cobertura integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/jacoco/integrationTest/html/index.html` | `backend-integration-test-reports-*` |
-| Build frontend | `cd frontend && pnpm build` | `frontend/dist/` | `frontend-diagnostics-*` si falla |
-| Unit tests frontend | `cd frontend && CHROME_BIN=/usr/bin/chromium pnpm test` | `frontend/coverage/qa-gestion-inventarios-frontend/index.html` | `frontend-coverage-*` |
-| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html` | `playwright-e2e-*` |
+| API tests | `cd backend && ./gradlew apiTest` | `backend/build/reports/tests/apiTest/index.html` | `backend-api-test-reports-*` |
+| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html` | Jenkins Pipeline |
 
 Estado de automatizacion de testing:
 
@@ -273,8 +264,8 @@ Estado de automatizacion de testing:
 |------|--------|---------|
 | Unit | Automatizada en CI | JUnit/Mockito ejecutado por `./gradlew test` y publicado con JaCoCo. |
 | Integration | Automatizada | Testcontainers ejecutado por `./gradlew integrationTest`; los reportes se publican para diagnosticar fallos de entorno. |
-| API | Cubierta por controller tests | Los controladores backend y reglas de seguridad se validan en `backend/src/test`; la suite API/contract dedicada se mantiene separada. |
-| E2E | Automatizada en GitHub Actions y Jenkins | Playwright cubre login, CRUD de productos, roles y responsive en `tests/e2e`; GitHub Actions publica HTML report, traces/videos y logs Docker Compose. |
+| API | Automatizada en CI | RestAssured valida contratos REST, status codes, errores y permisos en `backend/src/apiTest`. |
+| E2E | Automatizada en Jenkins | Playwright cubre login, CRUD de productos, roles y responsive en `tests/e2e`; Jenkins publica resultado JUnit del flujo E2E. |
 
 ## Observabilidad
 
