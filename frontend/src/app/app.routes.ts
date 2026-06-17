@@ -7,6 +7,7 @@ import { LoginComponent } from './login.component';
 import { ProductCreatePageComponent } from './product-create-page.component';
 import { ProductEditPageComponent } from './product-edit-page.component';
 import { ProductsComponent } from './products.component';
+import { SecurityAdminComponent } from './security-admin.component';
 
 @Component({
   standalone: true,
@@ -49,6 +50,12 @@ export const routes: Routes = [
     component: ProductsComponent,
     canActivate: [permissionGuard],
     data: { permission: 'product:view' }
+  },
+  {
+    path: 'seguridad',
+    component: SecurityAdminComponent,
+    canActivate: [permissionGuard],
+    data: { permission: 'user:manage' }
   },
   {
     path: 'forbidden',
