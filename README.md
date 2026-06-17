@@ -239,9 +239,9 @@ Los workflows automaticos de GitHub Actions cubren backend, frontend y E2E:
   `main`, `develop`, `staging`, ramas `test/**`, ramas `ci/**` y Pull Requests hacia `main`,
   `develop` o `staging`.
 - `Frontend CI` ejecuta `pnpm install --frozen-lockfile`, `pnpm build`, resuelve el binario
-  disponible de Chrome/Chromium y corre `pnpm test` en `frontend/` para `main`, `develop`,
-  `staging`, ramas `feature/**`, `test/**`, `ci/**` y Pull Requests hacia `main`, `develop`
-  o `staging`.
+  disponible de Chrome/Chromium y corre los unit tests con el launcher
+  `ChromeHeadlessNoSandbox` en `frontend/` para `main`, `develop`, `staging`, ramas
+  `feature/**`, `test/**`, `ci/**` y Pull Requests hacia `main`, `develop` o `staging`.
 - `Playwright E2E` se ejecuta automaticamente en los mismos eventos de frontend y tambien por
   `workflow_dispatch`. Levanta PostgreSQL, Keycloak, backend y frontend con Docker Compose,
   espera el stack con `pnpm run stack:ready` y corre `pnpm exec playwright test`.

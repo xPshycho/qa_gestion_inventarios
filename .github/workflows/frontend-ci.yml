@@ -57,7 +57,7 @@ jobs:
           echo "CHROME_BIN=${CHROME_PATH}" >> "$GITHUB_ENV"
 
       - name: Run unit tests
-        run: pnpm test
+        run: pnpm exec ng test --watch=false --browsers=ChromeHeadlessNoSandbox
 
       - name: Upload frontend coverage
         if: always()
