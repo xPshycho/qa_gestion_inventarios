@@ -18,6 +18,8 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class KeycloakAdminClient {
     private static final int USER_LIST_LIMIT = 1000;
+    @SuppressWarnings("java:S1075")
+    private static final String USER_REALM_ROLES_PATH = "/admin/realms/{realm}/users/{userId}/role-mappings/realm";
 
     private final RestClient restClient;
     private final String adminUrl;
@@ -64,12 +66,7 @@ public class KeycloakAdminClient {
     }
 
     public List<KeycloakRole> listUserRealmRoles(String userId) {
-        KeycloakRole[] roles = get(
-                "/admin/realms/{realm}/users/{userId}/role-mappings/realm",
-                KeycloakRole[].class,
-                realm,
-                userId
-        );
+        KeycloakRole[] roles = get(USER_REALM_ROLES_PATH, KeycloakRole[].class, realm, userId);
         return roles == null ? List.of() : Arrays.asList(roles);
     }
 
@@ -79,11 +76,11 @@ public class KeycloakAdminClient {
 
     public void replaceUserRealmRoles(String userId, List<KeycloakRole> currentRoles, List<KeycloakRole> targetRoles) {
         if (!currentRoles.isEmpty()) {
-            delete("/admin/realms/{realm}/users/{userId}/role-mappings/realm", currentRoles, realm, userId);
+            delete(USER_REALM_ROLES_PATH, currentRoles, realm, userId);
         }
 
         if (!targetRoles.isEmpty()) {
-            post("/admin/realms/{realm}/users/{userId}/role-mappings/realm", targetRoles, realm, userId);
+            post(USER_REALM_ROLES_PATH, targetRoles, realm, userId);
         }
     }
 

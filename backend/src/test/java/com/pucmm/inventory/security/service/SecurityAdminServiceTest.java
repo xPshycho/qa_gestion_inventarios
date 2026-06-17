@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.pucmm.inventory.security.api.dto.SecurityPermissionResponse;
+import com.pucmm.inventory.security.api.dto.SecurityRoleResponse;
 import com.pucmm.inventory.security.api.dto.SecurityUserRequest;
 import com.pucmm.inventory.security.api.dto.SecurityUserRolesRequest;
 import com.pucmm.inventory.security.client.KeycloakAdminClient;
@@ -76,17 +78,82 @@ class SecurityAdminServiceTest {
     }
 
     @Test
+    void createUserWithNullRolesAssignsNoRoles() {
+        SecurityUserRequest request = new SecurityUserRequest("carlos", "Carlos", "Hernandez", null, true, null);
+        KeycloakUser user = user();
+        when(securityCatalogRepository.findRoleCodes()).thenReturn(Set.of("INVENTORY_ADMIN"));
+        when(keycloakAdminClient.createUser(request)).thenReturn(user);
+        when(keycloakAdminClient.listUserRealmRoles("user-1")).thenReturn(List.of());
+
+        var response = securityAdminService.createUser(request);
+
+        assertThat(response.roleCodes()).isEmpty();
+        verify(keycloakAdminClient).replaceUserRealmRoles("user-1", List.of(), List.of());
+        verify(securityCatalogRepository).syncUser(user, List.of());
+    }
+
+    @Test
+    void updateUserUpdatesDataAndReturnsFunctionalRoles() {
+        SecurityUserRequest request = request(Set.of());
+        KeycloakUser user = user();
+        when(keycloakAdminClient.updateUser("user-1", request)).thenReturn(user);
+        when(securityCatalogRepository.findRoleCodes()).thenReturn(Set.of("INVENTORY_ADMIN"));
+        when(keycloakAdminClient.listUserRealmRoles("user-1")).thenReturn(List.of(role("INVENTORY_ADMIN")));
+
+        var response = securityAdminService.updateUser("user-1", request);
+
+        assertThat(response.username()).isEqualTo("carlos");
+        assertThat(response.roleCodes()).containsExactly("INVENTORY_ADMIN");
+        verify(securityCatalogRepository).syncUser(user, List.of("INVENTORY_ADMIN"));
+    }
+
+    @Test
+    void replaceUserRolesAssignsRolesAndSynchronizesLocalCatalog() {
+        SecurityUserRolesRequest request = new SecurityUserRolesRequest(Set.of("INVENTORY_ADMIN"));
+        KeycloakRole role = role("INVENTORY_ADMIN");
+        KeycloakUser user = user();
+        when(securityCatalogRepository.findRoleCodes()).thenReturn(Set.of("INVENTORY_ADMIN"));
+        when(keycloakAdminClient.getRealmRole("INVENTORY_ADMIN")).thenReturn(role);
+        when(keycloakAdminClient.listUserRealmRoles("user-1")).thenReturn(List.of());
+        when(keycloakAdminClient.getUser("user-1")).thenReturn(user);
+
+        var response = securityAdminService.replaceUserRoles("user-1", request);
+
+        assertThat(response.roleCodes()).containsExactly("INVENTORY_ADMIN");
+        verify(keycloakAdminClient).replaceUserRealmRoles("user-1", List.of(), List.of(role));
+        verify(securityCatalogRepository).syncUser(user, List.of("INVENTORY_ADMIN"));
+    }
+
+    @Test
     void replaceUserRolesRejectsUnknownFunctionalRole() {
         when(securityCatalogRepository.findRoleCodes()).thenReturn(Set.of("INVENTORY_ADMIN"));
+        SecurityUserRolesRequest request = new SecurityUserRolesRequest(Set.of("SUPER_ADMIN"));
 
-        assertThatThrownBy(() -> securityAdminService.replaceUserRoles(
-                "user-1",
-                new SecurityUserRolesRequest(Set.of("SUPER_ADMIN"))
-        ))
+        assertThatThrownBy(() -> securityAdminService.replaceUserRoles("user-1", request))
                 .isInstanceOf(InvalidSecurityRoleException.class)
                 .hasMessageContaining("SUPER_ADMIN");
 
         verifyNoInteractions(keycloakAdminClient);
+    }
+
+    @Test
+    void listRolesDelegatesToRepository() {
+        var roleResponse = new SecurityRoleResponse("INVENTORY_ADMIN", "Administrador", "Acceso completo", List.of());
+        when(securityCatalogRepository.findRoles()).thenReturn(List.of(roleResponse));
+
+        var roles = securityAdminService.listRoles();
+
+        assertThat(roles).containsExactly(roleResponse);
+    }
+
+    @Test
+    void listPermissionsDelegatesToRepository() {
+        var permission = new SecurityPermissionResponse("user:manage", "Seguridad", "Gestionar usuarios");
+        when(securityCatalogRepository.findPermissions()).thenReturn(List.of(permission));
+
+        var permissions = securityAdminService.listPermissions();
+
+        assertThat(permissions).containsExactly(permission);
     }
 
     private SecurityUserRequest request(Set<String> roles) {

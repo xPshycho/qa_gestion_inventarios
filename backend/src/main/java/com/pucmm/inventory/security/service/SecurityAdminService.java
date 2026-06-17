@@ -87,17 +87,18 @@ public class SecurityAdminService {
 
     private List<KeycloakRole> validateAndLoadRoles(Set<String> roleCodes) {
         Set<String> allowedRoles = securityCatalogRepository.findRoleCodes();
-        Set<String> requestedRoles = roleCodes == null ? Set.of() : roleCodes;
-        return requestedRoles.stream()
+        List<String> normalized = (roleCodes == null ? Set.<String>of() : roleCodes).stream()
                 .filter(Objects::nonNull)
                 .map(String::trim)
-                .peek(roleCode -> {
-                    if (!allowedRoles.contains(roleCode)) {
-                        throw new InvalidSecurityRoleException(roleCode);
-                    }
-                })
                 .distinct()
                 .sorted()
+                .toList();
+        for (String roleCode : normalized) {
+            if (!allowedRoles.contains(roleCode)) {
+                throw new InvalidSecurityRoleException(roleCode);
+            }
+        }
+        return normalized.stream()
                 .map(keycloakAdminClient::getRealmRole)
                 .toList();
     }
