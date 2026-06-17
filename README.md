@@ -130,8 +130,8 @@ docker compose exec postgres \
 | Ambiente | Descripcion | URL |
 |----------|-------------|-----|
 | Development | Local con Docker Compose | http://localhost:5173 |
-| Staging | Replica de produccion para pruebas post-deploy | TBD |
-| Production | Ambiente final | TBD |
+| Staging | Replica de produccion para pruebas post-deploy | Pendiente de issue de deployment/staging |
+| Production | Ambiente final | Pendiente de release final |
 
 ## Permisos del sistema
 
@@ -205,8 +205,8 @@ cd backend && ./gradlew apiTest
 # Verificacion backend completa
 cd backend && ./gradlew check
 
-# Frontend
-cd frontend && CHROME_BIN=/usr/bin/chromium pnpm test
+# Frontend unit tests + coverage
+cd frontend && CHROME_BIN=/usr/bin/chromium pnpm exec ng test --watch=false --browsers=ChromeHeadless --code-coverage
 
 # Build frontend
 cd frontend && pnpm build
@@ -224,10 +224,10 @@ E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 run stack:ready
 E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 exec playwright test
 
 # Performance tests
-# Pendiente de suite dedicada
+# Pendiente de suite dedicada en issue #60
 
 # Security scan
-# Pendiente de suite dedicada
+# Jenkins ejecuta pnpm audit --prod; ZAP/dependency scan dedicados pertenecen al issue de security testing
 ```
 
 Las pruebas de integracion levantan PostgreSQL 16 y Keycloak 26.6.3 con Testcontainers. Si el
@@ -256,7 +256,8 @@ despliegue preview con Docker Compose y E2E con Playwright.
 | Integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/tests/integrationTest/index.html` | `backend-integration-test-reports-*` |
 | Cobertura integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/jacoco/integrationTest/html/index.html` | `backend-integration-test-reports-*` |
 | API tests | `cd backend && ./gradlew apiTest` | `backend/build/reports/tests/apiTest/index.html` | `backend-api-test-reports-*` |
-| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html` | Jenkins Pipeline |
+| Frontend unit + coverage | `cd frontend && pnpm exec ng test --watch=false --browsers=ChromeHeadless --code-coverage` | `frontend/coverage/qa-gestion-inventarios-frontend/index.html` | `frontend-coverage-*` |
+| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html`, `tests/e2e/test-results/playwright-results.xml` | `playwright-e2e-*`, Jenkins Pipeline |
 
 Estado de automatizacion de testing:
 
@@ -265,7 +266,10 @@ Estado de automatizacion de testing:
 | Unit | Automatizada en CI | JUnit/Mockito ejecutado por `./gradlew test` y publicado con JaCoCo. |
 | Integration | Automatizada | Testcontainers ejecutado por `./gradlew integrationTest`; los reportes se publican para diagnosticar fallos de entorno. |
 | API | Automatizada en CI | RestAssured valida contratos REST, status codes, errores y permisos en `backend/src/apiTest`. |
-| E2E | Automatizada en Jenkins | Playwright cubre login, CRUD de productos, roles y responsive en `tests/e2e`; Jenkins publica resultado JUnit del flujo E2E. |
+| Frontend | Automatizada en CI | Angular/Karma ejecuta unit tests con cobertura y publica artifact `frontend-coverage-*`. |
+| E2E | Automatizada en GitHub Actions y Jenkins | Playwright cubre login, CRUD de productos, roles y responsive; se publican HTML, JUnit, screenshots, videos, traces y diagnosticos Docker. |
+
+La guia consolidada de comandos, reportes y artifacts esta en `docs/testing/ci-reporting.md`.
 
 ## Observabilidad
 
@@ -273,10 +277,12 @@ Una vez levantado el sistema:
 
 | Herramienta | URL |
 |-------------|-----|
-| Grafana | `TBD` |
-| Prometheus | `TBD` |
-| Alertmanager | `TBD` |
+| Grafana | Pendiente de issue #52 |
+| Prometheus | Pendiente de issue #52 |
+| Alertmanager | Pendiente de issue #52 |
 
 
 ## Documentacion
-`TBD`
+- `docs/security/keycloak.md`: configuracion de seguridad, usuarios demo, scopes y permisos.
+- `docs/ci/jenkins.md`: pipeline Jenkins, credenciales, stages, reportes y artifacts.
+- `docs/testing/ci-reporting.md`: guia de testing, cobertura, artifacts y evidencia para PRs.
