@@ -48,8 +48,19 @@ jobs:
       - name: Install E2E dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Resolve Chromium binary
+        run: |
+          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -n "$CHROME_PATH" ]; then
+            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${CHROME_PATH}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Playwright ffmpeg
+        run: pnpm exec playwright install ffmpeg
+
       - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        if: env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH == ''
+        run: pnpm exec playwright install chromium
 
       - name: Start Docker Compose stack
         working-directory: ${{ github.workspace }}
