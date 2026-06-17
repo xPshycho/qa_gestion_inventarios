@@ -63,6 +63,8 @@ docker compose ps
 |----------|--------------|-------------|
 | Frontend | http://localhost:5173 | Interfaz Angular de gestion de productos |
 | Backend | http://localhost:8080/actuator/health | Healthcheck HTTP del API |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html | Documentacion interactiva de la API REST |
+| OpenAPI JSON | http://localhost:8080/v3/api-docs | Contrato OpenAPI generado por Springdoc |
 | Keycloak | http://localhost:8081 | Realm `inventory` para OAuth2/JWT |
 | PostgreSQL | localhost:55432 | Base de datos local para desarrollo |
 | Flyway | Servicio interno | Aplica migraciones antes de iniciar el backend |
@@ -74,6 +76,15 @@ y `POSTGRES_PORT`, `PROMETHEUS_PORT` y `GRAFANA_PORT`.
 El puerto local por defecto de PostgreSQL es `55432` para evitar conflictos con instalaciones
 locales que ya usan `5432`. Si se necesita usar otro puerto, definir `POSTGRES_PORT`.
 La interfaz Angular consume la API del backend mediante la ruta `/api`.
+
+Swagger UI y `/v3/api-docs` quedan publicos para facilitar la evaluacion del avance. Los endpoints
+de negocio siguen protegidos por JWT y permisos granulares; para probar operaciones desde Swagger,
+usar el boton **Authorize** con un access token emitido por Keycloak.
+
+```bash
+# Validar que el contrato OpenAPI esta disponible
+curl http://localhost:8080/v3/api-docs
+```
 
 OpenTelemetry queda deshabilitado por defecto en Docker Compose con `OTEL_SDK_DISABLED=true`.
 Las metricas operativas se exponen por Actuator en `/actuator/prometheus` y Prometheus las
