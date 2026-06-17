@@ -53,6 +53,21 @@ class KeycloakSecurityIntegrationTest extends KeycloakIntegrationTest {
     }
 
     @Test
+    void adminServiceClientCanListUsersThroughKeycloakAdminApi() throws Exception {
+        String token = adminServiceAccessToken();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(keycloakUrl() + "/admin/realms/inventory/users?briefRepresentation=true"))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+        org.assertj.core.api.Assertions.assertThat(response.statusCode()).isEqualTo(200);
+        org.assertj.core.api.Assertions.assertThat(objectMapper.readTree(response.body()).isArray()).isTrue();
+    }
+
+    @Test
     void administratorTokenAllowsCreatingProducts() throws Exception {
         String token = accessToken("carlos", "Carlos123!");
 
