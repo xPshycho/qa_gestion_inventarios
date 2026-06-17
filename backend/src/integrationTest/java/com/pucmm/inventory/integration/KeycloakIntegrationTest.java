@@ -9,16 +9,22 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest {
     private static final String REALM = "inventory";
+    private static final String ADMIN_CLIENT_ID = "inventory-admin-service";
+    private static final String ADMIN_CLIENT_SECRET = "cambiar-admin-service";
+    private static final Logger KEYCLOAK_LOGGER = LoggerFactory.getLogger("testcontainers.keycloak");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final GenericContainer<?> KEYCLOAK =
@@ -31,9 +37,10 @@ public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest 
                     )
                     .withCommand("start-dev", "--import-realm")
                     .withExposedPorts(8080)
+                    .withLogConsumer(new Slf4jLogConsumer(KEYCLOAK_LOGGER))
                     .waitingFor(Wait.forHttp("/realms/inventory/.well-known/openid-configuration")
                             .forStatusCode(200)
-                            .withStartupTimeout(Duration.ofMinutes(2)));
+                            .withStartupTimeout(Duration.ofMinutes(4)));
 
     static {
         KEYCLOAK.start();
@@ -49,6 +56,10 @@ public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest 
                 "spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
                 () -> keycloakUrl() + "/realms/" + REALM + "/protocol/openid-connect/certs"
         );
+        registry.add("inventory.keycloak.admin-url", KeycloakIntegrationTest::keycloakUrl);
+        registry.add("inventory.keycloak.admin-realm", () -> REALM);
+        registry.add("inventory.keycloak.admin-client-id", () -> ADMIN_CLIENT_ID);
+        registry.add("inventory.keycloak.admin-client-secret", () -> ADMIN_CLIENT_SECRET);
     }
 
     protected static String keycloakUrl() {
@@ -69,6 +80,27 @@ public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest 
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
             throw new IllegalStateException("Keycloak token request failed with status " + response.statusCode());
+        }
+
+        JsonNode payload = OBJECT_MAPPER.readTree(response.body());
+        return payload.path("access_token").asText();
+    }
+
+    protected static String adminServiceAccessToken() throws Exception {
+        String requestBody = formParameter("grant_type", "client_credentials")
+                + "&" + formParameter("client_id", ADMIN_CLIENT_ID)
+                + "&" + formParameter("client_secret", ADMIN_CLIENT_SECRET);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(keycloakUrl() + "/realms/" + REALM + "/protocol/openid-connect/token"))
+                .header("Content-Type", MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException(
+                    "Keycloak admin-service token request failed with status " + response.statusCode()
+            );
         }
 
         JsonNode payload = OBJECT_MAPPER.readTree(response.body());

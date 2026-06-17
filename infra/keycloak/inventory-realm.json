@@ -546,9 +546,44 @@
           }
         ]
       }
+    },
+    {
+      "id": "client-inventory-admin-service",
+      "clientId": "inventory-admin-service",
+      "name": "Inventory Admin Service",
+      "description": "Cliente confidencial usado por el backend para administrar usuarios y roles funcionales",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "frontchannelLogout": false,
+      "authorizationServicesEnabled": false,
+      "secret": "cambiar-admin-service",
+      "attributes": {
+        "access.token.lifespan": "300"
+      }
     }
   ],
   "users": [
+    {
+      "id": "48248925-71ef-449b-bda3-f057d89304a3",
+      "username": "service-account-inventory-admin-service",
+      "enabled": true,
+      "emailVerified": false,
+      "serviceAccountClientId": "inventory-admin-service",
+      "clientRoles": {
+        "realm-management": [
+          "view-realm",
+          "query-users",
+          "view-users",
+          "manage-users"
+        ]
+      }
+    },
     {
       "id": "user-carlos",
       "username": "carlos",

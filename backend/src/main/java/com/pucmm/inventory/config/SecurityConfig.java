@@ -23,6 +23,7 @@ public class SecurityConfig {
     public static final String STOCK_VIEW = "stock:view";
     public static final String STOCK_MANAGE = "stock:manage";
     public static final String REPORT_VIEW = "report:view";
+    public static final String USER_MANAGE = "user:manage";
     public static final String AUDIT_VIEW = "audit:view";
 
     @Bean
@@ -40,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/products/*").hasAuthority(PRODUCT_MANAGE)
                         .requestMatchers(HttpMethod.DELETE, "/products/*").hasAuthority(PRODUCT_MANAGE)
                         .requestMatchers(HttpMethod.GET, "/reports/**").hasAuthority(REPORT_VIEW)
+                        .requestMatchers("/security/**").hasAuthority(USER_MANAGE)
                         .requestMatchers(HttpMethod.GET, "/audit/**").hasAuthority(AUDIT_VIEW)
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))

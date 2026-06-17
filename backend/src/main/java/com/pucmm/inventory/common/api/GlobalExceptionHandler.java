@@ -2,6 +2,8 @@ package com.pucmm.inventory.common.api;
 
 import com.pucmm.inventory.product.service.DuplicateSkuException;
 import com.pucmm.inventory.product.service.ProductNotFoundException;
+import com.pucmm.inventory.security.client.KeycloakAdminClientException;
+import com.pucmm.inventory.security.service.InvalidSecurityRoleException;
 import com.pucmm.inventory.stock.service.InsufficientStockException;
 import com.pucmm.inventory.stock.service.InventoryUserNotFoundException;
 import com.pucmm.inventory.stock.service.StockMovementValidationException;
@@ -53,6 +55,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({InsufficientStockException.class, StockMovementValidationException.class})
     public ResponseEntity<ErrorResponse> handleStockBusinessRule(RuntimeException exception) {
         return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidSecurityRoleException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSecurityRole(InvalidSecurityRoleException exception) {
+        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(KeycloakAdminClientException.class)
+    public ResponseEntity<ErrorResponse> handleKeycloakAdminClient(KeycloakAdminClientException exception) {
+        return buildResponse(HttpStatus.BAD_GATEWAY, exception.getMessage());
     }
 
     private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {

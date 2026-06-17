@@ -92,6 +92,13 @@ dependencyManagement {
     }
 }
 
+tasks.withType(Test).configureEach {
+    systemProperty 'otel.sdk.disabled', 'true'
+    systemProperty 'otel.traces.exporter', 'none'
+    systemProperty 'otel.metrics.exporter', 'none'
+    systemProperty 'otel.logs.exporter', 'none'
+}
+
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport

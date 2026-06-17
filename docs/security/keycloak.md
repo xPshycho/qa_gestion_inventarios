@@ -47,8 +47,39 @@ Ejemplo de claims soportados:
 | `/products/{id}/stock/adjustments` | `POST` | `stock:manage` |
 | `/products/{id}/stock-movements` | `GET` | `stock:view` |
 | `/reports/**` | `GET` | `report:view` |
+| `/security/users` | `GET` | `user:manage` |
+| `/security/users` | `POST` | `user:manage` |
+| `/security/users/{id}` | `PUT` | `user:manage` |
+| `/security/users/{id}/roles` | `PUT` | `user:manage` |
+| `/security/roles` | `GET` | `user:manage` |
+| `/security/permissions` | `GET` | `user:manage` |
 | `/audit/**` | `GET` | `audit:view` |
 | `/actuator/health` | `GET` | Publico |
+
+## Administracion de usuarios
+
+El modulo de seguridad de la aplicacion permite consultar usuarios, crear usuarios basicos,
+activar/desactivar cuentas y asignar roles funcionales. La fuente de autorizacion efectiva sigue
+siendo Keycloak: el backend usa Keycloak Admin REST con un cliente confidencial de service account y
+sin exponer credenciales administrativas al frontend.
+
+Cliente usado por la API:
+
+| Variable | Valor local por defecto |
+|----------|-------------------------|
+| `KEYCLOAK_ADMIN_URL` | `http://keycloak:8080` en Docker Compose |
+| `KEYCLOAK_ADMIN_REALM` | `inventory` |
+| `KEYCLOAK_ADMIN_CLIENT_ID` | `inventory-admin-service` |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | `cambiar-admin-service` |
+
+El cliente `inventory-admin-service` se importa desde `infra/keycloak/inventory-realm.json` con
+permisos minimos de `realm-management`: `view-realm`, `query-users`, `view-users` y `manage-users`. En ambientes
+reales el secreto debe inyectarse con un secret manager o variable protegida, no editarse en codigo.
+
+La app administra roles funcionales (`INVENTORY_ADMIN`, `STOCK_OPERATOR`, `INVENTORY_VIEWER`,
+`AUDIT_REVIEWER`). Los permisos individuales se muestran como matriz de consulta y se heredan por
+roles compuestos en Keycloak. La gestion de contrasenas, reset temporal y politicas avanzadas quedan
+en la consola de Keycloak.
 
 ## Comportamiento esperado
 
