@@ -73,7 +73,7 @@ Cliente usado por la API:
 | `KEYCLOAK_ADMIN_CLIENT_SECRET` | `cambiar-admin-service` |
 
 El cliente `inventory-admin-service` se importa desde `infra/keycloak/inventory-realm.json` con
-permisos minimos de `realm-management`: `view-realm`, `view-users` y `manage-users`. En ambientes
+permisos minimos de `realm-management`: `view-realm`, `query-users`, `view-users` y `manage-users`. En ambientes
 reales el secreto debe inyectarse con un secret manager o variable protegida, no editarse en codigo.
 
 La app administra roles funcionales (`INVENTORY_ADMIN`, `STOCK_OPERATOR`, `INVENTORY_VIEWER`,

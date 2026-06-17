@@ -9,6 +9,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -17,8 +19,6 @@ import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest {
     private static final String REALM = "inventory";
@@ -37,11 +37,10 @@ public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest 
                     )
                     .withCommand("start-dev", "--import-realm")
                     .withExposedPorts(8080)
-                    .withStartupAttempts(2)
                     .withLogConsumer(new Slf4jLogConsumer(KEYCLOAK_LOGGER))
                     .waitingFor(Wait.forHttp("/realms/inventory/.well-known/openid-configuration")
                             .forStatusCode(200)
-                            .withStartupTimeout(Duration.ofMinutes(5)));
+                            .withStartupTimeout(Duration.ofMinutes(2)));
 
     static {
         KEYCLOAK.start();
