@@ -92,7 +92,7 @@ pipeline {
                 dir('backend') {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
-                        ./gradlew test --tests '*ControllerTest' --no-daemon --stacktrace
+                        ./gradlew apiTest --no-daemon --stacktrace
                     '''
                 }
             }
@@ -197,6 +197,15 @@ pipeline {
                 reportDir: 'backend/build/reports/tests/integrationTest',
                 reportFiles: 'index.html',
                 reportName: 'Integration Test Report'
+            ])
+
+            publishHTML(target: [
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'backend/build/reports/tests/apiTest',
+                reportFiles: 'index.html',
+                reportName: 'API Test Report'
             ])
 
             publishHTML(target: [
