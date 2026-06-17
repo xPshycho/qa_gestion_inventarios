@@ -170,7 +170,7 @@ pipeline {
                         pnpm install --frozen-lockfile
                         pnpm exec playwright install --with-deps chromium || pnpm exec playwright install chromium
                         E2E_MANAGE_STACK=false pnpm run stack:ready
-                        PLAYWRIGHT_JUNIT_OUTPUT_NAME=playwright-results.xml pnpm exec playwright test --reporter=list,junit
+                        PLAYWRIGHT_JUNIT_OUTPUT_NAME=playwright-results.xml pnpm exec playwright test
                     '''
                 }
             }
@@ -228,7 +228,16 @@ pipeline {
 
             junit allowEmptyResults: true, testResults: 'tests/e2e/playwright-results.xml'
 
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,backend/build/reports/**,backend/build/test-results/**,backend/build/jacoco/*.exec,frontend/dist/**,frontend-audit.json'
+            publishHTML(target: [
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'tests/e2e/playwright-report',
+                reportFiles: 'index.html',
+                reportName: 'Playwright E2E Report'
+            ])
+
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,backend/build/reports/**,backend/build/test-results/**,backend/build/jacoco/*.exec,frontend/dist/**,frontend-audit.json,tests/e2e/playwright-results.xml,tests/e2e/playwright-report/**,tests/e2e/test-results/**'
 
             sh '''#!/usr/bin/env bash
                 set +e

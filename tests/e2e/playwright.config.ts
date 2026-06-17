@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const junitOutputFile =
+  process.env.PLAYWRIGHT_JUNIT_OUTPUT_NAME ?? 'test-results/playwright-results.xml';
 
 export default defineConfig({
   testDir: './specs',
@@ -17,6 +19,7 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['junit', { outputFile: junitOutputFile }],
   ],
   use: {
     baseURL,

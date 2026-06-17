@@ -70,9 +70,11 @@ Jenkins publica siempre los resultados disponibles, incluso cuando falla un stag
 - Reportes Gradle
 - Build frontend
 - Resultado JUnit de Playwright
+- Reporte HTML de Playwright
+- Screenshots, videos y traces de Playwright cuando una prueba falla
 - Resultado de `pnpm audit --prod` en `frontend-audit.json`
 
-No se archiva el workspace completo, `.env`, `.gradle`, `node_modules`, dumps, traces, videos ni credenciales.
+No se archiva el workspace completo, `.env`, `.gradle`, `node_modules`, dumps ni credenciales. Los traces, videos y screenshots de Playwright se archivan solo como evidencia de pruebas.
 
 ## Comandos equivalentes locales
 
