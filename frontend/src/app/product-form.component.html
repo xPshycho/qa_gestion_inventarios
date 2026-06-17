@@ -64,6 +64,7 @@
         formControlName="currentStock"
         min="0"
         step="1"
+        [readonly]="currentStockReadonly"
         [attr.aria-invalid]="fieldError('currentStock') ? true : null"
       >
       <small *ngIf="fieldError('currentStock')" class="field-error">

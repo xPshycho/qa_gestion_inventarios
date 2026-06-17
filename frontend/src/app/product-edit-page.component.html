@@ -2,7 +2,7 @@
   <section class="page-heading">
     <p class="eyebrow">Productos</p>
     <h1>Editar producto</h1>
-    <p>Actualiza la informacion general y los niveles de existencia del producto.</p>
+    <p>Actualiza la informacion general del producto.</p>
   </section>
 
   <section class="form-panel" aria-labelledby="product-form-title">
@@ -20,6 +20,7 @@
       *ngIf="productValue && !loading"
       submitLabel="Guardar cambios"
       [initialValue]="productValue"
+      [currentStockReadonly]="true"
       [submitting]="saving"
       (saveProduct)="updateProduct($event)"
     ></app-product-form>

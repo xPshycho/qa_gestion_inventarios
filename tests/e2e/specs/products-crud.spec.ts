@@ -27,7 +27,7 @@ test('permite completar el CRUD de productos', async ({ page }, testInfo) => {
     category: 'Automatizacion',
     status: 'Inactivo',
     price: '1499.99',
-    currentStock: '18',
+    currentStock: '12',
     minimumStock: '5',
     description: 'Producto temporal actualizado por Playwright.',
   };
@@ -73,7 +73,7 @@ test('permite completar el CRUD de productos', async ({ page }, testInfo) => {
     row = await findProductRow(page, sku);
     await expect(row).toContainText(updatedProduct.name);
     await expect(row).toContainText(updatedProduct.category);
-    await expect(row).toContainText('18');
+    await expect(row).toContainText('12');
     await expect(row).toContainText('Inactivo');
 
     await testInfo.attach('producto-actualizado', {

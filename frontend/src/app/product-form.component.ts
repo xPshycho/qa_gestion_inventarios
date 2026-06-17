@@ -40,6 +40,7 @@ export class ProductFormComponent {
 
   @Input() submitting = false;
   @Input() submitLabel = 'Guardar producto';
+  @Input() currentStockReadonly = false;
   @Output() readonly saveProduct = new EventEmitter<ProductRequest>();
 
   readonly form = this.formBuilder.group({

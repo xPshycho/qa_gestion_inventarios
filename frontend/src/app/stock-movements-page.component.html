@@ -1,0 +1,187 @@
+<main class="stock-page">
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">Stock</p>
+      <h1>Movimientos de stock</h1>
+      <p *ngIf="product">{{ product.sku }} - {{ product.name }}</p>
+    </div>
+    <a routerLink="/productos" class="secondary-action">Volver al catalogo</a>
+  </section>
+
+  <div *ngIf="successMessage" class="page-message page-message-success" role="status">
+    {{ successMessage }}
+  </div>
+
+  <div *ngIf="errorMessage" class="page-message page-message-error" role="alert">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="productLoading" class="state">
+    Cargando producto...
+  </div>
+
+  <ng-container *ngIf="!productLoading && product as productData">
+    <section class="summary-grid" aria-label="Resumen de stock">
+      <article class="summary-card">
+        <span>Stock actual</span>
+        <strong>{{ productData.currentStock }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Stock minimo</span>
+        <strong>{{ productData.minimumStock }}</strong>
+      </article>
+      <article class="summary-card" [class.summary-card-warning]="productData.stockAlert">
+        <span>Alerta</span>
+        <strong>{{ productData.stockAlert ? 'Critico' : 'Normal' }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Estado</span>
+        <strong>{{ statusLabel(productData.status) }}</strong>
+      </article>
+    </section>
+
+    <section class="stock-grid">
+      <article class="operation-panel" *ngIf="auth.hasPermission('stock:manage'); else readonlyStock">
+        <div class="panel-heading">
+          <strong>Registrar movimiento</strong>
+          <span>{{ operationLabel() }}</span>
+        </div>
+
+        <div class="operation-tabs" aria-label="Tipo de movimiento">
+          <button
+            type="button"
+            [class.active-tab]="operationType === 'ENTRY'"
+            [attr.aria-pressed]="operationType === 'ENTRY'"
+            (click)="selectOperation('ENTRY')"
+          >
+            Entrada
+          </button>
+          <button
+            type="button"
+            [class.active-tab]="operationType === 'EXIT'"
+            [attr.aria-pressed]="operationType === 'EXIT'"
+            (click)="selectOperation('EXIT')"
+          >
+            Salida
+          </button>
+          <button
+            type="button"
+            [class.active-tab]="operationType === 'ADJUSTMENT'"
+            [attr.aria-pressed]="operationType === 'ADJUSTMENT'"
+            (click)="selectOperation('ADJUSTMENT')"
+          >
+            Ajuste
+          </button>
+        </div>
+
+        <form class="stock-form" [formGroup]="movementForm" (ngSubmit)="submitMovement()" novalidate>
+          <label class="form-field" *ngIf="operationType !== 'ADJUSTMENT'">
+            <span>Cantidad</span>
+            <input
+              type="number"
+              formControlName="quantity"
+              min="1"
+              step="1"
+              [attr.aria-invalid]="fieldError('quantity') ? true : null"
+            >
+            <small *ngIf="fieldError('quantity')" class="field-error">{{ fieldError('quantity') }}</small>
+          </label>
+
+          <label class="form-field" *ngIf="operationType === 'ADJUSTMENT'">
+            <span>Stock nuevo</span>
+            <input
+              type="number"
+              formControlName="newQuantity"
+              min="0"
+              step="1"
+              [attr.aria-invalid]="fieldError('newQuantity') ? true : null"
+            >
+            <small *ngIf="fieldError('newQuantity')" class="field-error">
+              {{ fieldError('newQuantity') }}
+            </small>
+          </label>
+
+          <label class="form-field">
+            <span>Observaciones</span>
+            <textarea
+              formControlName="observations"
+              maxlength="500"
+              rows="4"
+              [attr.aria-invalid]="fieldError('observations') ? true : null"
+            ></textarea>
+            <small *ngIf="fieldError('observations')" class="field-error">
+              {{ fieldError('observations') }}
+            </small>
+          </label>
+
+          <button type="submit" class="primary-action" [disabled]="submitting">
+            {{ submitting ? 'Registrando...' : 'Registrar ' + operationLabel().toLowerCase() }}
+          </button>
+        </form>
+      </article>
+
+      <ng-template #readonlyStock>
+        <article class="operation-panel readonly-panel">
+          <div class="panel-heading">
+            <strong>Consulta de stock</strong>
+            <span>Historial disponible</span>
+          </div>
+          <p>No tienes permiso para registrar movimientos.</p>
+        </article>
+      </ng-template>
+
+      <article class="history-panel">
+        <div class="panel-heading">
+          <div>
+            <strong>Historial</strong>
+            <span>{{ movements.length }} movimientos</span>
+          </div>
+          <button type="button" class="refresh-button" (click)="refreshHistory()" [disabled]="movementsLoading">
+            Actualizar
+          </button>
+        </div>
+
+        <div *ngIf="movementsLoading" class="state">
+          Cargando historial...
+        </div>
+
+        <div class="table-scroll" *ngIf="!movementsLoading">
+          <table *ngIf="movements.length > 0; else emptyHistory">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Anterior</th>
+                <th>Nuevo</th>
+                <th>Delta</th>
+                <th>Usuario</th>
+                <th>Fecha</th>
+                <th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let movement of movements; trackBy: trackByMovementId">
+                <td>
+                  <span class="movement-type">{{ movementTypeLabel(movement.movementType) }}</span>
+                </td>
+                <td>{{ movement.previousQuantity }}</td>
+                <td>{{ movement.newQuantity }}</td>
+                <td>
+                  <strong class="delta" [ngClass]="movementDeltaClass(movement.deltaQuantity)">
+                    {{ movementDeltaLabel(movement.deltaQuantity) }}
+                  </strong>
+                </td>
+                <td>{{ movementActor(movement) }}</td>
+                <td>{{ movement.createdAt | date:'short' }}</td>
+                <td>{{ movement.observations || 'Sin observaciones' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyHistory>
+          <p class="empty">No hay movimientos registrados para este producto.</p>
+        </ng-template>
+      </article>
+    </section>
+  </ng-container>
+</main>
