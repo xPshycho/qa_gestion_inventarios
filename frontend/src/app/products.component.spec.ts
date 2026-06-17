@@ -93,13 +93,26 @@ describe('ProductsComponent', () => {
   });
 
   it('muestra la accion de editar solo con product manage', () => {
-    authService.hasPermission.and.returnValue(true);
+    authService.hasPermission.and.callFake((permission) => permission === 'product:manage');
     fixture.detectChanges();
 
-    const editLink = fixture.debugElement.query(By.css('a.row-action'));
+    const editLink = fixture.debugElement
+      .queryAll(By.css('a.row-action'))
+      .find((link) => (link.nativeElement as HTMLElement).textContent?.includes('Editar'));
 
-    expect(editLink).not.toBeNull();
-    expect(editLink.attributes['ng-reflect-router-link']).toContain('1');
+    expect(editLink).toBeDefined();
+    expect(editLink?.attributes['ng-reflect-router-link']).toContain('1');
+  });
+
+  it('muestra la accion de auditoria solo con audit view', () => {
+    authService.hasPermission.and.callFake((permission) => permission === 'audit:view');
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('Auditoria');
+    expect(compiled.textContent).not.toContain('Editar');
+    expect(compiled.textContent).not.toContain('Eliminar');
   });
 
   it('permite cancelar la eliminacion sin llamar a la api', () => {
