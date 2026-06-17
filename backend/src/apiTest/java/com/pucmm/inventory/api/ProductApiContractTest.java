@@ -19,6 +19,7 @@ import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.service.DuplicateSkuException;
 import com.pucmm.inventory.product.service.ProductNotFoundException;
 import com.pucmm.inventory.product.service.ProductService;
+import com.pucmm.inventory.stock.service.AuthenticatedInventoryUserResolver;
 import com.pucmm.inventory.stock.service.StockService;
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -51,6 +52,9 @@ class ProductApiContractTest {
 
     @MockitoBean
     private StockService stockService;
+
+    @MockitoBean
+    private AuthenticatedInventoryUserResolver authenticatedInventoryUserResolver;
 
     @BeforeEach
     void configureRestAssured() {

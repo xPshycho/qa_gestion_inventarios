@@ -41,15 +41,23 @@ class ProductServiceIntegrationTest extends PostgreSqlIntegrationTest {
                 "INT-CRUD-001",
                 "Monitor Dell P2425H USB-C",
                 new BigDecimal("16900.00"),
-                6,
+                8,
                 ProductStatus.INACTIVE
         ));
         ProductResponse loaded = productService.getProduct(created.id());
 
         assertThat(updated.name()).isEqualTo("Monitor Dell P2425H USB-C");
         assertThat(loaded.price()).isEqualByComparingTo("16900.00");
-        assertThat(loaded.currentStock()).isEqualTo(6);
+        assertThat(loaded.currentStock()).isEqualTo(8);
         assertThat(loaded.status()).isEqualTo(ProductStatus.INACTIVE);
+
+        assertThatThrownBy(() -> productService.updateProduct(created.id(), request(
+                "INT-CRUD-001",
+                "Monitor Dell P2425H USB-C",
+                new BigDecimal("16900.00"),
+                6,
+                ProductStatus.INACTIVE
+        ))).isInstanceOf(DirectStockUpdateException.class);
 
         productService.deleteProduct(created.id());
 

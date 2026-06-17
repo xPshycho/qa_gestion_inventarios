@@ -14,6 +14,7 @@ import com.pucmm.inventory.stock.repository.StockMovementRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @Transactional(readOnly = true)
@@ -33,10 +34,10 @@ public class StockService {
     }
 
     @Transactional
-    public StockMovementResponse registerEntry(Long productId, StockMovementRequest request) {
+    public StockMovementResponse registerEntry(Long productId, StockMovementRequest request, String actorUsername) {
         validatePositiveQuantity(request.quantity(), "quantity");
         Product product = findProductForUpdate(productId);
-        InventoryUser user = findUser(request.userId());
+        InventoryUser user = findAuthenticatedUser(actorUsername);
         int previousQuantity = product.getCurrentStock();
 
         product.increaseStock(request.quantity());
@@ -53,10 +54,10 @@ public class StockService {
     }
 
     @Transactional
-    public StockMovementResponse registerExit(Long productId, StockMovementRequest request) {
+    public StockMovementResponse registerExit(Long productId, StockMovementRequest request, String actorUsername) {
         validatePositiveQuantity(request.quantity(), "quantity");
         Product product = findProductForUpdate(productId);
-        InventoryUser user = findUser(request.userId());
+        InventoryUser user = findAuthenticatedUser(actorUsername);
         int previousQuantity = product.getCurrentStock();
 
         if (request.quantity() > previousQuantity) {
@@ -77,13 +78,13 @@ public class StockService {
     }
 
     @Transactional
-    public StockMovementResponse adjustStock(Long productId, StockAdjustmentRequest request) {
+    public StockMovementResponse adjustStock(Long productId, StockAdjustmentRequest request, String actorUsername) {
         if (request.newQuantity() == null || request.newQuantity() < 0) {
             throw new StockMovementValidationException("newQuantity must be greater than or equal to 0");
         }
 
         Product product = findProductForUpdate(productId);
-        InventoryUser user = findUser(request.userId());
+        InventoryUser user = findAuthenticatedUser(actorUsername);
         int previousQuantity = product.getCurrentStock();
 
         product.adjustStock(request.newQuantity());
@@ -136,13 +137,14 @@ public class StockService {
                 .orElseThrow(() -> new ProductNotFoundException(productId));
     }
 
-    private InventoryUser findUser(Long userId) {
-        if (userId == null) {
-            return null;
+    private InventoryUser findAuthenticatedUser(String username) {
+        if (!StringUtils.hasText(username)) {
+            throw new AuthenticatedInventoryUserException();
         }
 
-        return inventoryUserRepository.findById(userId)
-                .orElseThrow(() -> new InventoryUserNotFoundException(userId));
+        String normalizedUsername = username.trim();
+        return inventoryUserRepository.findByUsernameIgnoreCase(normalizedUsername)
+                .orElseThrow(() -> new AuthenticatedInventoryUserException(normalizedUsername));
     }
 
     private void validatePositiveQuantity(Integer quantity, String fieldName) {

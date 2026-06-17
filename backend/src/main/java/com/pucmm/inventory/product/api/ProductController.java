@@ -8,6 +8,7 @@ import com.pucmm.inventory.product.service.ProductService;
 import com.pucmm.inventory.stock.api.dto.StockAdjustmentRequest;
 import com.pucmm.inventory.stock.api.dto.StockMovementRequest;
 import com.pucmm.inventory.stock.api.dto.StockMovementResponse;
+import com.pucmm.inventory.stock.service.AuthenticatedInventoryUserResolver;
 import com.pucmm.inventory.stock.service.StockService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,7 @@ import jakarta.validation.constraints.Pattern;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,10 +38,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
     private final ProductService productService;
     private final StockService stockService;
+    private final AuthenticatedInventoryUserResolver authenticatedInventoryUserResolver;
 
-    public ProductController(ProductService productService, StockService stockService) {
+    public ProductController(
+            ProductService productService,
+            StockService stockService,
+            AuthenticatedInventoryUserResolver authenticatedInventoryUserResolver
+    ) {
         this.productService = productService;
         this.stockService = stockService;
+        this.authenticatedInventoryUserResolver = authenticatedInventoryUserResolver;
     }
 
     @GetMapping
@@ -93,27 +101,30 @@ public class ProductController {
     @Operation(summary = "Registrar entrada de stock")
     public StockMovementResponse registerStockEntry(
             @PathVariable Long id,
-            @Valid @RequestBody StockMovementRequest request
+            @Valid @RequestBody StockMovementRequest request,
+            Authentication authentication
     ) {
-        return stockService.registerEntry(id, request);
+        return stockService.registerEntry(id, request, authenticatedInventoryUserResolver.resolveUsername(authentication));
     }
 
     @PostMapping("/{id}/stock/exits")
     @Operation(summary = "Registrar salida de stock")
     public StockMovementResponse registerStockExit(
             @PathVariable Long id,
-            @Valid @RequestBody StockMovementRequest request
+            @Valid @RequestBody StockMovementRequest request,
+            Authentication authentication
     ) {
-        return stockService.registerExit(id, request);
+        return stockService.registerExit(id, request, authenticatedInventoryUserResolver.resolveUsername(authentication));
     }
 
     @PostMapping("/{id}/stock/adjustments")
     @Operation(summary = "Registrar ajuste de inventario")
     public StockMovementResponse adjustStock(
             @PathVariable Long id,
-            @Valid @RequestBody StockAdjustmentRequest request
+            @Valid @RequestBody StockAdjustmentRequest request,
+            Authentication authentication
     ) {
-        return stockService.adjustStock(id, request);
+        return stockService.adjustStock(id, request, authenticatedInventoryUserResolver.resolveUsername(authentication));
     }
 
     @GetMapping("/{id}/stock-movements")

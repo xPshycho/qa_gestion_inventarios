@@ -89,6 +89,17 @@ en la consola de Keycloak.
 | JWT valido sin el permiso requerido | `403 Forbidden` |
 | JWT valido con el permiso requerido | Acceso permitido |
 
+## Trazabilidad de stock
+
+Los endpoints de movimientos de stock derivan el usuario operativo desde el JWT autenticado. El
+backend usa el claim `preferred_username` cuando esta disponible y valida que exista un registro
+equivalente en `inventory_users.username`. El cliente no debe enviar `userId` para entradas,
+salidas ni ajustes de stock.
+
+El campo `currentStock` no se modifica mediante `PUT /products/{id}`. Los cambios de inventario
+deben pasar por `/products/{id}/stock/entries`, `/products/{id}/stock/exits` o
+`/products/{id}/stock/adjustments` para conservar historial y auditoria.
+
 ## Evidencia automatizada
 
 Las pruebas de seguridad viven en:

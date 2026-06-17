@@ -69,11 +69,11 @@ class AuditServiceIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "stock-user")
+    @WithMockUser(username = "edwin")
     void stockMovementRevisionsAreStoredForProductMovements() {
         Product product = saveProduct("AUD-STOCK-001", 10);
 
-        stockService.registerEntry(product.getId(), new StockMovementRequest(5, null, "Recepcion auditada"));
+        stockService.registerEntry(product.getId(), new StockMovementRequest(5, "Recepcion auditada"), "edwin");
 
         List<AuditRevisionResponse> revisions = auditService.findProductStockMovementRevisions(product.getId());
 
@@ -81,7 +81,7 @@ class AuditServiceIntegrationTest extends PostgreSqlIntegrationTest {
         AuditRevisionResponse revision = revisions.getFirst();
         assertThat(revision.entityName()).isEqualTo("StockMovement");
         assertThat(revision.revisionType()).isEqualTo("ADD");
-        assertThat(revision.username()).isEqualTo("stock-user");
+        assertThat(revision.username()).isEqualTo("edwin");
         assertThat(revision.currentValues())
                 .containsEntry("productId", product.getId())
                 .containsEntry("movementType", StockMovementType.ENTRY)

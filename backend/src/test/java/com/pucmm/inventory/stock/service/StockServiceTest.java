@@ -14,6 +14,7 @@ import com.pucmm.inventory.product.service.ProductNotFoundException;
 import com.pucmm.inventory.stock.api.dto.StockAdjustmentRequest;
 import com.pucmm.inventory.stock.api.dto.StockMovementRequest;
 import com.pucmm.inventory.stock.api.dto.StockMovementResponse;
+import com.pucmm.inventory.stock.domain.InventoryUser;
 import com.pucmm.inventory.stock.domain.StockMovement;
 import com.pucmm.inventory.stock.domain.StockMovementType;
 import com.pucmm.inventory.stock.repository.InventoryUserRepository;
@@ -60,13 +61,16 @@ class StockServiceTest {
     void registerEntryIncreasesStockAndCreatesMovement() {
         Product product = productWithStock(12, 4);
         when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
+        allowAuthenticatedUser("edwin");
 
         StockMovementResponse response = stockService.registerEntry(
                 1L,
-                new StockMovementRequest(3, null, "Recepcion")
+                new StockMovementRequest(3, "Recepcion"),
+                "edwin"
         );
 
         assertThat(product.getCurrentStock()).isEqualTo(15);
+        assertThat(response.username()).isEqualTo("edwin");
         assertThat(response.movementType()).isEqualTo(StockMovementType.ENTRY);
         assertThat(response.previousQuantity()).isEqualTo(12);
         assertThat(response.newQuantity()).isEqualTo(15);
@@ -78,10 +82,12 @@ class StockServiceTest {
     void registerExitDecreasesStockAndCreatesMovement() {
         Product product = productWithStock(12, 4);
         when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
+        allowAuthenticatedUser("edwin");
 
         StockMovementResponse response = stockService.registerExit(
                 1L,
-                new StockMovementRequest(8, null, "Entrega")
+                new StockMovementRequest(8, "Entrega"),
+                "edwin"
         );
 
         assertThat(product.getCurrentStock()).isEqualTo(4);
@@ -95,10 +101,11 @@ class StockServiceTest {
     @Test
     void registerExitRejectsNegativeStock() {
         Product product = productWithStock(2, 4);
-        StockMovementRequest request = new StockMovementRequest(3, null, "Entrega");
+        StockMovementRequest request = new StockMovementRequest(3, "Entrega");
         when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
+        allowAuthenticatedUser("edwin");
 
-        assertThatThrownBy(() -> stockService.registerExit(1L, request))
+        assertThatThrownBy(() -> stockService.registerExit(1L, request, "edwin"))
                 .isInstanceOf(InsufficientStockException.class)
                 .hasMessageContaining("Stock insuficiente");
     }
@@ -107,10 +114,12 @@ class StockServiceTest {
     void adjustStockSetsAbsoluteQuantityAndRecordsDelta() {
         Product product = productWithStock(12, 4);
         when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
+        allowAuthenticatedUser("edwin");
 
         StockMovementResponse response = stockService.adjustStock(
                 1L,
-                new StockAdjustmentRequest(5, null, "Conteo fisico")
+                new StockAdjustmentRequest(5, "Conteo fisico"),
+                "edwin"
         );
 
         assertThat(product.getCurrentStock()).isEqualTo(5);
@@ -122,24 +131,24 @@ class StockServiceTest {
 
     @Test
     void registerEntryRejectsUnknownProduct() {
-        StockMovementRequest request = new StockMovementRequest(1, null, null);
+        StockMovementRequest request = new StockMovementRequest(1, null);
         when(productRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> stockService.registerEntry(99L, request))
+        assertThatThrownBy(() -> stockService.registerEntry(99L, request, "edwin"))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessageContaining("99");
     }
 
     @Test
-    void registerEntryRejectsUnknownUser() {
+    void registerEntryRejectsUnregisteredAuthenticatedUser() {
         Product product = productWithStock(12, 4);
-        StockMovementRequest request = new StockMovementRequest(1, 99L, null);
+        StockMovementRequest request = new StockMovementRequest(1, null);
         when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
-        when(inventoryUserRepository.findById(99L)).thenReturn(Optional.empty());
+        when(inventoryUserRepository.findByUsernameIgnoreCase("externo")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> stockService.registerEntry(1L, request))
-                .isInstanceOf(InventoryUserNotFoundException.class)
-                .hasMessageContaining("99");
+        assertThatThrownBy(() -> stockService.registerEntry(1L, request, "externo"))
+                .isInstanceOf(AuthenticatedInventoryUserException.class)
+                .hasMessageContaining("externo");
     }
 
     @Test
@@ -190,5 +199,18 @@ class StockServiceTest {
         ReflectionTestUtils.setField(product, "createdAt", TIMESTAMP);
         ReflectionTestUtils.setField(product, "updatedAt", TIMESTAMP);
         return product;
+    }
+
+    private InventoryUser user(String username) {
+        InventoryUser user = org.mockito.Mockito.mock(InventoryUser.class);
+        lenient().when(user.getId()).thenReturn(2L);
+        lenient().when(user.getUsername()).thenReturn(username);
+        lenient().when(user.getDisplayName()).thenReturn("Usuario " + username);
+        return user;
+    }
+
+    private void allowAuthenticatedUser(String username) {
+        InventoryUser user = user(username);
+        when(inventoryUserRepository.findByUsernameIgnoreCase(username)).thenReturn(Optional.of(user));
     }
 }

@@ -65,6 +65,9 @@ public class ProductService {
         if (productRepository.existsBySkuIgnoreCaseAndIdNot(request.sku(), id)) {
             throw new DuplicateSkuException(request.sku());
         }
+        if (!product.getCurrentStock().equals(request.currentStock())) {
+            throw new DirectStockUpdateException();
+        }
 
         product.update(toProductData(request));
 
