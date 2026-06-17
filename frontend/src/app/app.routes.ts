@@ -54,6 +54,12 @@ export const routes: Routes = [
     data: { permission: 'audit:view' }
   },
   {
+    path: 'productos/:id/stock',
+    component: StockMovementsPageComponent,
+    canActivate: [permissionGuard],
+    data: { permission: 'stock:view' }
+  },
+  {
     path: 'productos',
     component: ProductsComponent,
     canActivate: [permissionGuard],

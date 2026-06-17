@@ -128,7 +128,7 @@
                 Estado <span>{{ sortLabel('status') }}</span>
               </button>
             </th>
-            <th *ngIf="auth.hasPermission('product:manage') || auth.hasPermission('audit:view')">Acciones</th>
+            <th *ngIf="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') || auth.hasPermission('stock:view')">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -147,7 +147,7 @@
                 {{ statusLabel(product.status) }}
               </span>
             </td>
-            <td *ngIf="auth.hasPermission('product:manage') || auth.hasPermission('audit:view')">
+            <td *ngIf="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') || auth.hasPermission('stock:view')">
               <div class="row-actions">
                 <a
                   *ngIf="auth.hasPermission('product:manage')"
@@ -163,6 +163,13 @@
                 >
                   Auditoria
                 </a>
+                <a
+                  *ngIf="auth.hasPermission('stock:view')"
+                  [routerLink]="['/productos', product.id, 'stock']"
+                  class="row-action"
+                >
+                  Movimientos
+                </a>
                 <button
                   *ngIf="auth.hasPermission('product:manage')"
                   type="button"
@@ -177,7 +184,7 @@
           </tr>
           <tr *ngIf="products.length === 0 && !errorMessage">
             <td
-              [attr.colspan]="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') ? 8 : 7"
+              [attr.colspan]="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') || auth.hasPermission('stock:view') ? 8 : 7"
               class="empty"
             >
               No hay productos para los criterios seleccionados.
