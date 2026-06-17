@@ -20,7 +20,10 @@ export async function fillProductForm(
   await page.getByLabel('Categoria').fill(product.category);
   await page.getByLabel('Estado').selectOption({ label: product.status });
   await page.getByLabel('Precio').fill(product.price);
-  await page.getByLabel('Stock actual').fill(product.currentStock);
+  const currentStock = page.getByLabel('Stock actual');
+  if (await currentStock.isEditable()) {
+    await currentStock.fill(product.currentStock);
+  }
   await page.getByLabel('Stock minimo').fill(product.minimumStock);
   await page.getByLabel('Descripcion').fill(product.description);
 }
