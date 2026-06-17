@@ -12,6 +12,7 @@ import com.pucmm.inventory.product.api.ProductController;
 import com.pucmm.inventory.product.api.dto.ProductResponse;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.service.ProductService;
+import com.pucmm.inventory.stock.service.AuthenticatedInventoryUserResolver;
 import com.pucmm.inventory.stock.service.StockService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import java.math.BigDecimal;
@@ -39,6 +40,9 @@ class SecurityApiContractTest {
 
     @MockitoBean
     private StockService stockService;
+
+    @MockitoBean
+    private AuthenticatedInventoryUserResolver authenticatedInventoryUserResolver;
 
     @BeforeEach
     void configureRestAssured() {

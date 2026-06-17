@@ -167,6 +167,19 @@ class ProductServiceTest {
 
         assertThat(response.sku()).isEqualTo("LEN-T14-G4");
         assertThat(response.name()).isEqualTo("Dell Latitude 5440");
+        assertThat(response.currentStock()).isEqualTo(12);
+    }
+
+    @Test
+    void updateProductRejectsDirectStockChange() {
+        Product existing = productWithId(1L, "DELL-LAT-5440");
+        ProductRequest request = request("LEN-T14-G4", 9);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productRepository.existsBySkuIgnoreCaseAndIdNot("LEN-T14-G4", 1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> productService.updateProduct(1L, request))
+                .isInstanceOf(DirectStockUpdateException.class)
+                .hasMessageContaining("currentStock");
     }
 
     @Test
@@ -192,13 +205,17 @@ class ProductServiceTest {
     }
 
     private ProductRequest request(String sku) {
+        return request(sku, 12);
+    }
+
+    private ProductRequest request(String sku, int currentStock) {
         return new ProductRequest(
                 sku,
                 "Dell Latitude 5440",
                 "Laptop empresarial Dell Latitude 5440 con pantalla de 14 pulgadas",
                 "Laptops",
                 new BigDecimal("68500.00"),
-                12,
+                currentStock,
                 4,
                 ProductStatus.ACTIVE
         );
