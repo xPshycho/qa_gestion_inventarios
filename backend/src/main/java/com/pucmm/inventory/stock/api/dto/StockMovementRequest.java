@@ -12,10 +12,6 @@ public record StockMovementRequest(
         @Positive
         Integer quantity,
 
-        @Schema(example = "2")
-        @Positive
-        Long userId,
-
         @Schema(example = "Recepcion de mercancia")
         @Size(max = 500)
         String observations

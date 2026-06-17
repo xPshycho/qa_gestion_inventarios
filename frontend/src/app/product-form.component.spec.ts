@@ -57,4 +57,15 @@ describe('ProductFormComponent', () => {
 
     expect(component.saveProduct.emit).toHaveBeenCalledWith(request);
   });
+
+  it('marca el stock actual como solo lectura cuando se edita un producto', () => {
+    component.currentStockReadonly = true;
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector(
+      'input[formControlName="currentStock"]'
+    );
+
+    expect(input.readOnly).toBeTrue();
+  });
 });

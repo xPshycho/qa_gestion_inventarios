@@ -19,6 +19,7 @@ import com.pucmm.inventory.product.api.dto.ProductRequest;
 import com.pucmm.inventory.product.api.dto.ProductResponse;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.service.ProductService;
+import com.pucmm.inventory.stock.service.AuthenticatedInventoryUserResolver;
 import com.pucmm.inventory.stock.service.StockService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -55,6 +56,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private StockService stockService;
+
+    @MockitoBean
+    private AuthenticatedInventoryUserResolver authenticatedInventoryUserResolver;
 
     @Test
     void requestWithoutJwtReturnsUnauthorized() throws Exception {
