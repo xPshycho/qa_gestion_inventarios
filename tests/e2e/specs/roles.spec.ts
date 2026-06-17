@@ -15,7 +15,8 @@ test('restringe acciones administrativas al usuario de consulta', async ({
   ).toHaveCount(0);
   await expect(
     page.getByRole('columnheader', { name: 'Acciones' }),
-  ).toHaveCount(0);
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Movimientos' }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Editar' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Eliminar' })).toHaveCount(0);
 
@@ -23,6 +24,13 @@ test('restringe acciones administrativas al usuario de consulta', async ({
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
   });
+
+  await page.getByRole('link', { name: 'Movimientos' }).first().click();
+  await expect(
+    page.getByRole('heading', { name: 'Movimientos de stock' }),
+  ).toBeVisible();
+  await expect(page.getByText('Consulta de stock')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Registrar entrada' })).toHaveCount(0);
 
   await page.goto('/productos/nuevo');
   await expect(page).toHaveURL(/\/forbidden$/);

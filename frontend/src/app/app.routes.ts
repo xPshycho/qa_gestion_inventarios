@@ -9,6 +9,7 @@ import { ProductCreatePageComponent } from './product-create-page.component';
 import { ProductEditPageComponent } from './product-edit-page.component';
 import { ProductsComponent } from './products.component';
 import { SecurityAdminComponent } from './security-admin.component';
+import { StockMovementsPageComponent } from './stock-movements-page.component';
 
 @Component({
   standalone: true,
