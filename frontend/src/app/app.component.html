@@ -17,6 +17,13 @@
       >
         Productos
       </a>
+      <a
+        *ngIf="auth.hasPermission('user:manage')"
+        routerLink="/seguridad"
+        routerLinkActive="active-link"
+      >
+        Seguridad
+      </a>
     </nav>
 
     <div class="user-session">
