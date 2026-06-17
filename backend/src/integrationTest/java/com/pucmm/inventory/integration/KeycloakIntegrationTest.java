@@ -40,7 +40,7 @@ public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest 
                     .withLogConsumer(new Slf4jLogConsumer(KEYCLOAK_LOGGER))
                     .waitingFor(Wait.forHttp("/realms/inventory/.well-known/openid-configuration")
                             .forStatusCode(200)
-                            .withStartupTimeout(Duration.ofMinutes(2)));
+                            .withStartupTimeout(Duration.ofMinutes(4)));
 
     static {
         KEYCLOAK.start();

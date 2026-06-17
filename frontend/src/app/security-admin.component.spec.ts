@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
 import { SecurityAdminService } from './security-admin.service';
@@ -68,15 +68,17 @@ describe('SecurityAdminComponent', () => {
     expect(compiled.textContent).toContain('user:manage');
   });
 
-  it('carga un usuario seleccionado en el formulario', () => {
+  it('carga un usuario seleccionado en el formulario', fakeAsync(() => {
     component.selectUser(users[0]);
+    fixture.detectChanges();
+    tick();
     fixture.detectChanges();
 
     const usernameInput = fixture.debugElement.query(By.css('input[name="username"]')).nativeElement as HTMLInputElement;
 
     expect(usernameInput.value).toBe('carlos');
     expect(component.roleSelection['INVENTORY_ADMIN']).toBeTrue();
-  });
+  }));
 
   it('crea usuarios nuevos con roles seleccionados', () => {
     component.startCreate();
