@@ -19,6 +19,8 @@ import com.pucmm.inventory.security.api.dto.SecurityRoleResponse;
 import com.pucmm.inventory.security.api.dto.SecurityUserRequest;
 import com.pucmm.inventory.security.api.dto.SecurityUserResponse;
 import com.pucmm.inventory.security.api.dto.SecurityUserRolesRequest;
+import com.pucmm.inventory.security.client.KeycloakAdminClientException;
+import com.pucmm.inventory.security.service.InvalidSecurityRoleException;
 import com.pucmm.inventory.security.service.SecurityAdminService;
 import java.util.List;
 import java.util.Set;
@@ -159,6 +161,31 @@ class SecurityAdminControllerTest {
                 true,
                 List.of("INVENTORY_ADMIN")
         );
+    }
+
+    @Test
+    void invalidRoleExceptionReturnsBadRequest() throws Exception {
+        SecurityUserRolesRequest rolesRequest = new SecurityUserRolesRequest(Set.of("BAD_ROLE"));
+        when(securityAdminService.replaceUserRoles("user-1", rolesRequest))
+                .thenThrow(new InvalidSecurityRoleException("BAD_ROLE"));
+
+        mockMvc.perform(put("/security/users/user-1/roles")
+                        .with(jwtWith(USER_MANAGE))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rolesRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void keycloakClientExceptionReturnsBadGateway() throws Exception {
+        when(securityAdminService.listUsers())
+                .thenThrow(new KeycloakAdminClientException("Keycloak no disponible"));
+
+        mockMvc.perform(get("/security/users")
+                        .with(jwtWith(USER_MANAGE)))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.message").exists());
     }
 
     private static RequestPostProcessor jwtWith(String permission) {

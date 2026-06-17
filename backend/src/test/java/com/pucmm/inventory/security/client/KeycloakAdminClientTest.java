@@ -200,6 +200,102 @@ class KeycloakAdminClientTest {
         server.verify();
     }
 
+    @Test
+    void listUsersReturnsEmptyListWhenBodyIsNull() {
+        expectToken();
+        mockServer.expect(requestTo(BASE_URL + "/admin/realms/inventory/users?max=1000"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("null", MediaType.APPLICATION_JSON));
+
+        List<KeycloakUser> users = client.listUsers();
+
+        assertThat(users).isEmpty();
+        mockServer.verify();
+    }
+
+    @Test
+    void listUserRealmRolesReturnsEmptyListWhenBodyIsNull() {
+        expectToken();
+        mockServer.expect(requestTo(BASE_URL + "/admin/realms/inventory/users/u1/role-mappings/realm"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("null", MediaType.APPLICATION_JSON));
+
+        List<KeycloakRole> roles = client.listUserRealmRoles("u1");
+
+        assertThat(roles).isEmpty();
+        mockServer.verify();
+    }
+
+    @Test
+    void createUserFallsBackToUsernameSearchWhenNoLocationHeader() {
+        SecurityUserRequest request = new SecurityUserRequest(
+                "carlos", "Carlos", "Hernandez", null, null, Set.of()
+        );
+        String usersByUsernameUrl = BASE_URL + "/admin/realms/inventory/users?username=carlos&exact=true&max=1";
+
+        expectToken();
+        mockServer.expect(requestTo(BASE_URL + "/admin/realms/inventory/users"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.CREATED));
+        expectToken();
+        mockServer.expect(requestTo(usersByUsernameUrl))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[" + USER_JSON + "]", MediaType.APPLICATION_JSON));
+
+        KeycloakUser user = client.createUser(request);
+
+        assertThat(user.username()).isEqualTo("carlos");
+        mockServer.verify();
+    }
+
+    @Test
+    void createUserWithBlankEmailOmitsEmailFromPayload() {
+        SecurityUserRequest request = new SecurityUserRequest(
+                "carlos", "Carlos", "Hernandez", "  ", true, Set.of()
+        );
+        expectToken();
+        mockServer.expect(requestTo(BASE_URL + "/admin/realms/inventory/users"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.CREATED)
+                        .header("Location", BASE_URL + "/admin/realms/inventory/users/u1"));
+        expectToken();
+        mockServer.expect(requestTo(BASE_URL + "/admin/realms/inventory/users/u1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(USER_JSON, MediaType.APPLICATION_JSON));
+
+        KeycloakUser user = client.createUser(request);
+
+        assertThat(user.id()).isEqualTo("u1");
+        mockServer.verify();
+    }
+
+    @Test
+    void replaceUserRealmRolesSkipsPostWhenTargetRolesEmpty() {
+        KeycloakRole existing = new KeycloakRole("r0", "OLD_ROLE", "old", false, false, "inventory");
+
+        expectToken();
+        mockServer.expect(requestTo(BASE_URL + "/admin/realms/inventory/users/u1/role-mappings/realm"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withSuccess());
+
+        client.replaceUserRealmRoles("u1", List.of(existing), List.of());
+
+        mockServer.verify();
+    }
+
+    @Test
+    void fetchAccessTokenThrowsWhenTokenIsBlank() {
+        mockServer.expect(requestTo(TOKEN_URL))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("{\"access_token\":\"\"}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.listUsers())
+                .isInstanceOf(KeycloakAdminClientException.class)
+                .hasMessageContaining("access token");
+
+        mockServer.verify();
+    }
+
     private void expectToken() {
         mockServer.expect(requestTo(TOKEN_URL))
                 .andExpect(method(HttpMethod.POST))
