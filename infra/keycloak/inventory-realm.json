@@ -613,7 +613,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Carlos123!",
+          "value": "admin123",
           "temporary": false
         }
       ]
@@ -632,7 +632,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Edwin123!",
+          "value": "admin123",
           "temporary": false
         }
       ]
@@ -651,7 +651,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Viewer123!",
+          "value": "admin123",
           "temporary": false
         }
       ]
@@ -670,7 +670,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Auditor123!",
+          "value": "admin123",
           "temporary": false
         }
       ]
