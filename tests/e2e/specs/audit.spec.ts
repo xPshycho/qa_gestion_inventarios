@@ -70,12 +70,11 @@ test('permite consultar auditoria de productos y movimientos de stock', async ({
     await page.goto('/productos');
     const seedRow = await findProductRow(page, 'DELL-LAT-5440');
     await seedRow.getByRole('link', { name: 'Auditoría' }).click();
-    const stockAuditPanel = page.locator('article').filter({
-      hasText: 'Revisiones de movimientos de stock',
-    });
-    await expect(stockAuditPanel).toBeVisible();
     await expect(
-      stockAuditPanel.getByText(/No hay revisiones de movimientos de stock|Tipo de movimiento/).first(),
+      page.getByText('Revisiones de movimientos de stock', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('No hay revisiones de movimientos de stock para este producto.'),
     ).toBeVisible();
 
     await testInfo.attach('auditoria-stock', {
