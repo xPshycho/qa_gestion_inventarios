@@ -1,0 +1,33 @@
+jenkins:
+  systemMessage: "Jenkins local para QA Gestion de Inventarios. Configurado automaticamente con JCasC."
+  numExecutors: 2
+  mode: NORMAL
+  labelString: "linux docker"
+  scmCheckoutRetryCount: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID}"
+          name: "Administrador local"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  crumbIssuer:
+    standard: {}
+  remotingSecurity:
+    enabled: true
+
+unclassified:
+  location:
+    url: "${JENKINS_URL}"
+
+tool:
+  jdk:
+    installations:
+      - name: "temurin-21"
+        home: "/opt/java/openjdk"
+
+jobs:
+  - file: /usr/share/jenkins/ref/casc/inventory-job.groovy
