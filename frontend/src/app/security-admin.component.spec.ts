@@ -110,6 +110,6 @@ describe('SecurityAdminComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
 
-    expect(component.errorMessage).toBe('No se pudo cargar la configuracion de seguridad.');
+    expect(component.errorMessage).toBe('No se pudo cargar la configuración de seguridad.');
   });
 });

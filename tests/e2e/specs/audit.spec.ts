@@ -53,13 +53,13 @@ test('permite consultar auditoria de productos y movimientos de stock', async ({
     );
 
     row = await findProductRow(page, sku);
-    await row.getByRole('link', { name: 'Auditoria' }).click();
+    await row.getByRole('link', { name: 'Auditoría' }).click();
     await expect(
       page.getByRole('heading', { name: 'Historial de producto y stock' }),
     ).toBeVisible();
     await expect(page.getByText(`${sku} - ${updatedProduct.name}`)).toBeVisible();
     await expect(page.getByText('Cambios del producto')).toBeVisible();
-    await expect(page.getByText('Modificacion')).toBeVisible();
+    await expect(page.getByText('Modificación')).toBeVisible();
     await expect(page.getByText(updatedProduct.name, { exact: true })).toBeVisible();
 
     await testInfo.attach('auditoria-producto', {
@@ -69,13 +69,12 @@ test('permite consultar auditoria de productos y movimientos de stock', async ({
 
     await page.goto('/productos');
     const seedRow = await findProductRow(page, 'DELL-LAT-5440');
-    await seedRow.getByRole('link', { name: 'Auditoria' }).click();
-    const stockAuditPanel = page.locator('article').filter({
-      hasText: 'Revisiones de movimientos de stock',
-    });
-    await expect(stockAuditPanel).toBeVisible();
+    await seedRow.getByRole('link', { name: 'Auditoría' }).click();
     await expect(
-      stockAuditPanel.getByText(/No hay revisiones de movimientos de stock|Tipo de movimiento/).first(),
+      page.getByText('Revisiones de movimientos de stock', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('No hay revisiones de movimientos de stock para este producto.'),
     ).toBeVisible();
 
     await testInfo.attach('auditoria-stock', {
@@ -98,13 +97,13 @@ test('bloquea la auditoria a usuarios sin permiso audit view', async ({ page }) 
   await loginAs(page, viewerUser);
 
   await page.goto('/productos');
-  await expect(page.getByRole('link', { name: 'Auditoria' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Auditoría' })).toHaveCount(0);
 
   await page.goto('/productos/1/auditoria');
   await expect(page).toHaveURL(/\/forbidden$/);
   await expect(
     page.getByRole('heading', {
-      name: 'No tienes permiso para ver este modulo',
+      name: 'No tienes permiso para ver este módulo',
     }),
   ).toBeVisible();
 });

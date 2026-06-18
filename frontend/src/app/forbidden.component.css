@@ -5,38 +5,41 @@
 }
 
 .forbidden-panel {
+  border-color: #ffd5d2;
+}
+
+.forbidden-panel mat-card-content {
+  display: grid;
+  gap: 16px;
   padding: 32px;
-  border: 1px solid #ffd5d2;
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
 }
 
 .eyebrow {
-  margin: 0 0 8px;
   color: var(--danger);
-  font-size: 0.8rem;
-  font-weight: 800;
-  text-transform: uppercase;
 }
 
 h1 {
   margin: 0;
+  line-height: 1.12;
 }
 
 p:not(.eyebrow) {
+  margin: 0;
   color: var(--muted);
   line-height: 1.6;
 }
 
 a {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  border-radius: 7px;
-  background: var(--primary);
-  color: #fff;
-  padding: 0 16px;
-  font-weight: 800;
-  text-decoration: none;
+  width: fit-content;
+}
+
+@media (max-width: 560px) {
+  .forbidden-page {
+    width: min(100% - 20px, 760px);
+    padding-top: 28px;
+  }
+
+  a {
+    width: 100%;
+  }
 }

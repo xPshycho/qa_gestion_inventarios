@@ -16,11 +16,11 @@ test('permite iniciar y cerrar sesion con Keycloak', async ({
     contentType: 'image/png',
   });
 
-  await page.getByRole('button', { name: 'Cerrar sesion' }).click();
+  await page.getByRole('button', { name: 'Cerrar sesión' }).click();
 
   await expect(page).toHaveURL(/\/login$/);
   await expect(
-    page.getByRole('button', { name: 'Iniciar sesion con Keycloak' }),
+    page.getByRole('button', { name: 'Iniciar sesión con Keycloak' }),
   ).toBeVisible();
 
   await testInfo.attach('sesion-cerrada', {

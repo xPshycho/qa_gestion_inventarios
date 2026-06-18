@@ -3,6 +3,7 @@ import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ProductRequest } from './product.model';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 type ProductFormField = keyof ProductRequest;
 
@@ -20,18 +21,18 @@ const EMPTY_PRODUCT: ProductRequest = {
 const FIELD_LABELS: Record<ProductFormField, string> = {
   sku: 'SKU',
   name: 'Nombre',
-  description: 'Descripcion',
-  category: 'Categoria',
+  description: 'Descripción',
+  category: 'Categoría',
   price: 'Precio',
   currentStock: 'Stock actual',
-  minimumStock: 'Stock minimo',
+  minimumStock: 'Stock mínimo',
   status: 'Estado'
 };
 
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ...MATERIAL_IMPORTS],
   templateUrl: './product-form.component.html',
   styleUrl: './product-form.component.css'
 })
@@ -128,9 +129,9 @@ export class ProductFormComponent {
     if (control.errors['pattern']) {
       return field === 'price'
         ? 'Precio debe tener hasta 10 enteros y 2 decimales.'
-        : `${FIELD_LABELS[field]} debe ser un numero entero.`;
+        : `${FIELD_LABELS[field]} debe ser un número entero.`;
     }
 
-    return `${FIELD_LABELS[field]} no es valido.`;
+    return `${FIELD_LABELS[field]} no es válido.`;
   }
 }

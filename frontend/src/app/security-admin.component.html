@@ -1,19 +1,21 @@
-<main class="security-page">
-  <section class="header-band">
-    <div>
-      <p class="eyebrow">Seguridad</p>
-      <h1>Usuarios, roles y permisos</h1>
-    </div>
-    <div class="header-actions">
-      <button class="primary-action" type="button" (click)="startCreate()">
-        Nuevo usuario
-      </button>
-      <div class="metric">
-        <strong>{{ users.length }}</strong>
-        <span>usuarios</span>
+<main class="security-page page-shell">
+  <mat-card class="page-heading-card">
+    <mat-card-content class="page-heading-content">
+      <div>
+        <p class="eyebrow">Seguridad</p>
+        <h1>Usuarios, roles y permisos</h1>
       </div>
-    </div>
-  </section>
+      <div class="header-actions">
+        <button mat-flat-button color="primary" class="primary-action" type="button" (click)="startCreate()">
+          Nuevo usuario
+        </button>
+        <div class="metric">
+          <strong>{{ users.length }}</strong>
+          <span>usuarios</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 
   <div *ngIf="successMessage" class="page-message page-message-success" role="status">
     {{ successMessage }}
@@ -23,30 +25,32 @@
     {{ errorMessage }}
   </div>
 
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
   <section class="state" *ngIf="loading">
-    Cargando configuracion de seguridad...
+    Cargando configuración de seguridad...
   </section>
 
   <section class="security-layout" *ngIf="!loading">
-    <section class="users-panel" aria-label="Usuarios registrados">
+    <mat-card class="users-panel" aria-label="Usuarios registrados">
       <div class="panel-toolbar">
         <div>
           <strong>Usuarios</strong>
           <span>Asignaciones activas desde Keycloak</span>
         </div>
-        <button type="button" class="refresh-button" (click)="loadSecurityData()" [disabled]="loading || saving">
+        <button mat-stroked-button type="button" class="refresh-button" (click)="loadSecurityData()" [disabled]="loading || saving">
           Actualizar
         </button>
       </div>
 
       <div class="table-scroll">
-        <table>
+        <table class="data-table security-table">
           <thead>
             <tr>
               <th>Usuario</th>
               <th>Estado</th>
               <th>Roles</th>
-              <th>Accion</th>
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -62,11 +66,11 @@
               </td>
               <td>
                 <div class="role-list">
-                  <span *ngFor="let roleCode of user.roleCodes">{{ roleLabel(roleCode) }}</span>
+                  <span class="pill" *ngFor="let roleCode of user.roleCodes">{{ roleLabel(roleCode) }}</span>
                 </div>
               </td>
               <td>
-                <button type="button" class="row-action" (click)="selectUser(user)">
+                <button type="button" mat-stroked-button class="row-action" (click)="selectUser(user)">
                   Editar
                 </button>
               </td>
@@ -74,60 +78,58 @@
           </tbody>
         </table>
       </div>
-    </section>
+    </mat-card>
 
-    <aside class="editor-panel" aria-label="Formulario de usuario">
+    <mat-card class="editor-panel" aria-label="Formulario de usuario">
       <div class="panel-toolbar">
         <div>
           <strong>{{ selectedUser ? 'Editar usuario' : 'Nuevo usuario' }}</strong>
-          <span>Sin gestion de contrasenas desde la app</span>
+          <span>La gestión de contraseñas se mantiene en Keycloak</span>
         </div>
       </div>
 
       <form (ngSubmit)="saveUser()" class="user-form">
-        <label class="field">
-          <span>Usuario</span>
-          <input type="text" name="username" [(ngModel)]="form.username" required maxlength="80">
-        </label>
+        <mat-form-field appearance="outline">
+          <mat-label>Usuario</mat-label>
+          <input matInput type="text" name="username" [(ngModel)]="form.username" required maxlength="80" autocomplete="username">
+        </mat-form-field>
 
         <div class="field-grid">
-          <label class="field">
-            <span>Nombre</span>
-            <input type="text" name="firstName" [(ngModel)]="form.firstName" required maxlength="80">
-          </label>
-          <label class="field">
-            <span>Apellido</span>
-            <input type="text" name="lastName" [(ngModel)]="form.lastName" required maxlength="80">
-          </label>
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input matInput type="text" name="firstName" [(ngModel)]="form.firstName" required maxlength="80" autocomplete="given-name">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Apellido</mat-label>
+            <input matInput type="text" name="lastName" [(ngModel)]="form.lastName" required maxlength="80" autocomplete="family-name">
+          </mat-form-field>
         </div>
 
-        <label class="field">
-          <span>Correo</span>
-          <input type="email" name="email" [(ngModel)]="form.email" maxlength="180">
-        </label>
+        <mat-form-field appearance="outline">
+          <mat-label>Correo</mat-label>
+          <input matInput type="email" name="email" [(ngModel)]="form.email" maxlength="180" autocomplete="email">
+        </mat-form-field>
 
-        <label class="toggle-field">
-          <input type="checkbox" name="enabled" [(ngModel)]="form.enabled">
-          <span>Usuario habilitado</span>
-        </label>
+        <mat-checkbox name="enabled" [(ngModel)]="form.enabled">
+          Usuario habilitado
+        </mat-checkbox>
 
         <section class="role-editor" aria-label="Roles funcionales">
-          <div *ngFor="let role of roles; trackBy: trackByRoleCode" class="role-option">
-            <label>
-              <input type="checkbox" [name]="'role-' + role.code" [(ngModel)]="roleSelection[role.code]">
-              <span>
+          <mat-card class="role-option" *ngFor="let role of roles; trackBy: trackByRoleCode">
+            <mat-checkbox [name]="'role-' + role.code" [(ngModel)]="roleSelection[role.code]">
+              <span class="role-copy">
                 <strong>{{ role.name }}</strong>
                 <small>{{ role.description }}</small>
               </span>
-            </label>
-          </div>
+            </mat-checkbox>
+          </mat-card>
         </section>
 
         <div class="form-actions">
-          <button type="button" class="ghost-button" (click)="startCreate()" [disabled]="saving">
+          <button type="button" mat-stroked-button class="ghost-button" (click)="startCreate()" [disabled]="saving">
             Limpiar
           </button>
-          <button type="submit" class="primary-action" [disabled]="saving">
+          <button type="submit" mat-flat-button color="primary" class="primary-action" [disabled]="saving">
             {{ saving ? 'Guardando...' : 'Guardar usuario' }}
           </button>
         </div>
@@ -136,37 +138,42 @@
       <button
         *ngIf="selectedUser"
         type="button"
+        mat-stroked-button
         class="secondary-action"
         (click)="saveRoles()"
         [disabled]="saving"
       >
         Guardar solo roles
       </button>
-    </aside>
+    </mat-card>
   </section>
 
   <section class="reference-section" *ngIf="!loading" aria-label="Matriz de roles y permisos">
-    <div class="reference-column">
-      <h2>Roles funcionales</h2>
-      <div *ngFor="let role of roles; trackBy: trackByRoleCode" class="reference-row">
-        <strong>{{ role.name }}</strong>
-        <span>{{ role.description }}</span>
-        <div class="permission-list">
-          <code *ngFor="let permission of role.permissions">{{ permission.code }}</code>
+    <mat-card class="reference-column">
+      <mat-card-content>
+        <h2>Roles funcionales</h2>
+        <div *ngFor="let role of roles; trackBy: trackByRoleCode" class="reference-row">
+          <strong>{{ role.name }}</strong>
+          <span>{{ role.description }}</span>
+          <div class="permission-list">
+            <code *ngFor="let permission of role.permissions">{{ permission.code }}</code>
+          </div>
         </div>
-      </div>
-    </div>
+      </mat-card-content>
+    </mat-card>
 
-    <div class="reference-column">
-      <h2>Permisos por modulo</h2>
-      <div *ngFor="let module of permissionModules()" class="reference-row">
-        <strong>{{ module }}</strong>
-        <div class="permission-list">
-          <code *ngFor="let permission of permissionsByModule(module)" [title]="permission.description">
-            {{ permission.code }}
-          </code>
+    <mat-card class="reference-column">
+      <mat-card-content>
+        <h2>Permisos por módulo</h2>
+        <div *ngFor="let module of permissionModules()" class="reference-row">
+          <strong>{{ module }}</strong>
+          <div class="permission-list">
+            <code *ngFor="let permission of permissionsByModule(module)" [title]="permission.description">
+              {{ permission.code }}
+            </code>
+          </div>
         </div>
-      </div>
-    </div>
+      </mat-card-content>
+    </mat-card>
   </section>
 </main>

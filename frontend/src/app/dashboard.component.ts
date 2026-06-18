@@ -9,11 +9,12 @@ import {
   TopMovedProduct
 } from './dashboard.model';
 import { DashboardService } from './dashboard.service';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ...MATERIAL_IMPORTS],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })

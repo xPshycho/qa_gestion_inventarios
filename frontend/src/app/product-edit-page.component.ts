@@ -6,11 +6,12 @@ import { ProductFormComponent } from './product-form.component';
 import { ProductRequest } from './product.model';
 import { productErrorMessage } from './product-error';
 import { ProductService } from './product.service';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 @Component({
   selector: 'app-product-edit-page',
   standalone: true,
-  imports: [CommonModule, ProductFormComponent, RouterLink],
+  imports: [CommonModule, ProductFormComponent, RouterLink, ...MATERIAL_IMPORTS],
   templateUrl: './product-edit-page.component.html',
   styleUrl: './product-form.component.css'
 })
@@ -29,7 +30,7 @@ export class ProductEditPageComponent implements OnInit {
     const productId = Number(this.route.snapshot.paramMap.get('id'));
     if (!Number.isSafeInteger(productId) || productId <= 0) {
       this.loading = false;
-      this.errorMessage = 'El identificador del producto no es valido.';
+      this.errorMessage = 'El identificador del producto no es válido.';
       return;
     }
 

@@ -33,13 +33,13 @@ export async function loadAuthRuntimeConfig(): Promise<AuthRuntimeConfig> {
   const response = await fetch(AUTH_CONFIG_URL, { cache: 'no-store' });
 
   if (!response.ok) {
-    throw new Error(`No se pudo cargar la configuracion de autenticacion (${response.status}).`);
+    throw new Error(`No se pudo cargar la configuración de autenticación (${response.status}).`);
   }
 
   const config: unknown = await response.json();
 
   if (!isAuthRuntimeConfig(config)) {
-    throw new Error('La configuracion de autenticacion no es valida.');
+    throw new Error('La configuración de autenticación no es válida.');
   }
 
   return config;
