@@ -15,7 +15,7 @@ pipeline {
     }
 
     environment {
-        GRADLE_USER_HOME = "${JENKINS_HOME}/.gradle-cache"
+        GRADLE_USER_HOME = "/opt/gradle-cache"
         COMPOSE_PROJECT_NAME = "inventory-jenkins-${BUILD_TAG}"
         CI = 'true'
         E2E_STACK_TIMEOUT_MS = '360000'

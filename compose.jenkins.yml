@@ -66,14 +66,17 @@ services:
   jenkins:
     image: inventory-jenkins-jenkins:local
     build:
-      context: ./infra/jenkins
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: infra/jenkins/Dockerfile
     restart: unless-stopped
     depends_on:
       docker:
         condition: service_healthy
       docker-images:
         condition: service_completed_successfully
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       CASC_JENKINS_CONFIG: /usr/share/jenkins/ref/casc/jenkins.yaml
       JAVA_OPTS: -Djenkins.install.runSetupWizard=false
