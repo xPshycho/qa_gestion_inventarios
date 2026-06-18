@@ -277,6 +277,16 @@ El pipeline Jenkins se mantiene como flujo complementario y esta documentado en
 `docs/ci/jenkins.md`. Ejecuta checkout, build, pruebas, analisis de calidad, build Docker,
 despliegue preview con Docker Compose y E2E con Playwright.
 
+El Jenkins local se entrega preconfigurado con el usuario `admin`, el job
+`inventory-avance-ci` y todas las herramientas requeridas. Se inicia desde la raiz con:
+
+```bash
+docker compose -p inventory-jenkins -f compose.jenkins.yml up -d --build --wait
+```
+
+La interfaz queda disponible en `http://localhost:18080`; la guia de operacion, reinicio y
+limpieza esta en `docs/ci/jenkins.md`.
+
 | Evidencia | Comando local | Reporte local | Artifact CI |
 |-----------|---------------|---------------|-------------|
 | Build backend | `cd backend && ./gradlew clean assemble` | `backend/build/libs/*.jar` | `backend-build-*` |
