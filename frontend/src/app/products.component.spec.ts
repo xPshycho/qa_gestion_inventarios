@@ -63,7 +63,7 @@ describe('ProductsComponent', () => {
   it('muestra el listado de productos recibido desde la api', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.textContent).toContain('Catalogo de inventario');
+    expect(compiled.textContent).toContain('Catálogo de inventario');
     expect(compiled.textContent).toContain('DELL-LAT-5440');
     expect(compiled.textContent).toContain('Dell Latitude 5440');
     expect(productService.listProducts).toHaveBeenCalled();
@@ -110,7 +110,7 @@ describe('ProductsComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.textContent).toContain('Auditoria');
+    expect(compiled.textContent).toContain('Auditoría');
     expect(compiled.textContent).not.toContain('Editar');
     expect(compiled.textContent).not.toContain('Eliminar');
   });

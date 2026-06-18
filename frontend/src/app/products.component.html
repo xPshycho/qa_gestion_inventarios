@@ -1,85 +1,95 @@
-<main class="inventory-page">
-  <section class="header-band">
-    <div>
-      <p class="eyebrow">Productos</p>
-      <h1>Catalogo de inventario</h1>
-    </div>
-    <div class="header-actions">
-      <a
-        *ngIf="auth.hasPermission('product:manage')"
-        routerLink="/productos/nuevo"
-        class="primary-action"
-      >
-        Nuevo producto
-      </a>
-      <div class="metric">
-        <strong>{{ page.totalElements }}</strong>
-        <span>registros</span>
+<main class="inventory-page page-shell">
+  <mat-card class="page-heading-card">
+    <mat-card-content class="page-heading-content">
+      <div>
+        <p class="eyebrow">Productos</p>
+        <h1>Catálogo de inventario</h1>
       </div>
-    </div>
-  </section>
+      <div class="header-actions">
+        <a
+          *ngIf="auth.hasPermission('product:manage')"
+          routerLink="/productos/nuevo"
+          class="primary-action"
+          mat-flat-button
+          color="primary"
+        >
+          Nuevo producto
+        </a>
+        <div class="metric">
+          <strong>{{ page.totalElements }}</strong>
+          <span>registros</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 
   <div *ngIf="successMessage" class="page-message page-message-success" role="status">
     {{ successMessage }}
   </div>
 
-  <section class="filters" aria-label="Filtros de productos">
-    <label class="field field-wide">
-      <span>Busqueda por nombre o SKU</span>
-      <input
-        type="search"
-        name="search"
-        [(ngModel)]="query.search"
-        (input)="queueSearch()"
-        placeholder="Ej. Latitude o DELL-LAT"
-      >
-    </label>
+  <mat-card class="filters-card">
+    <mat-card-content class="filters" aria-label="Filtros de productos">
+      <mat-form-field appearance="outline" class="field-wide">
+        <mat-label>Búsqueda por nombre o SKU</mat-label>
+        <input
+          matInput
+          type="search"
+          name="search"
+          [(ngModel)]="query.search"
+          (input)="queueSearch()"
+          placeholder="Ej. Latitude o DELL-LAT"
+        >
+      </mat-form-field>
 
-    <label class="field">
-      <span>Categoria</span>
-      <input
-        type="text"
-        name="category"
-        [(ngModel)]="query.category"
-        (input)="queueSearch()"
-        placeholder="Ej. Laptops"
-      >
-    </label>
+      <mat-form-field appearance="outline">
+        <mat-label>Categoría</mat-label>
+        <input
+          matInput
+          type="text"
+          name="category"
+          [(ngModel)]="query.category"
+          (input)="queueSearch()"
+          placeholder="Ej. Laptops"
+        >
+      </mat-form-field>
 
-    <label class="field">
-      <span>Estado</span>
-      <select name="status" [(ngModel)]="query.status" (change)="applyFilters()">
-        <option value="">Todos</option>
-        <option value="ACTIVE">Activo</option>
-        <option value="INACTIVE">Inactivo</option>
-      </select>
-    </label>
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select name="status" [(ngModel)]="query.status" (selectionChange)="applyFilters()">
+          <mat-option value="">Todos</mat-option>
+          <mat-option value="ACTIVE">Activo</mat-option>
+          <mat-option value="INACTIVE">Inactivo</mat-option>
+        </mat-select>
+      </mat-form-field>
 
-    <label class="field field-compact">
-      <span>Filas</span>
-      <select name="size" [(ngModel)]="query.size" (change)="changePageSize()">
-        <option [ngValue]="5">5</option>
-        <option [ngValue]="10">10</option>
-        <option [ngValue]="20">20</option>
-        <option [ngValue]="50">50</option>
-      </select>
-    </label>
+      <mat-form-field appearance="outline" class="field-compact">
+        <mat-label>Filas</mat-label>
+        <mat-select name="size" [(ngModel)]="query.size" (selectionChange)="changePageSize()">
+          <mat-option [value]="5">5</mat-option>
+          <mat-option [value]="10">10</mat-option>
+          <mat-option [value]="20">20</mat-option>
+          <mat-option [value]="50">50</mat-option>
+        </mat-select>
+      </mat-form-field>
 
-    <button class="ghost-button" type="button" (click)="clearFilters()" [disabled]="!hasFilters()">
-      Limpiar
-    </button>
-  </section>
+      <button mat-stroked-button class="ghost-button" type="button" (click)="clearFilters()" [disabled]="!hasFilters()">
+        Limpiar
+      </button>
+    </mat-card-content>
+  </mat-card>
 
-  <section class="table-panel" aria-label="Listado de productos">
+  <mat-card class="table-panel" aria-label="Listado de productos">
     <div class="table-toolbar">
       <div>
         <strong>Listado</strong>
         <span>{{ firstItem() }}-{{ lastItem() }} de {{ page.totalElements }}</span>
       </div>
-      <button class="refresh-button" type="button" (click)="loadProducts()" [disabled]="loading">
+      <button mat-flat-button color="primary" class="refresh-button" type="button" (click)="loadProducts()" [disabled]="loading">
         Actualizar
       </button>
     </div>
+
+    <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
 
     <div *ngIf="errorMessage" class="state state-error" role="alert">
       {{ errorMessage }}
@@ -90,7 +100,7 @@
     </div>
 
     <div class="table-scroll" *ngIf="!loading">
-      <table>
+      <table class="data-table products-table">
         <thead>
           <tr>
             <th>
@@ -105,7 +115,7 @@
             </th>
             <th>
               <button type="button" class="sort-button" (click)="changeSort('category')">
-                Categoria <span>{{ sortLabel('category') }}</span>
+                Categoría <span>{{ sortLabel('category') }}</span>
               </button>
             </th>
             <th>
@@ -120,7 +130,7 @@
             </th>
             <th>
               <button type="button" class="sort-button" (click)="changeSort('minimumStock')">
-                Minimo <span>{{ sortLabel('minimumStock') }}</span>
+                Mínimo <span>{{ sortLabel('minimumStock') }}</span>
               </button>
             </th>
             <th>
@@ -136,7 +146,7 @@
             <td class="sku">{{ product.sku }}</td>
             <td>
               <strong>{{ product.name }}</strong>
-              <span class="description">{{ product.description || 'Sin descripcion' }}</span>
+              <span class="description">{{ product.description || 'Sin descripción' }}</span>
             </td>
             <td>{{ product.category }}</td>
             <td>{{ product.price | currency:'DOP':'symbol':'1.2-2' }}</td>
@@ -153,6 +163,7 @@
                   *ngIf="auth.hasPermission('product:manage')"
                   [routerLink]="['/productos', product.id, 'editar']"
                   class="row-action"
+                  mat-stroked-button
                 >
                   Editar
                 </a>
@@ -160,13 +171,15 @@
                   *ngIf="auth.hasPermission('audit:view')"
                   [routerLink]="['/productos', product.id, 'auditoria']"
                   class="row-action"
+                  mat-stroked-button
                 >
-                  Auditoria
+                  Auditoría
                 </a>
                 <a
                   *ngIf="auth.hasPermission('stock:view')"
                   [routerLink]="['/productos', product.id, 'stock']"
                   class="row-action"
+                  mat-stroked-button
                 >
                   Movimientos
                 </a>
@@ -174,6 +187,7 @@
                   *ngIf="auth.hasPermission('product:manage')"
                   type="button"
                   class="row-action row-action-danger"
+                  mat-stroked-button
                   (click)="requestDelete(product)"
                   [disabled]="deletingProductId !== null"
                 >
@@ -195,15 +209,15 @@
     </div>
 
     <div class="pagination">
-      <button type="button" (click)="changePage(query.page - 1)" [disabled]="query.page === 0 || loading">
+      <button mat-stroked-button type="button" (click)="changePage(query.page - 1)" [disabled]="query.page === 0 || loading">
         Anterior
       </button>
-      <span>Pagina {{ page.page + 1 }} de {{ totalPages() }}</span>
-      <button type="button" (click)="changePage(query.page + 1)" [disabled]="query.page + 1 >= totalPages() || loading">
+      <span>Página {{ page.page + 1 }} de {{ totalPages() }}</span>
+      <button mat-stroked-button type="button" (click)="changePage(query.page + 1)" [disabled]="query.page + 1 >= totalPages() || loading">
         Siguiente
       </button>
     </div>
-  </section>
+  </mat-card>
 
   <div
     *ngIf="productPendingDelete"
@@ -211,7 +225,7 @@
     role="presentation"
     (click)="cancelDelete()"
   >
-    <section
+    <mat-card
       class="confirm-dialog"
       role="alertdialog"
       aria-modal="true"
@@ -219,32 +233,37 @@
       aria-describedby="delete-description"
       (click)="$event.stopPropagation()"
     >
-      <p class="eyebrow">Confirmar eliminacion</p>
-      <h2 id="delete-title">Eliminar {{ productPendingDelete.name }}</h2>
-      <p id="delete-description">
-        Esta accion eliminara el producto con SKU
-        <strong>{{ productPendingDelete.sku }}</strong>. No se puede deshacer.
-      </p>
+      <mat-card-content>
+        <p class="eyebrow">Confirmar eliminación</p>
+        <h2 id="delete-title">Eliminar {{ productPendingDelete.name }}</h2>
+        <p id="delete-description">
+          Esta acción eliminará el producto con SKU
+          <strong>{{ productPendingDelete.sku }}</strong>. No se puede deshacer.
+        </p>
 
-      <div class="dialog-actions">
-        <button
-          type="button"
-          class="ghost-button"
-          (click)="cancelDelete()"
-          [disabled]="deletingProductId !== null"
-        >
-          Cancelar
-        </button>
-        <button
-          #deleteConfirmButton
-          type="button"
-          class="danger-button"
-          (click)="confirmDelete()"
-          [disabled]="deletingProductId !== null"
-        >
-          {{ deletingProductId !== null ? 'Eliminando...' : 'Eliminar producto' }}
-        </button>
-      </div>
-    </section>
+        <div class="dialog-actions">
+          <button
+            type="button"
+            mat-stroked-button
+            class="ghost-button"
+            (click)="cancelDelete()"
+            [disabled]="deletingProductId !== null"
+          >
+            Cancelar
+          </button>
+          <button
+            #deleteConfirmButton
+            type="button"
+            mat-flat-button
+            color="warn"
+            class="danger-button"
+            (click)="confirmDelete()"
+            [disabled]="deletingProductId !== null"
+          >
+            {{ deletingProductId !== null ? 'Eliminando...' : 'Eliminar producto' }}
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
   </div>
 </main>

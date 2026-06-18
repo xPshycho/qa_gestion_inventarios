@@ -15,6 +15,7 @@ import {
   StockOperationType
 } from './stock-movement.model';
 import { StockMovementService } from './stock-movement.service';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 type StockFormField = 'quantity' | 'newQuantity' | 'observations';
 
@@ -27,7 +28,7 @@ const STOCK_FIELD_LABELS: Record<StockFormField, string> = {
 @Component({
   selector: 'app-stock-movements-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ...MATERIAL_IMPORTS],
   templateUrl: './stock-movements-page.component.html',
   styleUrl: './stock-movements-page.component.css'
 })
@@ -73,7 +74,7 @@ export class StockMovementsPageComponent implements OnInit, OnDestroy {
     if (!Number.isSafeInteger(productId) || productId <= 0) {
       this.productLoading = false;
       this.movementsLoading = false;
-      this.errorMessage = 'El identificador del producto no es valido.';
+      this.errorMessage = 'El identificador del producto no es válido.';
       return;
     }
 
@@ -171,10 +172,10 @@ export class StockMovementsPageComponent implements OnInit, OnDestroy {
     }
 
     if (control.errors['pattern']) {
-      return `${STOCK_FIELD_LABELS[field]} debe ser un numero entero.`;
+      return `${STOCK_FIELD_LABELS[field]} debe ser un número entero.`;
     }
 
-    return `${STOCK_FIELD_LABELS[field]} no es valido.`;
+    return `${STOCK_FIELD_LABELS[field]} no es válido.`;
   }
 
   operationLabel(type: StockOperationType = this.operationType): string {

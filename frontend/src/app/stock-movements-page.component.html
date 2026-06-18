@@ -1,12 +1,14 @@
-<main class="stock-page">
-  <section class="page-heading">
-    <div>
-      <p class="eyebrow">Stock</p>
-      <h1>Movimientos de stock</h1>
-      <p *ngIf="product">{{ product.sku }} - {{ product.name }}</p>
-    </div>
-    <a routerLink="/productos" class="secondary-action">Volver al catalogo</a>
-  </section>
+<main class="stock-page page-shell">
+  <mat-card class="page-heading-card">
+    <mat-card-content class="page-heading-content">
+      <div>
+        <p class="eyebrow">Stock</p>
+        <h1>Movimientos de stock</h1>
+        <p class="page-subtitle" *ngIf="product">{{ product.sku }} - {{ product.name }}</p>
+      </div>
+      <a routerLink="/productos" class="secondary-action" mat-stroked-button>Volver al catálogo</a>
+    </mat-card-content>
+  </mat-card>
 
   <div *ngIf="successMessage" class="page-message page-message-success" role="status">
     {{ successMessage }}
@@ -16,32 +18,42 @@
     {{ errorMessage }}
   </div>
 
+  <mat-progress-bar *ngIf="productLoading" mode="indeterminate"></mat-progress-bar>
+
   <div *ngIf="productLoading" class="state">
     Cargando producto...
   </div>
 
   <ng-container *ngIf="!productLoading && product as productData">
     <section class="summary-grid" aria-label="Resumen de stock">
-      <article class="summary-card">
-        <span>Stock actual</span>
-        <strong>{{ productData.currentStock }}</strong>
-      </article>
-      <article class="summary-card">
-        <span>Stock minimo</span>
-        <strong>{{ productData.minimumStock }}</strong>
-      </article>
-      <article class="summary-card" [class.summary-card-warning]="productData.stockAlert">
-        <span>Alerta</span>
-        <strong>{{ productData.stockAlert ? 'Critico' : 'Normal' }}</strong>
-      </article>
-      <article class="summary-card">
-        <span>Estado</span>
-        <strong>{{ statusLabel(productData.status) }}</strong>
-      </article>
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <span>Stock actual</span>
+          <strong>{{ productData.currentStock }}</strong>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <span>Stock mínimo</span>
+          <strong>{{ productData.minimumStock }}</strong>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="summary-card" [class.summary-card-warning]="productData.stockAlert">
+        <mat-card-content>
+          <span>Alerta</span>
+          <strong>{{ productData.stockAlert ? 'Crítico' : 'Normal' }}</strong>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <span>Estado</span>
+          <strong>{{ statusLabel(productData.status) }}</strong>
+        </mat-card-content>
+      </mat-card>
     </section>
 
     <section class="stock-grid">
-      <article class="operation-panel" *ngIf="auth.hasPermission('stock:manage'); else readonlyStock">
+      <mat-card class="operation-panel" *ngIf="auth.hasPermission('stock:manage'); else readonlyStock">
         <div class="panel-heading">
           <strong>Registrar movimiento</strong>
           <span>{{ operationLabel() }}</span>
@@ -49,6 +61,7 @@
 
         <div class="operation-tabs" aria-label="Tipo de movimiento">
           <button
+            mat-stroked-button
             type="button"
             [class.active-tab]="operationType === 'ENTRY'"
             [attr.aria-pressed]="operationType === 'ENTRY'"
@@ -57,6 +70,7 @@
             Entrada
           </button>
           <button
+            mat-stroked-button
             type="button"
             [class.active-tab]="operationType === 'EXIT'"
             [attr.aria-pressed]="operationType === 'EXIT'"
@@ -65,6 +79,7 @@
             Salida
           </button>
           <button
+            mat-stroked-button
             type="button"
             [class.active-tab]="operationType === 'ADJUSTMENT'"
             [attr.aria-pressed]="operationType === 'ADJUSTMENT'"
@@ -75,78 +90,80 @@
         </div>
 
         <form class="stock-form" [formGroup]="movementForm" (ngSubmit)="submitMovement()" novalidate>
-          <label class="form-field" *ngIf="operationType !== 'ADJUSTMENT'">
-            <span>Cantidad</span>
+          <mat-form-field appearance="outline" *ngIf="operationType !== 'ADJUSTMENT'">
+            <mat-label>Cantidad</mat-label>
             <input
+              matInput
               type="number"
               formControlName="quantity"
               min="1"
               step="1"
               [attr.aria-invalid]="fieldError('quantity') ? true : null"
             >
-            <small *ngIf="fieldError('quantity')" class="field-error">{{ fieldError('quantity') }}</small>
-          </label>
+            <mat-error *ngIf="fieldError('quantity')">{{ fieldError('quantity') }}</mat-error>
+          </mat-form-field>
 
-          <label class="form-field" *ngIf="operationType === 'ADJUSTMENT'">
-            <span>Stock nuevo</span>
+          <mat-form-field appearance="outline" *ngIf="operationType === 'ADJUSTMENT'">
+            <mat-label>Stock nuevo</mat-label>
             <input
+              matInput
               type="number"
               formControlName="newQuantity"
               min="0"
               step="1"
               [attr.aria-invalid]="fieldError('newQuantity') ? true : null"
             >
-            <small *ngIf="fieldError('newQuantity')" class="field-error">
-              {{ fieldError('newQuantity') }}
-            </small>
-          </label>
+            <mat-error *ngIf="fieldError('newQuantity')">{{ fieldError('newQuantity') }}</mat-error>
+          </mat-form-field>
 
-          <label class="form-field">
-            <span>Observaciones</span>
+          <mat-form-field appearance="outline">
+            <mat-label>Observaciones</mat-label>
             <textarea
+              matInput
               formControlName="observations"
               maxlength="500"
               rows="4"
               [attr.aria-invalid]="fieldError('observations') ? true : null"
             ></textarea>
-            <small *ngIf="fieldError('observations')" class="field-error">
-              {{ fieldError('observations') }}
-            </small>
-          </label>
+            <mat-hint align="end">Máximo 500 caracteres</mat-hint>
+            <mat-error *ngIf="fieldError('observations')">{{ fieldError('observations') }}</mat-error>
+          </mat-form-field>
 
-          <button type="submit" class="primary-action" [disabled]="submitting">
+          <button type="submit" class="primary-action" mat-flat-button color="primary" [disabled]="submitting">
             {{ submitting ? 'Registrando...' : 'Registrar ' + operationLabel().toLowerCase() }}
           </button>
         </form>
-      </article>
+      </mat-card>
 
       <ng-template #readonlyStock>
-        <article class="operation-panel readonly-panel">
+        <mat-card class="operation-panel readonly-panel">
           <div class="panel-heading">
             <strong>Consulta de stock</strong>
             <span>Historial disponible</span>
           </div>
           <p>No tienes permiso para registrar movimientos.</p>
-        </article>
+        </mat-card>
       </ng-template>
 
-      <article class="history-panel">
+      <mat-card class="history-panel">
         <div class="panel-heading">
           <div>
             <strong>Historial</strong>
             <span>{{ movements.length }} movimientos</span>
           </div>
-          <button type="button" class="refresh-button" (click)="refreshHistory()" [disabled]="movementsLoading">
+          <button type="button" mat-flat-button color="primary" class="refresh-button" (click)="refreshHistory()" [disabled]="movementsLoading">
             Actualizar
           </button>
         </div>
+
+        <mat-progress-bar *ngIf="movementsLoading" mode="indeterminate"></mat-progress-bar>
 
         <div *ngIf="movementsLoading" class="state">
           Cargando historial...
         </div>
 
         <div class="table-scroll" *ngIf="!movementsLoading">
-          <table *ngIf="movements.length > 0; else emptyHistory">
+          <table class="data-table" *ngIf="movements.length > 0; else emptyHistory">
             <thead>
               <tr>
                 <th>Tipo</th>
@@ -181,7 +198,7 @@
         <ng-template #emptyHistory>
           <p class="empty">No hay movimientos registrados para este producto.</p>
         </ng-template>
-      </article>
+      </mat-card>
     </section>
   </ng-container>
 </main>

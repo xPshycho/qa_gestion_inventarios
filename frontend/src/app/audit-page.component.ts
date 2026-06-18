@@ -7,16 +7,17 @@ import { AuditFieldChange, AuditRevision, AuditRevisionType } from './audit.mode
 import { AuditService } from './audit.service';
 import { Product } from './product.model';
 import { ProductService } from './product.service';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 const FIELD_LABELS: Record<string, string> = {
   id: 'ID',
   sku: 'SKU',
   name: 'Nombre',
-  description: 'Descripcion',
-  category: 'Categoria',
+  description: 'Descripción',
+  category: 'Categoría',
   price: 'Precio',
   currentStock: 'Stock actual',
-  minimumStock: 'Stock minimo',
+  minimumStock: 'Stock mínimo',
   status: 'Estado',
   productId: 'Producto',
   userId: 'Usuario',
@@ -32,7 +33,7 @@ const FIELD_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-audit-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ...MATERIAL_IMPORTS],
   templateUrl: './audit-page.component.html',
   styleUrl: './audit-page.component.css'
 })
@@ -53,7 +54,7 @@ export class AuditPageComponent implements OnInit, OnDestroy {
     const productId = Number(this.route.snapshot.paramMap.get('id'));
     if (!Number.isSafeInteger(productId) || productId <= 0) {
       this.loading = false;
-      this.errorMessage = 'El identificador del producto no es valido.';
+      this.errorMessage = 'El identificador del producto no es válido.';
       return;
     }
 
@@ -74,8 +75,8 @@ export class AuditPageComponent implements OnInit, OnDestroy {
   revisionTypeLabel(type: AuditRevisionType): string {
     const labels: Record<AuditRevisionType, string> = {
       ADD: 'Alta',
-      MOD: 'Modificacion',
-      DEL: 'Eliminacion'
+      MOD: 'Modificación',
+      DEL: 'Eliminación'
     };
 
     return labels[type] ?? type;
@@ -158,7 +159,7 @@ export class AuditPageComponent implements OnInit, OnDestroy {
           this.product = null;
           this.productRevisions = [];
           this.stockMovementRevisions = [];
-          this.errorMessage = auditErrorMessage(error, 'No se pudo cargar la auditoria del producto.');
+          this.errorMessage = auditErrorMessage(error, 'No se pudo cargar la auditoría del producto.');
         }
       });
   }

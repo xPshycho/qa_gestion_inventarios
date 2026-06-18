@@ -1,48 +1,60 @@
-<main class="audit-page">
-  <section class="page-heading">
-    <div>
-      <p class="eyebrow">Auditoria</p>
-      <h1>Historial de producto y stock</h1>
-      <p *ngIf="product">{{ product.sku }} - {{ product.name }}</p>
-    </div>
-    <div class="heading-actions">
-      <button type="button" class="refresh-button" (click)="refreshAudit()" [disabled]="loading">
-        Actualizar
-      </button>
-      <a routerLink="/productos" class="secondary-action">Volver al catalogo</a>
-    </div>
-  </section>
+<main class="audit-page page-shell">
+  <mat-card class="page-heading-card">
+    <mat-card-content class="page-heading-content">
+      <div>
+        <p class="eyebrow">Auditoría</p>
+        <h1>Historial de producto y stock</h1>
+        <p class="page-subtitle" *ngIf="product">{{ product.sku }} - {{ product.name }}</p>
+      </div>
+      <div class="heading-actions">
+        <button type="button" mat-flat-button color="primary" class="refresh-button" (click)="refreshAudit()" [disabled]="loading">
+          Actualizar
+        </button>
+        <a routerLink="/productos" class="secondary-action" mat-stroked-button>Volver al catálogo</a>
+      </div>
+    </mat-card-content>
+  </mat-card>
 
   <div *ngIf="errorMessage" class="page-message page-message-error" role="alert">
     {{ errorMessage }}
   </div>
 
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
   <div *ngIf="loading" class="state">
-    Cargando auditoria...
+    Cargando auditoría...
   </div>
 
   <ng-container *ngIf="!loading && product">
-    <section class="summary-grid" aria-label="Resumen de auditoria">
-      <article class="summary-card">
-        <span>Revisiones producto</span>
-        <strong>{{ productRevisions.length }}</strong>
-      </article>
-      <article class="summary-card">
-        <span>Revisiones stock</span>
-        <strong>{{ stockMovementRevisions.length }}</strong>
-      </article>
-      <article class="summary-card">
-        <span>Stock actual</span>
-        <strong>{{ product.currentStock }}</strong>
-      </article>
-      <article class="summary-card" [class.summary-card-warning]="product.stockAlert">
-        <span>Estado stock</span>
-        <strong>{{ product.stockAlert ? 'Critico' : 'Normal' }}</strong>
-      </article>
+    <section class="summary-grid" aria-label="Resumen de auditoría">
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <span>Revisiones producto</span>
+          <strong>{{ productRevisions.length }}</strong>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <span>Revisiones stock</span>
+          <strong>{{ stockMovementRevisions.length }}</strong>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <span>Stock actual</span>
+          <strong>{{ product.currentStock }}</strong>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="summary-card" [class.summary-card-warning]="product.stockAlert">
+        <mat-card-content>
+          <span>Estado stock</span>
+          <strong>{{ product.stockAlert ? 'Crítico' : 'Normal' }}</strong>
+        </mat-card-content>
+      </mat-card>
     </section>
 
     <section class="audit-grid">
-      <article class="audit-panel">
+      <mat-card class="audit-panel">
         <div class="panel-heading">
           <strong>Cambios del producto</strong>
           <span>{{ productRevisions.length }} revisiones</span>
@@ -57,7 +69,7 @@
               <div>
                 <span class="revision-type">{{ revisionTypeLabel(revision.revisionType) }}</span>
                 <strong>{{ entityLabel(revision.entityName) }} #{{ revision.entityId }}</strong>
-                <small>Revision {{ revision.revision }} - {{ actorLabel(revision) }}</small>
+                <small>Revisión {{ revision.revision }} - {{ actorLabel(revision) }}</small>
               </div>
               <time>{{ revision.changedAt | date:'short' }}</time>
             </div>
@@ -75,9 +87,9 @@
         <ng-template #emptyProductAudit>
           <p class="empty">No hay revisiones del producto para mostrar.</p>
         </ng-template>
-      </article>
+      </mat-card>
 
-      <article class="audit-panel">
+      <mat-card class="audit-panel">
         <div class="panel-heading">
           <strong>Revisiones de movimientos de stock</strong>
           <span>{{ stockMovementRevisions.length }} revisiones</span>
@@ -92,7 +104,7 @@
               <div>
                 <span class="revision-type">{{ revisionTypeLabel(revision.revisionType) }}</span>
                 <strong>{{ entityLabel(revision.entityName) }} #{{ revision.entityId }}</strong>
-                <small>Revision {{ revision.revision }} - {{ actorLabel(revision) }}</small>
+                <small>Revisión {{ revision.revision }} - {{ actorLabel(revision) }}</small>
               </div>
               <time>{{ revision.changedAt | date:'short' }}</time>
             </div>
@@ -110,7 +122,7 @@
         <ng-template #emptyStockAudit>
           <p class="empty">No hay revisiones de movimientos de stock para este producto.</p>
         </ng-template>
-      </article>
+      </mat-card>
     </section>
   </ng-container>
 </main>

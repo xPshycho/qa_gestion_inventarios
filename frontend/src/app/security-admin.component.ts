@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin, Subscription, finalize } from 'rxjs';
 import { SecurityPermission, SecurityRole, SecurityUser, SecurityUserRequest } from './security-admin.model';
 import { SecurityAdminService } from './security-admin.service';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 const EMPTY_FORM: SecurityUserRequest = {
   username: '',
@@ -17,7 +18,7 @@ const EMPTY_FORM: SecurityUserRequest = {
 @Component({
   selector: 'app-security-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...MATERIAL_IMPORTS],
   templateUrl: './security-admin.component.html',
   styleUrl: './security-admin.component.css'
 })
@@ -64,7 +65,7 @@ export class SecurityAdminComponent implements OnInit, OnDestroy {
           this.resetRoleSelection(this.form.roleCodes);
         },
         error: () => {
-          this.errorMessage = 'No se pudo cargar la configuracion de seguridad.';
+          this.errorMessage = 'No se pudo cargar la configuración de seguridad.';
         }
       });
   }

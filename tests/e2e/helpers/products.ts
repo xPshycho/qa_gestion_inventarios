@@ -17,22 +17,23 @@ export async function fillProductForm(
 ): Promise<void> {
   await page.getByLabel('SKU').fill(product.sku);
   await page.getByLabel('Nombre').fill(product.name);
-  await page.getByLabel('Categoria').fill(product.category);
-  await page.getByLabel('Estado').selectOption({ label: product.status });
+  await page.getByLabel('Categoría').fill(product.category);
+  await page.getByLabel('Estado').click();
+  await page.getByRole('option', { name: product.status }).click();
   await page.getByLabel('Precio').fill(product.price);
   const currentStock = page.getByLabel('Stock actual');
   if (await currentStock.isEditable()) {
     await currentStock.fill(product.currentStock);
   }
-  await page.getByLabel('Stock minimo').fill(product.minimumStock);
-  await page.getByLabel('Descripcion').fill(product.description);
+  await page.getByLabel('Stock mínimo').fill(product.minimumStock);
+  await page.getByLabel('Descripción').fill(product.description);
 }
 
 export async function findProductRow(
   page: Page,
   sku: string,
 ): Promise<Locator> {
-  const search = page.getByLabel('Busqueda por nombre o SKU');
+  const search = page.getByLabel('Búsqueda por nombre o SKU');
   await search.fill(sku);
 
   const row = page.getByRole('row').filter({ hasText: sku });
@@ -54,7 +55,7 @@ export async function deleteProductFromRow(
 export async function cleanupProduct(page: Page, sku: string): Promise<void> {
   try {
     await page.goto('/productos');
-    const search = page.getByLabel('Busqueda por nombre o SKU');
+    const search = page.getByLabel('Búsqueda por nombre o SKU');
     await search.fill(sku);
 
     const row = page.getByRole('row').filter({ hasText: sku });

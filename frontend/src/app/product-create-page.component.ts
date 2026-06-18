@@ -6,11 +6,12 @@ import { ProductFormComponent } from './product-form.component';
 import { ProductRequest } from './product.model';
 import { productErrorMessage } from './product-error';
 import { ProductService } from './product.service';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 @Component({
   selector: 'app-product-create-page',
   standalone: true,
-  imports: [CommonModule, ProductFormComponent],
+  imports: [CommonModule, ProductFormComponent, ...MATERIAL_IMPORTS],
   templateUrl: './product-create-page.component.html',
   styleUrl: './product-form.component.css'
 })

@@ -104,7 +104,7 @@ describe('AuditPageComponent', () => {
 
   it('muestra etiquetas legibles para revision y entidad', () => {
     expect(component.revisionTypeLabel('ADD')).toBe('Alta');
-    expect(component.revisionTypeLabel('MOD')).toBe('Modificacion');
+    expect(component.revisionTypeLabel('MOD')).toBe('Modificación');
     expect(component.entityLabel('StockMovement')).toBe('Movimiento de stock');
   });
 

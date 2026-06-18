@@ -1,10 +1,14 @@
 <header *ngIf="auth.isAuthenticated()" class="application-header">
-  <div class="header-content">
-    <a class="brand" routerLink="/">Inventario empresarial</a>
+  <mat-toolbar class="app-toolbar">
+    <a class="brand" routerLink="/" aria-label="Ir al inicio">
+      <span class="brand-mark" aria-hidden="true">IG</span>
+      <span>Inventario empresarial</span>
+    </a>
 
-    <nav aria-label="Modulos principales">
+    <nav class="main-nav" aria-label="Módulos principales">
       <a
         *ngIf="auth.hasPermission('report:view')"
+        mat-button
         routerLink="/dashboard"
         routerLinkActive="active-link"
       >
@@ -12,6 +16,7 @@
       </a>
       <a
         *ngIf="auth.hasPermission('product:view')"
+        mat-button
         routerLink="/productos"
         routerLinkActive="active-link"
       >
@@ -19,6 +24,7 @@
       </a>
       <a
         *ngIf="auth.hasPermission('user:manage')"
+        mat-button
         routerLink="/seguridad"
         routerLinkActive="active-link"
       >
@@ -26,16 +32,18 @@
       </a>
     </nav>
 
+    <div class="toolbar-spacer"></div>
+
     <div class="user-session">
-      <div>
+      <div class="user-copy">
         <strong>{{ auth.user()?.displayName }}</strong>
         <span>{{ auth.user()?.username }}</span>
       </div>
-      <button type="button" (click)="logout()" [disabled]="logoutInProgress">
-        {{ logoutInProgress ? 'Cerrando...' : 'Cerrar sesion' }}
+      <button mat-stroked-button type="button" (click)="logout()" [disabled]="logoutInProgress">
+        {{ logoutInProgress ? 'Cerrando...' : 'Cerrar sesión' }}
       </button>
     </div>
-  </div>
+  </mat-toolbar>
 </header>
 
 <router-outlet></router-outlet>

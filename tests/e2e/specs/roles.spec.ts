@@ -8,7 +8,7 @@ test('restringe acciones administrativas al usuario de consulta', async ({
 
   await page.goto('/productos');
   await expect(
-    page.getByRole('heading', { name: 'Catalogo de inventario' }),
+    page.getByRole('heading', { name: 'Catálogo de inventario' }),
   ).toBeVisible();
   await expect(
     page.getByRole('link', { name: 'Nuevo producto' }),
@@ -36,7 +36,7 @@ test('restringe acciones administrativas al usuario de consulta', async ({
   await expect(page).toHaveURL(/\/forbidden$/);
   await expect(
     page.getByRole('heading', {
-      name: 'No tienes permiso para ver este modulo',
+      name: 'No tienes permiso para ver este módulo',
     }),
   ).toBeVisible();
 

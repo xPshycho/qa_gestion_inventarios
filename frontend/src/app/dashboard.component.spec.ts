@@ -58,8 +58,8 @@ describe('DashboardComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain('Indicadores operacionales');
-    expect(compiled.textContent).toContain('Stock critico');
-    expect(compiled.textContent).toContain('Productos criticos');
+    expect(compiled.textContent).toContain('Stock crítico');
+    expect(compiled.textContent).toContain('Productos críticos');
     expect(dashboardService.getDashboard).toHaveBeenCalled();
   });
 });

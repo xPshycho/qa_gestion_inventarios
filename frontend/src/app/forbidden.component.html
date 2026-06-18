@@ -1,8 +1,12 @@
 <main class="forbidden-page">
-  <section class="forbidden-panel">
-    <p class="eyebrow">Acceso denegado</p>
-    <h1>No tienes permiso para ver este modulo</h1>
-    <p>Tu sesion es valida, pero la operacion requiere un permiso que no esta asignado a tu cuenta.</p>
-    <a routerLink="/">Volver a un modulo disponible</a>
-  </section>
+  <mat-card class="forbidden-panel">
+    <mat-card-content>
+      <p class="eyebrow">Acceso denegado</p>
+      <h1>No tienes permiso para ver este módulo</h1>
+      <p>
+        Tu sesión es válida, pero la operación requiere un permiso que no está asignado a tu cuenta.
+      </p>
+      <a mat-flat-button color="primary" routerLink="/">Volver a un módulo disponible</a>
+    </mat-card-content>
+  </mat-card>
 </main>

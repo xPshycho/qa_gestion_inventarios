@@ -1,20 +1,29 @@
+@import '@angular/material/prebuilt-themes/azure-blue.css';
+
 :root {
   color-scheme: light;
-  --bg: #f4f7f6;
+  --bg: #f5f7fa;
   --surface: #ffffff;
-  --surface-muted: #eef3f1;
-  --border: #d8e0dc;
-  --border-strong: #aebbb6;
-  --text: #16201c;
-  --muted: #5c6b65;
-  --primary: #126b5d;
-  --primary-strong: #0a4c43;
-  --accent: #365ad8;
+  --surface-muted: #eef3f7;
+  --surface-strong: #e2e8f0;
+  --border: #d7dee8;
+  --border-strong: #a9b7c7;
+  --text: #17212f;
+  --muted: #596879;
+  --primary: #0f766e;
+  --primary-strong: #0b5f59;
+  --accent: #2563eb;
+  --accent-soft: #e8f0ff;
   --danger: #b42318;
-  --warning-bg: #fff6d6;
-  --success-bg: #dff7ec;
-  --inactive-bg: #e9edf2;
-  --shadow: 0 18px 45px rgba(22, 32, 28, 0.08);
+  --danger-soft: #fff1f0;
+  --warning: #9a6700;
+  --warning-bg: #fff7d6;
+  --success-bg: #e4f7ed;
+  --inactive-bg: #e8edf3;
+  --shadow: 0 18px 42px rgba(23, 33, 47, 0.09);
+  --radius: 8px;
+  --page-width: 1180px;
+  --focus: 0 0 0 3px rgba(37, 99, 235, 0.22);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -22,24 +31,341 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+}
+
 body {
   margin: 0;
-  min-width: 320px;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
-button {
+button,
+a,
+[role="button"] {
   cursor: pointer;
 }
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+}
+
+a {
+  color: inherit;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  overflow-wrap: anywhere;
+}
+
+.mat-mdc-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.mat-mdc-form-field-subscript-wrapper {
+  min-height: 18px;
+}
+
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-outlined-button,
+.mat-mdc-unelevated-button {
+  border-radius: 7px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.mat-mdc-chip {
+  border-radius: 999px !important;
+  font-weight: 800;
+}
+
+.page-shell {
+  width: min(var(--page-width), calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.page-heading-card {
+  margin-bottom: 16px;
+}
+
+.page-heading-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.heading-actions,
+.header-actions,
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 3vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  letter-spacing: 0;
+}
+
+.page-subtitle {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.metric,
+.summary-card,
+.metric-card {
+  min-width: 0;
+}
+
+.metric {
+  min-width: 118px;
+  border-left: 3px solid var(--accent);
+  padding-left: 13px;
+}
+
+.metric strong,
+.metric span {
+  display: block;
+  text-align: right;
+}
+
+.metric strong {
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.metric span,
+.muted {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.page-message {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  line-height: 1.45;
+}
+
+.page-message-success {
+  border-color: #a9dfc5;
+  background: var(--success-bg);
+  color: var(--primary-strong);
+}
+
+.page-message-error,
+.state-error {
+  border-color: #ffd5d2;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.state,
+.empty,
+.empty-inline {
+  color: var(--muted);
+  text-align: center;
+}
+
+.state,
+.empty {
+  margin: 0;
+  padding: 24px 18px;
+}
+
+.empty-inline {
+  margin: 0;
+  padding: 22px 18px;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  min-width: 760px;
+}
+
+.data-table th,
+.data-table td {
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.data-table th {
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pill,
+.status,
+.movement-type,
+.revision-type {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--inactive-bg);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 5px 9px;
+}
+
+.status-active,
+.pill-success {
+  background: var(--success-bg);
+  color: var(--primary-strong);
+}
+
+.pill-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.delta {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.delta-positive {
+  color: var(--primary-strong);
+}
+
+.delta-negative {
+  color: var(--danger);
+}
+
+.delta-neutral {
+  color: var(--muted);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+input,
+textarea,
+select {
+  max-width: 100%;
+}
+
+textarea {
+  resize: vertical;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .page-shell {
+    width: min(100% - 20px, var(--page-width));
+    padding: 18px 0 36px;
+  }
+
+  .page-heading-content,
+  .heading-actions,
+  .header-actions,
+  .panel-actions,
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .metric strong,
+  .metric span {
+    text-align: left;
+  }
+
+  .form-grid,
+  .form-field-wide {
+    grid-template-columns: 1fr;
+    grid-column: auto;
+  }
 }

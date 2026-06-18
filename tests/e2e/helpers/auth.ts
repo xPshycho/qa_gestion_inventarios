@@ -18,11 +18,11 @@ export const viewerUser: E2EUser = {
 export async function loginAs(page: Page, user: E2EUser): Promise<void> {
   await page.goto('/login');
   await expect(
-    page.getByRole('heading', { name: 'Gestion de inventarios' }),
+    page.getByRole('heading', { name: 'Gestión de inventarios' }),
   ).toBeVisible();
 
   await page
-    .getByRole('button', { name: 'Iniciar sesion con Keycloak' })
+    .getByRole('button', { name: 'Iniciar sesión con Keycloak' })
     .click();
   await expect(page).toHaveURL(/\/realms\/inventory\/protocol\/openid-connect\/auth/);
 
@@ -31,6 +31,6 @@ export async function loginAs(page: Page, user: E2EUser): Promise<void> {
   await page.locator('#kc-login').click();
 
   await expect(
-    page.getByRole('button', { name: 'Cerrar sesion' }),
+    page.getByRole('button', { name: 'Cerrar sesión' }),
   ).toBeVisible();
 }

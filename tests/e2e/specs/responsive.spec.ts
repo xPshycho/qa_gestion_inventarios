@@ -8,11 +8,11 @@ test('mantiene usable el catalogo en viewport movil', async ({
   await page.goto('/productos');
 
   await expect(
-    page.getByRole('heading', { name: 'Catalogo de inventario' }),
+    page.getByRole('heading', { name: 'Catálogo de inventario' }),
   ).toBeVisible();
-  await expect(page.getByLabel('Busqueda por nombre o SKU')).toBeVisible();
+  await expect(page.getByLabel('Búsqueda por nombre o SKU')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Actualizar' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Modulos principales' }))
+  await expect(page.getByRole('navigation', { name: 'Módulos principales' }))
     .toBeVisible();
 
   const hasHorizontalOverflow = await page.evaluate(() => (

@@ -1,52 +1,56 @@
 <form class="product-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
   <div class="form-grid">
-    <label class="form-field">
-      <span>SKU</span>
+    <mat-form-field appearance="outline">
+      <mat-label>SKU</mat-label>
       <input
+        matInput
         type="text"
         formControlName="sku"
         maxlength="64"
         autocomplete="off"
         [attr.aria-invalid]="fieldError('sku') ? true : null"
       >
-      <small *ngIf="fieldError('sku')" class="field-error">{{ fieldError('sku') }}</small>
-    </label>
+      <mat-error *ngIf="fieldError('sku')">{{ fieldError('sku') }}</mat-error>
+    </mat-form-field>
 
-    <label class="form-field">
-      <span>Nombre</span>
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre</mat-label>
       <input
+        matInput
         type="text"
         formControlName="name"
         maxlength="160"
         autocomplete="off"
         [attr.aria-invalid]="fieldError('name') ? true : null"
       >
-      <small *ngIf="fieldError('name')" class="field-error">{{ fieldError('name') }}</small>
-    </label>
+      <mat-error *ngIf="fieldError('name')">{{ fieldError('name') }}</mat-error>
+    </mat-form-field>
 
-    <label class="form-field">
-      <span>Categoria</span>
+    <mat-form-field appearance="outline">
+      <mat-label>Categoría</mat-label>
       <input
+        matInput
         type="text"
         formControlName="category"
         maxlength="100"
         autocomplete="off"
         [attr.aria-invalid]="fieldError('category') ? true : null"
       >
-      <small *ngIf="fieldError('category')" class="field-error">{{ fieldError('category') }}</small>
-    </label>
+      <mat-error *ngIf="fieldError('category')">{{ fieldError('category') }}</mat-error>
+    </mat-form-field>
 
-    <label class="form-field">
-      <span>Estado</span>
-      <select formControlName="status">
-        <option value="ACTIVE">Activo</option>
-        <option value="INACTIVE">Inactivo</option>
-      </select>
-    </label>
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select formControlName="status">
+        <mat-option value="ACTIVE">Activo</mat-option>
+        <mat-option value="INACTIVE">Inactivo</mat-option>
+      </mat-select>
+    </mat-form-field>
 
-    <label class="form-field">
-      <span>Precio</span>
+    <mat-form-field appearance="outline">
+      <mat-label>Precio</mat-label>
       <input
+        matInput
         type="number"
         formControlName="price"
         min="0"
@@ -54,12 +58,13 @@
         step="0.01"
         [attr.aria-invalid]="fieldError('price') ? true : null"
       >
-      <small *ngIf="fieldError('price')" class="field-error">{{ fieldError('price') }}</small>
-    </label>
+      <mat-error *ngIf="fieldError('price')">{{ fieldError('price') }}</mat-error>
+    </mat-form-field>
 
-    <label class="form-field">
-      <span>Stock actual</span>
+    <mat-form-field appearance="outline">
+      <mat-label>Stock actual</mat-label>
       <input
+        matInput
         type="number"
         formControlName="currentStock"
         min="0"
@@ -67,42 +72,40 @@
         [readonly]="currentStockReadonly"
         [attr.aria-invalid]="fieldError('currentStock') ? true : null"
       >
-      <small *ngIf="fieldError('currentStock')" class="field-error">
-        {{ fieldError('currentStock') }}
-      </small>
-    </label>
+      <mat-hint *ngIf="currentStockReadonly">Se ajusta desde movimientos de stock.</mat-hint>
+      <mat-error *ngIf="fieldError('currentStock')">{{ fieldError('currentStock') }}</mat-error>
+    </mat-form-field>
 
-    <label class="form-field">
-      <span>Stock minimo</span>
+    <mat-form-field appearance="outline">
+      <mat-label>Stock mínimo</mat-label>
       <input
+        matInput
         type="number"
         formControlName="minimumStock"
         min="0"
         step="1"
         [attr.aria-invalid]="fieldError('minimumStock') ? true : null"
       >
-      <small *ngIf="fieldError('minimumStock')" class="field-error">
-        {{ fieldError('minimumStock') }}
-      </small>
-    </label>
+      <mat-error *ngIf="fieldError('minimumStock')">{{ fieldError('minimumStock') }}</mat-error>
+    </mat-form-field>
 
-    <label class="form-field form-field-wide">
-      <span>Descripcion</span>
+    <mat-form-field appearance="outline" class="form-field-wide">
+      <mat-label>Descripción</mat-label>
       <textarea
+        matInput
         formControlName="description"
         maxlength="500"
         rows="5"
         [attr.aria-invalid]="fieldError('description') ? true : null"
       ></textarea>
-      <small *ngIf="fieldError('description')" class="field-error">
-        {{ fieldError('description') }}
-      </small>
-    </label>
+      <mat-hint align="end">Máximo 500 caracteres</mat-hint>
+      <mat-error *ngIf="fieldError('description')">{{ fieldError('description') }}</mat-error>
+    </mat-form-field>
   </div>
 
   <div class="form-actions">
-    <a routerLink="/productos" class="secondary-action">Cancelar</a>
-    <button type="submit" class="primary-action" [disabled]="submitting">
+    <a routerLink="/productos" class="secondary-action" mat-stroked-button>Cancelar</a>
+    <button type="submit" class="primary-action" mat-flat-button color="primary" [disabled]="submitting">
       {{ submitting ? 'Guardando...' : submitLabel }}
     </button>
   </div>

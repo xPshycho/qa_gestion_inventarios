@@ -7,6 +7,7 @@ import { AuthService } from './auth/auth.service';
 import { Product, ProductPage, ProductQuery, ProductStatus, SortField } from './product.model';
 import { productErrorMessage } from './product-error';
 import { ProductService } from './product.service';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 const DEFAULT_QUERY: ProductQuery = {
   page: 0,
@@ -21,7 +22,7 @@ const DEFAULT_QUERY: ProductQuery = {
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...MATERIAL_IMPORTS],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })

@@ -1,43 +1,29 @@
 import { Component } from '@angular/core';
 import { DashboardComponent } from './dashboard.component';
+import { MATERIAL_IMPORTS } from './shared/material.imports';
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [DashboardComponent],
+  imports: [DashboardComponent, ...MATERIAL_IMPORTS],
   template: `
-    <main class="dashboard-page">
-      <section class="page-heading">
-        <div>
-          <p>Dashboard</p>
+    <main class="dashboard-page page-shell">
+      <mat-card class="page-heading-card">
+        <mat-card-content class="page-heading-content">
+          <div>
+            <p class="eyebrow">Dashboard</p>
           <h1>Inventario operativo</h1>
-        </div>
-      </section>
+            <p class="page-subtitle">Indicadores de productos, stock y movimientos recientes.</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
       <app-dashboard></app-dashboard>
     </main>
   `,
   styles: [`
     .dashboard-page {
-      width: min(1180px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 32px 0 48px;
-    }
-
-    .page-heading {
-      margin-bottom: 20px;
-    }
-
-    p {
-      margin: 0 0 6px;
-      color: var(--primary);
-      font-size: 0.78rem;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(1.65rem, 3vw, 2.35rem);
+      display: grid;
+      gap: 16px;
     }
   `]
 })

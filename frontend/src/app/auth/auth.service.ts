@@ -84,7 +84,7 @@ export class AuthService {
 
   async login(returnUrl = '/'): Promise<void> {
     if (!this.keycloak) {
-      throw new Error('El servicio de autenticacion no esta disponible.');
+      throw new Error('El servicio de autenticación no está disponible.');
     }
 
     await this.keycloak.login({

@@ -1,55 +1,69 @@
 <section class="dashboard-area" aria-label="Dashboard operacional">
-  <div class="dashboard-heading">
-    <div>
-      <strong>Indicadores operacionales</strong>
-      <span>Vista historica del estado del inventario</span>
-    </div>
-    <button class="refresh-button" type="button" (click)="refreshDashboard()" [disabled]="dashboardLoading">
-      Actualizar
-    </button>
-  </div>
+  <mat-card class="dashboard-heading-card">
+    <mat-card-content class="dashboard-heading">
+      <div>
+        <strong>Indicadores operacionales</strong>
+        <span>Vista histórica del estado del inventario</span>
+      </div>
+      <button mat-flat-button color="primary" class="refresh-button" type="button" (click)="refreshDashboard()" [disabled]="dashboardLoading">
+        Actualizar
+      </button>
+    </mat-card-content>
+  </mat-card>
 
   <div *ngIf="dashboardErrorMessage" class="state state-error" role="alert">
     {{ dashboardErrorMessage }}
   </div>
+
+  <mat-progress-bar *ngIf="dashboardLoading" mode="indeterminate"></mat-progress-bar>
 
   <div *ngIf="dashboardLoading" class="state">
     Cargando dashboard...
   </div>
 
   <ng-container *ngIf="!dashboardLoading && dashboard as dashboardData">
-    <section class="metrics-grid" aria-label="Metricas operacionales">
-      <article class="metric-card">
-        <span>Total productos</span>
-        <strong>{{ dashboardData.metrics.totalProducts }}</strong>
-        <small>{{ dashboardData.metrics.activeProducts }} activos</small>
-      </article>
-      <article class="metric-card metric-card-warning">
-        <span>Stock critico</span>
-        <strong>{{ dashboardData.metrics.criticalProducts }}</strong>
-        <small>{{ dashboardData.metrics.inactiveProducts }} inactivos</small>
-      </article>
-      <article class="metric-card">
-        <span>Unidades en stock</span>
-        <strong>{{ dashboardData.metrics.totalStockUnits }}</strong>
-        <small>inventario disponible</small>
-      </article>
-      <article class="metric-card">
-        <span>Valor inventario</span>
-        <strong>{{ dashboardData.metrics.inventoryValue | currency:'DOP':'symbol':'1.2-2' }}</strong>
-        <small>valor actual</small>
-      </article>
-      <article class="metric-card metric-card-accent">
-        <span>Movimientos</span>
-        <strong>{{ dashboardData.metrics.totalMovements }}</strong>
-        <small>{{ dashboardData.metrics.entryMovements }} entradas / {{ dashboardData.metrics.exitMovements }} salidas</small>
-      </article>
+    <section class="metrics-grid" aria-label="Métricas operacionales">
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <span>Total productos</span>
+          <strong>{{ dashboardData.metrics.totalProducts }}</strong>
+          <small>{{ dashboardData.metrics.activeProducts }} activos</small>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="metric-card metric-card-warning">
+        <mat-card-content>
+          <span>Stock crítico</span>
+          <strong>{{ dashboardData.metrics.criticalProducts }}</strong>
+          <small>{{ dashboardData.metrics.inactiveProducts }} inactivos</small>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <span>Unidades en stock</span>
+          <strong>{{ dashboardData.metrics.totalStockUnits }}</strong>
+          <small>inventario disponible</small>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <span>Valor inventario</span>
+          <strong>{{ dashboardData.metrics.inventoryValue | currency:'DOP':'symbol':'1.2-2' }}</strong>
+          <small>valor actual</small>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="metric-card metric-card-accent">
+        <mat-card-content>
+          <span>Movimientos</span>
+          <strong>{{ dashboardData.metrics.totalMovements }}</strong>
+          <small>{{ dashboardData.metrics.entryMovements }} entradas / {{ dashboardData.metrics.exitMovements }} salidas</small>
+        </mat-card-content>
+      </mat-card>
     </section>
 
     <section class="insight-grid" aria-label="Indicadores detallados">
-      <article class="insight-panel">
+      <mat-card class="insight-panel">
         <div class="insight-title">
-          <strong>Productos criticos</strong>
+          <strong>Productos críticos</strong>
           <span>{{ dashboardData.criticalProducts.length }} visibles</span>
         </div>
 
@@ -66,13 +80,13 @@
         </ul>
 
         <ng-template #emptyCritical>
-          <p class="empty-inline">No hay productos activos en stock critico.</p>
+          <p class="empty-inline">No hay productos activos en stock crítico.</p>
         </ng-template>
-      </article>
+      </mat-card>
 
-      <article class="insight-panel">
+      <mat-card class="insight-panel">
         <div class="insight-title">
-          <strong>Productos mas movidos</strong>
+          <strong>Productos más movidos</strong>
           <span>por unidades</span>
         </div>
 
@@ -90,9 +104,9 @@
         <ng-template #emptyMoved>
           <p class="empty-inline">No hay movimientos registrados.</p>
         </ng-template>
-      </article>
+      </mat-card>
 
-      <article class="insight-panel insight-panel-wide">
+      <mat-card class="insight-panel insight-panel-wide">
         <div class="insight-title">
           <strong>Historial reciente</strong>
           <span>{{ dashboardData.recentMovements.length }} movimientos</span>
@@ -117,7 +131,7 @@
         <ng-template #emptyHistory>
           <p class="empty-inline">No hay historial reciente para mostrar.</p>
         </ng-template>
-      </article>
+      </mat-card>
     </section>
   </ng-container>
 </section>
