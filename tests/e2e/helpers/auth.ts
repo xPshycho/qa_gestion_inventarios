@@ -7,12 +7,12 @@ export interface E2EUser {
 
 export const adminUser: E2EUser = {
   username: process.env.E2E_ADMIN_USERNAME ?? 'carlos',
-  password: process.env.E2E_ADMIN_PASSWORD ?? 'Carlos123!',
+  password: process.env.E2E_ADMIN_PASSWORD ?? 'admin123',
 };
 
 export const viewerUser: E2EUser = {
   username: process.env.E2E_VIEWER_USERNAME ?? 'viewer',
-  password: process.env.E2E_VIEWER_PASSWORD ?? 'Viewer123!',
+  password: process.env.E2E_VIEWER_PASSWORD ?? 'admin123',
 };
 
 export async function loginAs(page: Page, user: E2EUser): Promise<void> {

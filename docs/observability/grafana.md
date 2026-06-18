@@ -14,7 +14,7 @@ Las credenciales demo de Grafana son:
 
 | Usuario | Contrasena |
 |---|---|
-| `admin` | `cambiar` |
+| `admin` | `admin123` |
 
 Los valores se pueden cambiar en `.env` con `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_PORT` y `PROMETHEUS_PORT`.
 

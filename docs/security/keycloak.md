@@ -81,6 +81,21 @@ La app administra roles funcionales (`INVENTORY_ADMIN`, `STOCK_OPERATOR`, `INVEN
 roles compuestos en Keycloak. La gestion de contrasenas, reset temporal y politicas avanzadas quedan
 en la consola de Keycloak.
 
+## Usuarios demo locales
+
+Estas credenciales son solo para desarrollo local y pruebas demo.
+
+| Usuario | Contrasena | Rol |
+|---------|------------|-----|
+| `carlos` | `admin123` | `INVENTORY_ADMIN` |
+| `edwin` | `admin123` | `STOCK_OPERATOR` |
+| `viewer` | `admin123` | `INVENTORY_VIEWER` |
+| `auditor` | `admin123` | `AUDIT_REVIEWER` |
+
+La consola administrativa local de Keycloak usa `admin` / `admin123` por defecto. Si el volumen de
+Keycloak ya existia con otra clave, recrear el contenedor/volumen local para importar el realm
+actualizado.
+
 ## Comportamiento esperado
 
 | Caso | Resultado |

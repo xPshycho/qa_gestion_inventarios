@@ -90,6 +90,22 @@ OpenTelemetry queda deshabilitado por defecto en Docker Compose con `OTEL_SDK_DI
 Las metricas operativas se exponen por Actuator en `/actuator/prometheus` y Prometheus las
 scrapea desde la red interna de Docker Compose.
 
+## Credenciales demo locales
+
+Estas credenciales son solo para desarrollo local y datos de prueba.
+
+| Servicio | Usuario | Contrasena |
+|----------|---------|------------|
+| Aplicacion | `carlos` | `admin123` |
+| Aplicacion | `edwin` | `admin123` |
+| Aplicacion | `viewer` | `admin123` |
+| Aplicacion | `auditor` | `admin123` |
+| Keycloak admin | `admin` | `admin123` |
+| Grafana admin | `admin` | `admin123` |
+
+Si Keycloak o Grafana ya tenian volumenes creados con credenciales anteriores, recrear los
+contenedores/volumenes locales para que se importe la configuracion nueva.
+
 ## Migraciones de base de datos
 
 Flyway ejecuta las migraciones versionadas ubicadas en `backend/src/main/resources/db/migration`.

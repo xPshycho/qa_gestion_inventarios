@@ -69,7 +69,7 @@ class KeycloakSecurityIntegrationTest extends KeycloakIntegrationTest {
 
     @Test
     void administratorTokenAllowsCreatingProducts() throws Exception {
-        String token = accessToken("carlos", "Carlos123!");
+        String token = accessToken("carlos", "admin123");
 
         mockMvc.perform(post("/products")
                         .header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -82,7 +82,7 @@ class KeycloakSecurityIntegrationTest extends KeycloakIntegrationTest {
 
     @Test
     void viewerTokenAllowsReadingProducts() throws Exception {
-        String token = accessToken("viewer", "Viewer123!");
+        String token = accessToken("viewer", "admin123");
 
         mockMvc.perform(get("/products")
                         .header(HttpHeaders.AUTHORIZATION, bearer(token)))
@@ -92,7 +92,7 @@ class KeycloakSecurityIntegrationTest extends KeycloakIntegrationTest {
 
     @Test
     void viewerTokenCannotCreateProducts() throws Exception {
-        String token = accessToken("viewer", "Viewer123!");
+        String token = accessToken("viewer", "admin123");
 
         mockMvc.perform(post("/products")
                         .header(HttpHeaders.AUTHORIZATION, bearer(token))
