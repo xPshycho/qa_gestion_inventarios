@@ -1,0 +1,35 @@
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+ARG PNPM_VERSION=10.12.1
+
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-factor 2 \
+    && npm config set fetch-retry-mintimeout 10000 \
+    && npm config set fetch-retry-maxtimeout 60000 \
+    && npm install -g "pnpm@${PNPM_VERSION}" --ignore-scripts
+
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+COPY angular.json tsconfig.json tsconfig.app.json ./
+COPY public ./public
+COPY src ./src
+RUN pnpm build
+
+FROM nginx:1.27-alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker-entrypoint.sh /usr/local/bin/inventory-frontend-entrypoint
+COPY --from=build /app/dist/qa-gestion-inventarios-frontend/browser /usr/share/nginx/html
+
+RUN chmod +x /usr/local/bin/inventory-frontend-entrypoint \
+    && chown -R nginx:nginx /run /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html
+
+USER nginx
+
+EXPOSE 8080
+
+ENTRYPOINT []
+CMD ["/usr/local/bin/inventory-frontend-entrypoint"]

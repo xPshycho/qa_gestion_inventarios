@@ -1,0 +1,49 @@
+<header *ngIf="auth.isAuthenticated()" class="application-header">
+  <mat-toolbar class="app-toolbar">
+    <a class="brand" routerLink="/" aria-label="Ir al inicio">
+      <span class="brand-mark" aria-hidden="true">IG</span>
+      <span>Inventario empresarial</span>
+    </a>
+
+    <nav class="main-nav" aria-label="Módulos principales">
+      <a
+        *ngIf="auth.hasPermission('report:view')"
+        mat-button
+        routerLink="/dashboard"
+        routerLinkActive="active-link"
+      >
+        Dashboard
+      </a>
+      <a
+        *ngIf="auth.hasPermission('product:view')"
+        mat-button
+        routerLink="/productos"
+        routerLinkActive="active-link"
+      >
+        Productos
+      </a>
+      <a
+        *ngIf="auth.hasPermission('user:manage')"
+        mat-button
+        routerLink="/seguridad"
+        routerLinkActive="active-link"
+      >
+        Seguridad
+      </a>
+    </nav>
+
+    <div class="toolbar-spacer"></div>
+
+    <div class="user-session">
+      <div class="user-copy">
+        <strong>{{ auth.user()?.displayName }}</strong>
+        <span>{{ auth.user()?.username }}</span>
+      </div>
+      <button mat-stroked-button type="button" (click)="logout()" [disabled]="logoutInProgress">
+        {{ logoutInProgress ? 'Cerrando...' : 'Cerrar sesión' }}
+      </button>
+    </div>
+  </mat-toolbar>
+</header>
+
+<router-outlet></router-outlet>

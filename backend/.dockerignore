@@ -1,0 +1,10 @@
+.gradle/
+build/
+logs/
+*.log
+*.dump
+*.hprof
+.env
+.env.*
+tmp/
+temp/

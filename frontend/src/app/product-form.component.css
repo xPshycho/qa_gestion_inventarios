@@ -1,0 +1,30 @@
+.product-page {
+  --page-width: 900px;
+}
+
+.form-panel mat-card-content {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+}
+
+.product-form {
+  display: grid;
+  gap: 22px;
+}
+
+.form-actions {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.primary-action,
+.secondary-action {
+  min-height: 42px;
+}
+
+@media (max-width: 680px) {
+  .form-panel mat-card-content {
+    padding: 18px;
+  }
+}

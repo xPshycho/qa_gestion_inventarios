@@ -1,0 +1,164 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+      - 'test/**'
+      - 'ci/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  build:
+    name: Backend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: Build backend artifact
+        run: ./gradlew clean assemble --no-daemon
+
+      - name: Upload backend build outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build-${{ github.run_number }}
+          path: |
+            backend/build/libs/*.jar
+            backend/build/reports/problems/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  unit-tests:
+    name: Unit Tests and Coverage
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: Run unit tests and coverage gate
+        run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification --no-daemon
+
+      - name: Upload unit test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-unit-test-reports-${{ github.run_number }}
+          path: |
+            backend/build/reports/tests/**
+            backend/build/reports/jacoco/**
+            backend/build/reports/tests/test/**
+            backend/build/test-results/test/**
+            backend/build/reports/jacoco/test/**
+            backend/build/jacoco/test.exec
+          if-no-files-found: warn
+          retention-days: 14
+
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: Run API contract tests
+        run: ./gradlew apiTest --no-daemon
+
+      - name: Upload API test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-api-test-reports-${{ github.run_number }}
+          path: |
+            backend/build/reports/tests/apiTest/**
+            backend/build/test-results/apiTest/**
+            backend/build/reports/problems/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  integration-tests:
+    name: Integration Tests and Coverage
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: Run integration tests with JaCoCo
+        run: ./gradlew integrationTest --no-daemon
+
+      - name: Upload integration test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-test-reports-${{ github.run_number }}
+          path: |
+            backend/build/reports/tests/**
+            backend/build/reports/jacoco/**
+            backend/build/reports/tests/integrationTest/**
+            backend/build/test-results/integrationTest/**
+            backend/build/reports/jacoco/integrationTest/**
+            backend/build/jacoco/integrationTest.exec
+            backend/build/reports/problems/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Summarize integration evidence
+        if: always()
+        run: |
+          {
+            echo "## Integration evidence"
+            echo ""
+            echo "- Command: \`./gradlew integrationTest --no-daemon\`"
+            echo "- Test report: \`backend/build/reports/tests/integrationTest/index.html\`"
+            echo "- Coverage report: \`backend/build/reports/jacoco/integrationTest/html/index.html\`"
+            echo "- Testcontainers diagnostics are available in the uploaded reports when environment-dependent failures occur"
+          } >> "$GITHUB_STEP_SUMMARY"

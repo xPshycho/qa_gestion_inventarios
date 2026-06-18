@@ -1,0 +1,16 @@
+# Keep Unix entrypoint scripts executable inside Linux containers.
+gradlew text eol=lf
+**/gradlew text eol=lf
+*.sh text eol=lf
+
+# Keep Windows launchers compatible with Windows checkouts.
+*.bat text eol=crlf
+
+# Keep Gradle and Docker metadata stable across Windows/WSL/Linux.
+*.gradle text eol=lf
+*.properties text eol=lf
+Dockerfile text eol=lf
+**/Dockerfile text eol=lf
+
+# Binary wrapper artifacts must not be line-ending normalized.
+*.jar binary

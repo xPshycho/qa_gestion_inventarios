@@ -1,0 +1,133 @@
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-card mat-card-content {
+  display: grid;
+  gap: 8px;
+  min-height: 112px;
+  padding: 18px;
+}
+
+.summary-card span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.summary-card strong {
+  font-size: 1.55rem;
+  line-height: 1.1;
+}
+
+.summary-card-warning {
+  border-color: #f2c94c;
+  background: var(--warning-bg);
+}
+
+.stock-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.operation-panel,
+.history-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
+}
+
+.panel-heading strong,
+.panel-heading span {
+  display: block;
+}
+
+.panel-heading span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.operation-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 16px 18px 0;
+}
+
+.operation-tabs button {
+  min-height: 42px;
+}
+
+.operation-tabs .active-tab {
+  border-color: var(--primary);
+  background: var(--success-bg);
+  color: var(--primary-strong);
+}
+
+.stock-form {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+}
+
+.primary-action {
+  min-height: 42px;
+}
+
+.readonly-panel p {
+  margin: 0;
+  padding: 22px 18px;
+  color: var(--muted);
+}
+
+.movement-type {
+  background: var(--surface-muted);
+  color: var(--primary-strong);
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .summary-grid,
+  .stock-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .history-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-heading-content,
+  .panel-heading,
+  .summary-grid,
+  .stock-grid,
+  .operation-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .history-panel {
+    grid-column: auto;
+  }
+}
