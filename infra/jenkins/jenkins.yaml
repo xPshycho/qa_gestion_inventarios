@@ -23,6 +23,16 @@ unclassified:
   location:
     url: "${JENKINS_URL}"
 
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: "sonarcloud-token"
+              secret: "5547ab9129cbf8afa56363e8ef5c846cf48fc1d0"
+              description: "SonarCloud Token"
+
 tool:
   jdk:
     installations:
