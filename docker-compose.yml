@@ -53,6 +53,19 @@ services:
     expose:
       - "8080"
       - "9000"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -qE '^HTTP/[0-9.]+ 200 ' <&3
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
     networks:
       - inventory-network
 
@@ -64,6 +77,8 @@ services:
     depends_on:
       flyway:
         condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-inventory_user}
@@ -81,8 +96,8 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health >/dev/null"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 12
+      start_period: 60s
     networks:
       - inventory-network
 
