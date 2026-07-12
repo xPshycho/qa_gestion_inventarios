@@ -253,7 +253,9 @@ E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 run stack:ready
 E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 exec playwright test
 
 # Performance tests
-# Pendiente de suite dedicada en issue #60
+K6_PROFILE=smoke K6_PASSWORD="<password-local>" k6 run tests/performance/performance.js
+
+# Guia completa: tests/performance/README.md
 
 # Security scan
 # Jenkins ejecuta pnpm audit --prod; ZAP/dependency scan dedicados pertenecen al issue de security testing
