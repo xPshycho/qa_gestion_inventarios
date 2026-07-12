@@ -36,7 +36,7 @@ seguridad, observabilidad, integracion y despliegue continuos.
 - Docker >= 24
 - Docker Compose >= 2.20
 - Java 21
-- Node.js >= 20
+- Node.js 20.19+, 22.12+ o 24.x
 
 ## Instalacion local
 
