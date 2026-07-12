@@ -101,7 +101,8 @@ describe('ProductsComponent', () => {
       .find((link) => (link.nativeElement as HTMLElement).textContent?.includes('Editar'));
 
     expect(editLink).toBeDefined();
-    expect(editLink?.attributes['ng-reflect-router-link']).toContain('1');
+    expect((editLink?.nativeElement as HTMLAnchorElement).getAttribute('href'))
+      .toBe('/productos/1/editar');
   });
 
   it('muestra la accion de auditoria solo con audit view', () => {
