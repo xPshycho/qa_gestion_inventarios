@@ -24,6 +24,7 @@ RUN apk add --no-cache gettext
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY security-headers.conf.template /etc/nginx/templates/security-headers.conf.template
+COPY silent-sso-headers.conf.template /etc/nginx/templates/silent-sso-headers.conf.template
 COPY docker-entrypoint.sh /usr/local/bin/inventory-frontend-entrypoint
 COPY --from=build /app/dist/qa-gestion-inventarios-frontend/browser /usr/share/nginx/html
 

@@ -31,6 +31,9 @@ envsubst '${KEYCLOAK_PUBLIC_URL}' \
 envsubst '${KEYCLOAK_PUBLIC_URL}' \
   < "$nginx_template_dir/security-headers.conf.template" \
   > "$nginx_config_dir/security-headers.conf"
+envsubst '${KEYCLOAK_PUBLIC_URL}' \
+  < "$nginx_template_dir/silent-sso-headers.conf.template" \
+  > "$nginx_config_dir/silent-sso-headers.conf"
 
 nginx -t
 
