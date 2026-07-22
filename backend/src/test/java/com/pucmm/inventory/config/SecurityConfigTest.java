@@ -3,10 +3,12 @@ package com.pucmm.inventory.config;
 import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_VIEW;
 import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_MANAGE;
 import static com.pucmm.inventory.config.SecurityConfig.REPORT_VIEW;
+import static org.hamcrest.Matchers.containsString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -100,6 +102,35 @@ class SecurityConfigTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/products/1"));
+    }
+
+    @Test
+    void preflightFromAllowedOriginReturnsCorsHeaders() throws Exception {
+        mockMvc.perform(options("/products")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Methods", containsString("POST")))
+                .andExpect(header().string("Access-Control-Allow-Headers", containsString("Authorization")));
+    }
+
+    @Test
+    void preflightFromUnexpectedOriginIsRejected() throws Exception {
+        mockMvc.perform(options("/products")
+                        .header("Origin", "https://untrusted.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void allowedOriginStillRequiresJwt() throws Exception {
+        mockMvc.perform(get("/products/{id}", 1L)
+                        .header("Origin", "http://127.0.0.1:5173"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://127.0.0.1:5173"));
     }
 
     @Test
