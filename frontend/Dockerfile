@@ -20,12 +20,16 @@ RUN pnpm build
 
 FROM nginx:1.27-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN apk add --no-cache gettext
+
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY security-headers.conf.template /etc/nginx/templates/security-headers.conf.template
+COPY silent-sso-headers.conf.template /etc/nginx/templates/silent-sso-headers.conf.template
 COPY docker-entrypoint.sh /usr/local/bin/inventory-frontend-entrypoint
 COPY --from=build /app/dist/qa-gestion-inventarios-frontend/browser /usr/share/nginx/html
 
 RUN chmod +x /usr/local/bin/inventory-frontend-entrypoint \
-    && chown -R nginx:nginx /run /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html
+    && chown -R nginx:nginx /etc/nginx/conf.d /run /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html
 
 USER nginx
 

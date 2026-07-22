@@ -136,3 +136,22 @@ Comando de verificacion:
 cd backend
 ./gradlew test
 ```
+
+## CORS y headers HTTP
+
+La API permite solicitudes CORS solo desde los orígenes de desarrollo `http://localhost:5173` y
+`http://127.0.0.1:5173`. Acepta los métodos `GET`, `POST`, `PUT`, `DELETE` y `OPTIONS`, con los
+headers `Authorization`, `Content-Type` y `Accept`. No permite credenciales de navegador porque la
+autenticación usa el header Bearer JWT.
+
+El frontend usa el proxy mismo-origen `/api` en Docker Compose y devuelve una Content Security
+Policy que permite recursos propios y el origen configurado en `KEYCLOAK_PUBLIC_URL`. También
+devuelve `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy`. Los estilos inline se
+mantienen permitidos únicamente por el mecanismo de estilos dinámicos de Angular; los scripts
+inline y `eval` permanecen bloqueados.
+
+Con el stack levantado, validar los headers con:
+
+```bash
+bash tests/security/verify-headers.sh
+```

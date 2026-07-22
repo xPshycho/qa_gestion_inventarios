@@ -5,6 +5,8 @@ server {
   index index.html;
   resolver 127.0.0.11 valid=30s ipv6=off;
 
+  include /etc/nginx/conf.d/security-headers.conf;
+
   location = /health {
     default_type text/plain;
     return 200 "ok\n";
@@ -20,7 +22,13 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
+  location = /silent-check-sso.html {
+    include /etc/nginx/conf.d/silent-sso-headers.conf;
+    try_files $uri =404;
+  }
+
   location / {
+    include /etc/nginx/conf.d/security-headers.conf;
     try_files $uri $uri/ /index.html;
   }
 }
