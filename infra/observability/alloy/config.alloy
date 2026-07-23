@@ -19,13 +19,19 @@ otelcol.exporter.otlp "tempo" {
   }
 }
 
+discovery.docker "inventory" {
+  host = "unix:///var/run/docker.sock"
+}
+
 loki.source.docker "inventory" {
   host       = "unix:///var/run/docker.sock"
-  targets    = []
+  targets    = discovery.docker.inventory.targets
   forward_to = [loki.process.inventory.receiver]
 }
 
 loki.process "inventory" {
+  stage.docker {}
+
   stage.regex {
     expression = "traceId=(?P<traceId>[a-f0-9]{32}|-) spanId=(?P<spanId>[a-f0-9]{16}|-) correlationId=(?P<correlationId>[^ ]+)"
   }
