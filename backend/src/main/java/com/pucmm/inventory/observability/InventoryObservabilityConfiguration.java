@@ -4,11 +4,13 @@ import com.pucmm.inventory.product.repository.ProductRepository;
 import com.pucmm.inventory.stock.repository.StockMovementRepository;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /** Publishes low-cardinality inventory indicators for the business dashboard. */
 @Configuration
+@ConditionalOnBean({ProductRepository.class, StockMovementRepository.class})
 public class InventoryObservabilityConfiguration {
     @Bean
     InventoryBusinessMetrics inventoryBusinessMetrics(
