@@ -97,6 +97,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_METRICS_EXPORTER: none
+      # Alloy recolecta los logs del contenedor y los envía a Loki.
+      # Evita exportarlos también por OTLP, cuyo pipeline sólo gestiona trazas.
+      OTEL_LOGS_EXPORTER: none
     expose:
       - "8080"
     healthcheck:
