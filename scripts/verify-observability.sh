@@ -4,8 +4,8 @@ set -Eeuo pipefail
 readonly COMPOSE=(docker compose)
 
 require_healthy() {
-  local readonly_url="$1"
-  local readonly_name="$2"
+  local url="$1"
+  local name="$2"
   printf 'Checking %s...\n' "$name"
   curl --fail --silent --show-error --retry 12 --retry-delay 2 "$url" >/dev/null
 }
