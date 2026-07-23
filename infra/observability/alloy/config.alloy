@@ -1,0 +1,52 @@
+otelcol.receiver.otlp "inventory" {
+  grpc {}
+  http {}
+  output {
+    traces = [otelcol.processor.batch.inventory.input]
+  }
+}
+
+otelcol.processor.batch "inventory" {
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls { insecure = true }
+  }
+}
+
+discovery.docker "inventory" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "inventory" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.inventory.targets
+  forward_to = [loki.process.inventory.receiver]
+}
+
+loki.process "inventory" {
+  stage.docker {}
+
+  stage.regex {
+    expression = "traceId=(?P<traceId>[a-f0-9]{32}|-) spanId=(?P<spanId>[a-f0-9]{16}|-) correlationId=(?P<correlationId>[^ ]+)"
+  }
+  stage.structured_metadata {
+    values = {
+      traceId = "",
+      spanId = "",
+      correlationId = "",
+    }
+  }
+  forward_to = [loki.write.inventory.receiver]
+}
+
+loki.write "inventory" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
