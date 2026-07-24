@@ -6,8 +6,6 @@ on:
       - main
       - develop
       - staging
-      - 'test/**'
-      - 'ci/**'
   pull_request:
     branches:
       - main
@@ -16,6 +14,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: backend-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:

@@ -1,0 +1,153 @@
+name: Security Testing
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Optional HTTPS staging URL for the ZAP baseline scan'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-testing-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  COMPOSE_PROJECT_NAME: inventory-security-${{ github.run_id }}
+
+jobs:
+  dependency-and-image-scan:
+    name: Dependency, configuration and image scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build application images
+        run: docker compose build backend frontend
+
+      - name: Scan repository dependencies and configuration
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy-repository.json
+          exit-code: '0'
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: inventory-security-${{ github.run_id }}-backend:latest
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy-backend-image.json
+          exit-code: '0'
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: inventory-security-${{ github.run_id }}-frontend:latest
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy-frontend-image.json
+          exit-code: '0'
+
+      - name: Enforce vulnerability quality gate
+        run: |
+          jq -e '
+            [
+              .[]
+              | .Results[]?
+              | (.Vulnerabilities[]?, .Misconfigurations[]?)
+              | select(.Severity == "HIGH" or .Severity == "CRITICAL")
+            ]
+            | length == 0
+          ' --slurp trivy-repository.json trivy-backend-image.json trivy-frontend-image.json
+
+      - name: Upload Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-security-reports-${{ github.run_number }}
+          path: trivy-*.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  zap-baseline:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start Docker Compose stack
+        if: inputs.target_url == ''
+        run: docker compose up --build --wait --wait-timeout 240 -d
+
+      - name: Verify Compose frontend health
+        if: inputs.target_url == ''
+        env:
+          FRONTEND_URL: http://frontend:8080
+        run: |
+          docker compose exec -T frontend sh -c 'wget -qO- http://127.0.0.1:8080/health >/dev/null'
+
+      - name: Run ZAP baseline against the Compose stack
+        if: inputs.target_url == ''
+        env:
+          ZAP_TARGET_URL: http://frontend:8080
+          ZAP_DOCKER_NETWORK: inventory-security-${{ github.run_id }}_inventory-network
+        run: tests/security/run-zap-baseline.sh
+
+      - name: Run ZAP baseline against staging
+        if: inputs.target_url != ''
+        env:
+          ZAP_TARGET_URL: ${{ inputs.target_url }}
+          ZAP_DOCKER_NETWORK: bridge
+        run: tests/security/run-zap-baseline.sh
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report-${{ github.run_number }}
+          path: tests/security/reports/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Collect Docker Compose diagnostics
+        if: always() && inputs.target_url == ''
+        run: docker compose logs --no-color > tests/security/compose.log || true
+
+      - name: Upload Docker Compose diagnostics
+        if: always() && inputs.target_url == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-compose-diagnostics-${{ github.run_number }}
+          path: tests/security/compose.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop Docker Compose stack
+        if: always() && inputs.target_url == ''
+        run: docker compose down -v --remove-orphans
