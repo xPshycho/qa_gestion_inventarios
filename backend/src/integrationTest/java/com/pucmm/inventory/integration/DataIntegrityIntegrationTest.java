@@ -27,7 +27,7 @@ class DataIntegrityIntegrationTest extends PostgreSqlIntegrationTest {
         );
         Integer seededRoles = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM roles", Integer.class);
         Integer seededUsers = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM inventory_users WHERE external_id LIKE 'demo-%'",
+                "SELECT COUNT(*) FROM inventory_users WHERE username IN ('carlos', 'edwin', 'viewer', 'auditor')",
                 Integer.class
         );
         Integer rolesWithoutPermissions = jdbcTemplate.queryForObject(
@@ -45,7 +45,7 @@ class DataIntegrityIntegrationTest extends PostgreSqlIntegrationTest {
                 """
                 SELECT COUNT(*)
                 FROM inventory_users inventory_user
-                WHERE inventory_user.external_id LIKE 'demo-%'
+                WHERE inventory_user.username IN ('carlos', 'edwin', 'viewer', 'auditor')
                   AND NOT EXISTS (
                     SELECT 1 FROM user_roles user_role
                     WHERE user_role.user_id = inventory_user.id
