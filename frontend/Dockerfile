@@ -20,7 +20,8 @@ RUN pnpm build
 
 FROM nginx:1.29-alpine
 
-RUN apk add --no-cache gettext
+RUN apk upgrade --no-cache \
+    && apk add --no-cache gettext
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY security-headers.conf.template /etc/nginx/templates/security-headers.conf.template

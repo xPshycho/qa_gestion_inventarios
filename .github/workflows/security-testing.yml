@@ -6,8 +6,6 @@ on:
       - main
       - develop
       - staging
-      - 'test/**'
-      - 'security/**'
   pull_request:
     branches:
       - main
@@ -22,6 +20,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: security-testing-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   COMPOSE_PROJECT_NAME: inventory-security-${{ github.run_id }}

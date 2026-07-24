@@ -19,6 +19,9 @@ main() {
   }
 
   mkdir -p -- "$report_dir"
+  # ZAP runs as an unprivileged container user, whose UID differs from the
+  # GitHub Actions runner.  The directory is a short-lived CI report volume.
+  chmod 0777 -- "$report_dir"
 
   docker run --rm \
     --network "$ZAP_DOCKER_NETWORK" \
@@ -32,8 +35,14 @@ main() {
     -w zap-baseline-report.md \
     -J zap-baseline-report.json
 
+  local report_json="$report_dir/zap-baseline-report.json"
+  if [[ ! -s "$report_json" ]]; then
+    echo "ZAP did not generate the expected JSON report: $report_json" >&2
+    exit 1
+  fi
+
   local high_alerts
-  high_alerts="$(jq '[.site[].alerts[]? | select((.riskcode | tonumber) >= 3)] | length' "$report_dir/zap-baseline-report.json")"
+  high_alerts="$(jq '[.site[].alerts[]? | select((.riskcode | tonumber) >= 3)] | length' "$report_json")"
 
   if [[ "$high_alerts" -gt 0 ]]; then
     echo "ZAP detected $high_alerts high-risk alert(s)." >&2
