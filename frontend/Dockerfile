@@ -18,7 +18,7 @@ COPY public ./public
 COPY src ./src
 RUN pnpm build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.29-alpine
 
 RUN apk add --no-cache gettext
 

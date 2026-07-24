@@ -108,7 +108,7 @@ jobs:
         env:
           FRONTEND_URL: http://frontend:8080
         run: |
-          docker compose exec -T frontend sh -c 'wget -qO- http://localhost:8080/health >/dev/null'
+          docker compose exec -T frontend sh -c 'wget -qO- http://127.0.0.1:8080/health >/dev/null'
 
       - name: Run ZAP baseline against the Compose stack
         if: inputs.target_url == ''
