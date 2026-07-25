@@ -1,0 +1,51 @@
+[
+  {
+    "firstAt": "2026-07-25T14:38:50.608Z",
+    "lastAt": "2026-07-25T14:39:54.026Z",
+    "count": 2,
+    "type": "error",
+    "text": "ERROR TypeError: Cannot read properties of undefined (reading 'focus')\n    at http://127.0.0.1:5173/main-J4YKP4AZ.js:26:55579\n    at P.<computed> (http://127.0.0.1:5173/polyfills-7R4CRVNH.js:1:21587)\n    at f.invokeTask (http://127.0.0.1:5173/polyfills-7R4CRVNH.js:1:7505)\n    at Object.onInvokeTask (http://127.0.0.1:5173/chunk-SKNYW3UI.js:4:39489)\n    at f.invokeTask (http://127.0.0.1:5173/polyfills-7R4CRVNH.js:1:7426)\n    at e.runTask (http://127.0.0.1:5173/polyfills-7R4CRVNH.js:1:2410)\n    at invokeTask (http://127.0.0.1:5173/polyfills-7R4CRVNH.js:1:8614)\n    at E.useG.invoke (http://127.0.0.1:5173/polyfills-7R4CRVNH.js:1:8515)\n    at T._.args.<computed> (http://127.0.0.1:5173/polyfills-7R4CRVNH.js:1:21217)"
+  },
+  {
+    "firstAt": "2026-07-25T14:27:58.742Z",
+    "lastAt": "2026-07-25T14:38:49.438Z",
+    "count": 28,
+    "type": "error",
+    "text": "Executing inline event handler violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+  },
+  {
+    "firstAt": "2026-07-25T14:32:07.721Z",
+    "lastAt": "2026-07-25T14:32:07.721Z",
+    "count": 1,
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 400 ()"
+  },
+  {
+    "firstAt": "2026-07-25T14:35:34.661Z",
+    "lastAt": "2026-07-25T14:35:34.681Z",
+    "count": 3,
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()"
+  },
+  {
+    "firstAt": "2026-07-25T14:30:40.710Z",
+    "lastAt": "2026-07-25T14:30:40.710Z",
+    "count": 1,
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 409 ()"
+  },
+  {
+    "firstAt": "2026-07-25T14:39:45.975Z",
+    "lastAt": "2026-07-25T14:39:54.116Z",
+    "count": 2,
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 500 ()"
+  },
+  {
+    "firstAt": "2026-07-25T14:28:28.036Z",
+    "lastAt": "2026-07-25T14:38:49.682Z",
+    "count": 8,
+    "type": "warning",
+    "text": "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing."
+  }
+]
