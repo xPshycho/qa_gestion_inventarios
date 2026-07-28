@@ -10,13 +10,10 @@ Esta guia documenta el stack de observabilidad del issue #52. El objetivo es val
 | Grafana | `http://localhost:3000` | Dashboard operativo |
 | Backend metrics | `http://localhost:8080/actuator/prometheus` | Endpoint Prometheus del backend |
 
-Las credenciales demo de Grafana son:
-
-| Usuario | Contrasena |
-|---|---|
-| `admin` | `admin123` |
-
-Los valores se pueden cambiar en `.env` con `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_PORT` y `PROMETHEUS_PORT`.
+El username se configura con `GRAFANA_ADMIN_USER`. La contraseña no tiene valor
+predeterminado ni se documenta: `./scripts/security/init-secret-env.sh local`
+la genera como `GRAFANA_ADMIN_PASSWORD` dentro de `.env`. Los puertos se
+configuran con `GRAFANA_PORT` y `PROMETHEUS_PORT`.
 
 ## Archivos versionados
 
