@@ -205,7 +205,7 @@ render_renewal_timer() {
       'Description=Check the Inventory short-lived IP certificate every six hours' \
       '' \
       '[Timer]' \
-      'OnBootSec=5min' \
+      'OnActiveSec=5min' \
       'OnUnitActiveSec=6h' \
       'RandomizedDelaySec=30min' \
       'AccuracySec=1min' \
@@ -292,7 +292,8 @@ printf 'Renewal interval: six hours with up to thirty minutes of jitter\n'
 readonly certificate_lineage="/etc/letsencrypt/live/$TLS_CERTIFICATE_NAME"
 if [[ -r "$certificate_lineage/fullchain.pem" \
   && -r "$certificate_lineage/privkey.pem" ]]; then
-  systemctl enable --now inventory-certbot-renew.timer
+  systemctl enable inventory-certbot-renew.timer
+  systemctl restart inventory-certbot-renew.timer
   printf 'Certificate exists; renewal timer enabled.\n'
 else
   systemctl disable --now inventory-certbot-renew.timer >/dev/null 2>&1 || true
