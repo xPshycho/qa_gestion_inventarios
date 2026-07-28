@@ -26,7 +26,7 @@ test('permite registrar movimientos de stock desde la UI', async ({
   await page.getByLabel('Cantidad').fill('5');
   await page.getByLabel('Observaciones').fill(entryObservation);
   await page.getByRole('button', { name: 'Registrar entrada' }).click();
-  await expect(page.getByRole('status')).toHaveText(
+  await expect(page.locator('.page-message-success[role="status"]')).toHaveText(
     `Entrada registrada correctamente. Stock actual: ${initialStock + 5}.`,
   );
   await expect(page.getByRole('row').filter({ hasText: entryObservation })).toContainText('+5');
@@ -35,7 +35,7 @@ test('permite registrar movimientos de stock desde la UI', async ({
   await page.getByLabel('Cantidad').fill('2');
   await page.getByLabel('Observaciones').fill(exitObservation);
   await page.getByRole('button', { name: 'Registrar salida' }).click();
-  await expect(page.getByRole('status')).toHaveText(
+  await expect(page.locator('.page-message-success[role="status"]')).toHaveText(
     `Salida registrada correctamente. Stock actual: ${initialStock + 3}.`,
   );
   await expect(page.getByRole('row').filter({ hasText: exitObservation })).toContainText('-2');
@@ -44,7 +44,7 @@ test('permite registrar movimientos de stock desde la UI', async ({
   await page.getByLabel('Stock nuevo').fill(String(initialStock));
   await page.getByLabel('Observaciones').fill(adjustmentObservation);
   await page.getByRole('button', { name: 'Registrar ajuste' }).click();
-  await expect(page.getByRole('status')).toHaveText(
+  await expect(page.locator('.page-message-success[role="status"]')).toHaveText(
     `Ajuste registrado correctamente. Stock actual: ${initialStock}.`,
   );
   await expect(page.getByRole('row').filter({ hasText: adjustmentObservation })).toContainText(String(initialStock));
