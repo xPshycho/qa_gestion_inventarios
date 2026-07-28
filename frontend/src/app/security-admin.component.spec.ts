@@ -80,7 +80,7 @@ describe('SecurityAdminComponent', () => {
     expect(component.roleSelection['INVENTORY_ADMIN']).toBeTrue();
   }));
 
-  it('crea usuarios nuevos con roles seleccionados', () => {
+  it('crea usuarios nuevos con roles seleccionados', fakeAsync(() => {
     component.startCreate();
     component.form = {
       username: 'viewer',
@@ -91,6 +91,8 @@ describe('SecurityAdminComponent', () => {
       roleCodes: []
     };
     component.roleSelection = { INVENTORY_ADMIN: true };
+    fixture.detectChanges();
+    tick();
 
     component.saveUser();
 
@@ -102,7 +104,24 @@ describe('SecurityAdminComponent', () => {
       enabled: true,
       roleCodes: ['INVENTORY_ADMIN']
     });
-  });
+  }));
+
+  it('anuncia los errores y enfoca el primer campo invalido', fakeAsync(() => {
+    component.startCreate();
+    fixture.detectChanges();
+    tick();
+
+    component.saveUser();
+    fixture.detectChanges();
+    tick();
+
+    const usernameInput = fixture.debugElement
+      .query(By.css('input[name="username"]')).nativeElement as HTMLInputElement;
+    expect(securityAdminService.createUser).not.toHaveBeenCalled();
+    expect(component.errorMessage).toContain('Revisa los campos obligatorios');
+    expect(usernameInput.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(usernameInput);
+  }));
 
   it('muestra un error cuando falla la carga inicial', async () => {
     securityAdminService.listUsers.and.returnValue(throwError(() => new Error('failed')));
