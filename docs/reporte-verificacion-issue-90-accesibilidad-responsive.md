@@ -6,6 +6,7 @@
 - **Repositorio:** `xPshycho/qa_gestion_inventarios`
 - **Rama de trabajo:** `test/final-a11y-responsive-ux`
 - **Base dependiente:** `3b2dd561a1269666ba30210cd05bda40aac28383` (PR #111 hacia `develop`)
+- **Pull request:** [#112 hacia `develop`](https://github.com/xPshycho/qa_gestion_inventarios/pull/112) (draft hasta integrar #111)
 - **Issue:** [#90 - Validación de accesibilidad, usabilidad y responsive final](https://github.com/xPshycho/qa_gestion_inventarios/issues/90)
 - **Resultado técnico:** **COMPLETO Y APROBADO**
 
@@ -196,8 +197,8 @@ issue.
 ## 9. Conclusión
 
 Los criterios técnicos y de evidencia del issue #90 están satisfechos. La
-implementación queda **apta para commit, revisión cruzada, publicación del
-artifact de CI y cierre mediante PR con `Closes #90`**.
+implementación está publicada en el PR #112 con `Closes #90`.
 
-Este reporte certifica el estado del árbol de trabajo. No afirma que GitHub ya
-haya recibido los cambios ni que el issue remoto haya sido cerrado.
+El PR permanece como draft hasta que #111 se fusione en `develop`; después
+debe completarse la evidencia CI del SHA definitivo, la revisión cruzada y el
+merge. El issue remoto se cerrará automáticamente con ese merge.
