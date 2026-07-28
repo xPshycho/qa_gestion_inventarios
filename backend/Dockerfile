@@ -13,7 +13,8 @@ FROM eclipse-temurin:21-jre-alpine-3.23@sha256:3f08b13888f595cc49edabea7250ba694
 
 WORKDIR /app
 
-RUN addgroup -S inventory \
+RUN apk upgrade --no-cache \
+    && addgroup -S inventory \
     && adduser -S inventory -G inventory
 
 COPY --from=build --chown=inventory:inventory /workspace/build/libs/*.jar app.jar

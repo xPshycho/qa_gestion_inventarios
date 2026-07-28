@@ -20,6 +20,8 @@ RUN pnpm build
 
 FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
 
+RUN apk upgrade --no-cache
+
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY security-headers.conf.template /etc/nginx/templates/security-headers.conf.template
 COPY silent-sso-headers.conf.template /etc/nginx/templates/silent-sso-headers.conf.template

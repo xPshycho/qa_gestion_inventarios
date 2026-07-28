@@ -5,6 +5,7 @@ import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_MANAGE;
 import static com.pucmm.inventory.config.SecurityConfig.REPORT_VIEW;
 import static org.hamcrest.Matchers.containsString;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -137,6 +138,26 @@ class SecurityConfigTest {
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isForbidden())
                 .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void corsOriginsAreTrimmedAndBlankEntriesAreIgnored() {
+        SecurityConfig securityConfig = new SecurityConfig(
+                List.of(" https://staging.example.test ", " ", "http://localhost:5173")
+        );
+
+        assertThat(securityConfig.corsConfigurationSource()
+                .getCorsConfigurations()
+                .get("/**")
+                .getAllowedOrigins())
+                .containsExactly("https://staging.example.test", "http://localhost:5173");
+    }
+
+    @Test
+    void corsConfigurationRejectsAListWithoutValidOrigins() {
+        assertThatThrownBy(() -> new SecurityConfig(List.of(" ", "\t")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("At least one CORS origin must be configured");
     }
 
     @Test
