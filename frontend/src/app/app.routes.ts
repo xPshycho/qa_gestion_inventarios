@@ -27,54 +27,56 @@ export const routes: Routes = [
   {
     path: 'login',
     component: LoginComponent,
-    canActivate: [loginGuard]
+    canActivate: [loginGuard],
+    data: { title: 'Iniciar sesión' }
   },
   {
     path: 'dashboard',
     component: DashboardPageComponent,
     canActivate: [permissionGuard],
-    data: { permission: 'report:view' }
+    data: { permission: 'report:view', title: 'Dashboard' }
   },
   {
     path: 'productos/nuevo',
     component: ProductCreatePageComponent,
     canActivate: [permissionGuard],
-    data: { permission: 'product:manage' }
+    data: { permission: 'product:manage', title: 'Nuevo producto' }
   },
   {
     path: 'productos/:id/editar',
     component: ProductEditPageComponent,
     canActivate: [permissionGuard],
-    data: { permission: 'product:manage' }
+    data: { permission: 'product:manage', title: 'Editar producto' }
   },
   {
     path: 'productos/:id/auditoria',
     component: AuditPageComponent,
     canActivate: [permissionGuard],
-    data: { permission: 'audit:view' }
+    data: { permission: 'audit:view', title: 'Auditoría de producto' }
   },
   {
     path: 'productos/:id/stock',
     component: StockMovementsPageComponent,
     canActivate: [permissionGuard],
-    data: { permission: 'stock:view' }
+    data: { permission: 'stock:view', title: 'Movimientos de stock' }
   },
   {
     path: 'productos',
     component: ProductsComponent,
     canActivate: [permissionGuard],
-    data: { permission: 'product:view' }
+    data: { permission: 'product:view', title: 'Productos' }
   },
   {
     path: 'seguridad',
     component: SecurityAdminComponent,
     canActivate: [permissionGuard],
-    data: { permission: 'user:manage' }
+    data: { permission: 'user:manage', title: 'Seguridad' }
   },
   {
     path: 'forbidden',
     component: ForbiddenComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    data: { title: 'Acceso denegado' }
   },
   {
     path: '**',

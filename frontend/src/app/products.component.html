@@ -1,4 +1,4 @@
-<main class="inventory-page page-shell">
+<main id="main-content" class="inventory-page page-shell" tabindex="-1">
   <mat-card class="page-heading-card">
     <mat-card-content class="page-heading-content">
       <div>
@@ -84,18 +84,30 @@
         <strong>Listado</strong>
         <span>{{ firstItem() }}-{{ lastItem() }} de {{ page.totalElements }}</span>
       </div>
-      <button mat-flat-button color="primary" class="refresh-button" type="button" (click)="loadProducts()" [disabled]="loading">
+      <button
+        #productsRefreshButton
+        mat-flat-button
+        color="primary"
+        class="refresh-button"
+        type="button"
+        (click)="loadProducts()"
+        [disabled]="loading"
+      >
         Actualizar
       </button>
     </div>
 
-    <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+    <mat-progress-bar
+      *ngIf="loading"
+      mode="indeterminate"
+      aria-label="Cargando productos"
+    ></mat-progress-bar>
 
     <div *ngIf="errorMessage" class="state state-error" role="alert">
       {{ errorMessage }}
     </div>
 
-    <div *ngIf="loading" class="state">
+    <div *ngIf="loading" class="state" aria-live="polite">
       Cargando productos...
     </div>
 
@@ -103,39 +115,39 @@
       <table class="data-table products-table">
         <thead>
           <tr>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('sku')">
-                SKU <span>{{ sortLabel('sku') }}</span>
+            <th [attr.aria-sort]="sortAria('sku')">
+              <button type="button" class="sort-button" (click)="changeSort('sku')" [attr.aria-label]="sortButtonLabel('sku', 'SKU')">
+                SKU <span aria-hidden="true">{{ sortLabel('sku') }}</span>
               </button>
             </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('name')">
-                Nombre <span>{{ sortLabel('name') }}</span>
+            <th [attr.aria-sort]="sortAria('name')">
+              <button type="button" class="sort-button" (click)="changeSort('name')" [attr.aria-label]="sortButtonLabel('name', 'nombre')">
+                Nombre <span aria-hidden="true">{{ sortLabel('name') }}</span>
               </button>
             </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('category')">
-                Categoría <span>{{ sortLabel('category') }}</span>
+            <th [attr.aria-sort]="sortAria('category')">
+              <button type="button" class="sort-button" (click)="changeSort('category')" [attr.aria-label]="sortButtonLabel('category', 'categoría')">
+                Categoría <span aria-hidden="true">{{ sortLabel('category') }}</span>
               </button>
             </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('price')">
-                Precio <span>{{ sortLabel('price') }}</span>
+            <th [attr.aria-sort]="sortAria('price')">
+              <button type="button" class="sort-button" (click)="changeSort('price')" [attr.aria-label]="sortButtonLabel('price', 'precio')">
+                Precio <span aria-hidden="true">{{ sortLabel('price') }}</span>
               </button>
             </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('currentStock')">
-                Stock <span>{{ sortLabel('currentStock') }}</span>
+            <th [attr.aria-sort]="sortAria('currentStock')">
+              <button type="button" class="sort-button" (click)="changeSort('currentStock')" [attr.aria-label]="sortButtonLabel('currentStock', 'stock')">
+                Stock <span aria-hidden="true">{{ sortLabel('currentStock') }}</span>
               </button>
             </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('minimumStock')">
-                Mínimo <span>{{ sortLabel('minimumStock') }}</span>
+            <th [attr.aria-sort]="sortAria('minimumStock')">
+              <button type="button" class="sort-button" (click)="changeSort('minimumStock')" [attr.aria-label]="sortButtonLabel('minimumStock', 'stock mínimo')">
+                Mínimo <span aria-hidden="true">{{ sortLabel('minimumStock') }}</span>
               </button>
             </th>
-            <th>
-              <button type="button" class="sort-button" (click)="changeSort('status')">
-                Estado <span>{{ sortLabel('status') }}</span>
+            <th [attr.aria-sort]="sortAria('status')">
+              <button type="button" class="sort-button" (click)="changeSort('status')" [attr.aria-label]="sortButtonLabel('status', 'estado')">
+                Estado <span aria-hidden="true">{{ sortLabel('status') }}</span>
               </button>
             </th>
             <th *ngIf="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') || auth.hasPermission('stock:view')">Acciones</th>
@@ -231,6 +243,8 @@
       aria-modal="true"
       aria-labelledby="delete-title"
       aria-describedby="delete-description"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
       (click)="$event.stopPropagation()"
     >
       <mat-card-content>
@@ -243,6 +257,8 @@
 
         <div class="dialog-actions">
           <button
+            #deleteCancelButton
+            cdkFocusInitial
             type="button"
             mat-stroked-button
             class="ghost-button"
@@ -252,7 +268,6 @@
             Cancelar
           </button>
           <button
-            #deleteConfirmButton
             type="button"
             mat-flat-button
             color="warn"
