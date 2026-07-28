@@ -41,7 +41,19 @@ jobs:
         run: ./scripts/security/init-secret-env.sh local
 
       - name: Build application images
-        run: docker compose build backend frontend
+        run: |
+          for attempt in 1 2 3; do
+            if docker compose build backend frontend; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Docker Compose image build failed after 3 attempts."
+              exit 1
+            fi
+            delay=$((attempt * 15))
+            echo "::warning::Image build attempt ${attempt} failed; retrying in ${delay}s."
+            sleep "$delay"
+          done
 
       - name: Scan repository dependencies and configuration
         uses: aquasecurity/trivy-action@v0.36.0
@@ -112,9 +124,25 @@ jobs:
       - name: Generate ephemeral artifact-scan credentials
         run: ./scripts/security/init-secret-env.sh local
 
+      - name: Build Docker Compose application images
+        if: inputs.target_url == ''
+        run: |
+          for attempt in 1 2 3; do
+            if docker compose build backend frontend; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Docker Compose image build failed after 3 attempts."
+              exit 1
+            fi
+            delay=$((attempt * 15))
+            echo "::warning::Image build attempt ${attempt} failed; retrying in ${delay}s."
+            sleep "$delay"
+          done
+
       - name: Start Docker Compose stack
         if: inputs.target_url == ''
-        run: docker compose up --build --wait --wait-timeout 240 -d
+        run: docker compose up --no-build --wait --wait-timeout 240 -d
 
       - name: Verify Compose frontend health
         if: inputs.target_url == ''
