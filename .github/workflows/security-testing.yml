@@ -37,6 +37,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate ephemeral local credentials
+        run: ./scripts/security/init-secret-env.sh local
+
       - name: Build application images
         run: docker compose build backend frontend
 
@@ -84,8 +87,13 @@ jobs:
             | length == 0
           ' --slurp trivy-repository.json trivy-backend-image.json trivy-frontend-image.json
 
-      - name: Upload Trivy reports
+      - name: Verify Trivy report safety
+        id: trivy_artifact_safety
         if: always()
+        run: ./scripts/security/verify-artifacts.sh trivy-repository.json trivy-backend-image.json trivy-frontend-image.json
+
+      - name: Upload safe Trivy reports
+        if: always() && steps.trivy_artifact_safety.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: trivy-security-reports-${{ github.run_number }}
@@ -100,6 +108,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Generate ephemeral artifact-scan credentials
+        run: ./scripts/security/init-secret-env.sh local
 
       - name: Start Docker Compose stack
         if: inputs.target_url == ''
@@ -126,8 +137,22 @@ jobs:
           ZAP_DOCKER_NETWORK: bridge
         run: tests/security/run-zap-baseline.sh
 
-      - name: Upload ZAP reports
+      - name: Collect Docker Compose diagnostics
+        if: always() && inputs.target_url == ''
+        run: docker compose logs --no-color > tests/security/compose.log || true
+
+      - name: Verify security artifact safety
+        id: security_artifact_safety
         if: always()
+        run: |
+          artifact_paths=(tests/security/reports)
+          if [ -f tests/security/compose.log ]; then
+            artifact_paths+=(tests/security/compose.log)
+          fi
+          ./scripts/security/verify-artifacts.sh "${artifact_paths[@]}"
+
+      - name: Upload safe ZAP reports
+        if: always() && steps.security_artifact_safety.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: zap-baseline-report-${{ github.run_number }}
@@ -135,12 +160,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Collect Docker Compose diagnostics
-        if: always() && inputs.target_url == ''
-        run: docker compose logs --no-color > tests/security/compose.log || true
-
-      - name: Upload Docker Compose diagnostics
-        if: always() && inputs.target_url == ''
+      - name: Upload safe Docker Compose diagnostics
+        if: always() && inputs.target_url == '' && steps.security_artifact_safety.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: security-compose-diagnostics-${{ github.run_number }}

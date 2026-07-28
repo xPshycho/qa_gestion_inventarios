@@ -46,10 +46,8 @@ seguridad, observabilidad, integracion y despliegue continuos.
 git clone https://github.com/xPshycho/qa_gestion_inventarios
 cd qa_gestion_inventarios
 
-# 2. Configurar variables de entorno
-cp .env.example .env
-
-# Editar .env con los valores reales
+# 2. Generar .env con secretos aleatorios y permisos 0600
+./scripts/security/init-secret-env.sh local
 
 # 3. Levantar el sistema completo
 docker compose up --build -d
@@ -94,21 +92,23 @@ curl http://localhost:8080/v3/api-docs
 habilita y etiqueta la telemetria con ambiente y version. Las metricas operativas se exponen por
 Actuator en `/actuator/prometheus` y Prometheus las scrapea desde la red interna de Compose.
 
-## Credenciales demo locales
+## Credenciales locales
 
-Estas credenciales son solo para desarrollo local y datos de prueba.
+Los usernames no sensibles están declarados en `.env.example`. Todas las
+contraseñas y el client secret se generan en `.env`, que está ignorado y usa
+permisos `0600`. No hay passwords compartidos ni valores predeterminados en
+Compose, el realm de Keycloak o la documentación.
 
-| Servicio | Usuario | Contrasena |
-|----------|---------|------------|
-| Aplicacion | `carlos` | `admin123` |
-| Aplicacion | `edwin` | `admin123` |
-| Aplicacion | `viewer` | `admin123` |
-| Aplicacion | `auditor` | `admin123` |
-| Keycloak admin | `admin` | `admin123` |
-| Grafana admin | `admin` | `admin123` |
+Para rotarlos:
 
-Si Keycloak o Grafana ya tenian volumenes creados con credenciales anteriores, recrear los
-contenedores/volumenes locales para que se importe la configuracion nueva.
+```bash
+./scripts/security/init-secret-env.sh local --rotate
+docker compose down -v
+docker compose up --build -d
+```
+
+La guía completa de proveedores, nombres, Jenkins, GitHub Actions y respuesta
+a exposiciones está en `docs/security/secrets-management.md`.
 
 ## Migraciones de base de datos
 
@@ -319,11 +319,16 @@ El Jenkins local se entrega preconfigurado con el usuario `admin`, el job
 `inventory-avance-ci` y todas las herramientas requeridas. Se inicia desde la raiz con:
 
 ```bash
-docker compose -p inventory-jenkins -f compose.jenkins.yml up -d --build --wait
+./scripts/security/init-secret-env.sh jenkins
+docker compose --env-file .env.jenkins \
+  -p inventory-jenkins \
+  -f compose.jenkins.yml \
+  up -d --build --wait
 ```
 
-La interfaz queda disponible en `http://localhost:18080`; la guia de operacion, reinicio y
-limpieza esta en `docs/ci/jenkins.md`.
+La interfaz queda disponible en `http://localhost:18080`. El password se lee
+del archivo local ignorado `.env.jenkins`; la guía de operación, reinicio y
+limpieza está en `docs/ci/jenkins.md`.
 
 | Evidencia | Comando local | Reporte local | Artifact CI |
 |-----------|---------------|---------------|-------------|
@@ -334,7 +339,7 @@ limpieza esta en `docs/ci/jenkins.md`.
 | Cobertura integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/jacoco/integrationTest/html/index.html` | `backend-integration-test-reports-*` |
 | API tests | `cd backend && ./gradlew apiTest` | `backend/build/reports/tests/apiTest/index.html` | `backend-api-test-reports-*` |
 | Frontend unit + coverage | `cd frontend && pnpm exec ng test --watch=false --browsers=ChromeHeadless --code-coverage` | `frontend/coverage/qa-gestion-inventarios-frontend/index.html` | `frontend-coverage-*` |
-| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html`, `tests/e2e/test-results/playwright-results.xml` | `playwright-e2e-*`, Jenkins Pipeline |
+| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | HTML y JUnit locales; CI conserva JUnit y evidencia UX controlada después del safety | `playwright-e2e-*`, Jenkins Pipeline |
 | Staging post-deploy | `./scripts/staging/post-deploy.sh` | `.staging/evidence/post-deploy/summary.md` | `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`, solo con safety `PASS` |
 
 Estado de automatizacion de testing:
@@ -345,7 +350,7 @@ Estado de automatizacion de testing:
 | Integration | Automatizada | Testcontainers ejecutado por `./gradlew integrationTest`; los reportes se publican para diagnosticar fallos de entorno. |
 | API | Automatizada en CI | RestAssured valida contratos REST, status codes, errores y permisos en `backend/src/apiTest`. |
 | Frontend | Automatizada en CI | Angular/Karma ejecuta unit tests con cobertura y publica artifact `frontend-coverage-*`. |
-| E2E | Automatizada en GitHub Actions y Jenkins | Playwright cubre login, CRUD de productos, roles y responsive; fuera de staging conserva HTML, JUnit y artifacts de diagnostico configurados por ese flujo. |
+| E2E | Automatizada en GitHub Actions y Jenkins | Playwright cubre login, CRUD de productos, roles, accesibilidad, responsive y navegadores; CI desactiva HTML, screenshots automáticos, traces y videos, y publica JUnit y evidencia UX controlada solo después del safety. |
 | Post-deploy staging | Automatizada en GitHub Actions | Despliega `DEPLOYED_SHA`, ejecuta siete fases y solo publica evidencia tras el safety final. Playwright staging usa `list` + JUnit y capturas controladas, sin HTML, traces ni videos. |
 
 La guia consolidada de comandos, reportes y artifacts esta en `docs/testing/ci-reporting.md`.
@@ -370,6 +375,7 @@ posterior al inicio del check con el `deployment.id` de este preview.
 
 ## Documentacion
 - `docs/security/keycloak.md`: configuracion de seguridad, usuarios demo, scopes y permisos.
+- `docs/security/secrets-management.md`: contrato de secretos, rotación, Gitleaks, Jenkins y GitHub Actions.
 - `docs/ci/jenkins.md`: pipeline Jenkins, credenciales, stages, reportes y artifacts.
 - `docs/deployment/staging.md`: despliegue staging reproducible, secretos, validacion, promocion y rollback.
 - `docs/testing/ci-reporting.md`: guia de testing, cobertura, artifacts y evidencia para PRs.

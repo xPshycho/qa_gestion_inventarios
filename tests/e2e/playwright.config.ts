@@ -8,9 +8,11 @@ const outputDir =
   process.env.PLAYWRIGHT_OUTPUT_DIR ?? './test-results';
 const htmlOutputDir =
   process.env.PLAYWRIGHT_HTML_OUTPUT_DIR ?? './playwright-report';
+const safeReporting =
+  process.env.PLAYWRIGHT_SAFE_REPORTING === 'true' || Boolean(process.env.CI);
 const retainSensitiveArtifacts =
-  process.env.PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS !== 'false';
-const safeReporting = process.env.PLAYWRIGHT_SAFE_REPORTING === 'true';
+  !safeReporting
+  && process.env.PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS !== 'false';
 const safeScreenshotOutputDir =
   process.env.PLAYWRIGHT_SAFE_SCREENSHOT_DIR ?? './safe-screenshots';
 const uxEvidenceOutputDir =

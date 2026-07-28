@@ -14,10 +14,10 @@ Closes #
 
 <!-- Separa quality gates previos al despliegue de pruebas post-deploy. -->
 
-| Tipo | Comando o workflow | Resultado |
-| --- | --- | --- |
-| Pre-deploy |  |  |
-| Post-deploy |  |  |
+| Tipo | Comando o workflow | Resultado | Enlace o artifact |
+| --- | --- | --- | --- |
+| Pre-deploy |  |  |  |
+| Post-deploy |  |  |  |
 
 ## Evidencia de staging
 
@@ -38,11 +38,15 @@ push staging o workflow_dispatch.
 
 ## Seguridad y secretos
 
-- [ ] No se añadieron contraseñas, tokens, `.staging/staging.env` ni realms
-      renderizados.
+- [ ] No se añadieron contraseñas, tokens, archivos `.env`,
+      `.staging/staging.env` ni realms renderizados.
+- [ ] `Secret Scanning / Gitleaks` terminó en `PASS` para el SHA del PR.
+- [ ] Si una credencial estuvo expuesta, adjunté constancia redactada de
+      revocación o rotación sin mostrar su valor.
+- [ ] Los pipelines afectados funcionan con credenciales externas.
 - [ ] El artifact solo se publicó después del safety recursivo `PASS`.
-- [ ] La evidencia no contiene HTML, traces, videos ni HAR de Playwright
-      staging.
+- [ ] La evidencia E2E no contiene HTML, traces, videos ni HAR y superó el
+      verificador de artifacts aplicable.
 - [ ] Los cambios de permisos, puertos o exposición de red están explicados.
 
 ## Checklist

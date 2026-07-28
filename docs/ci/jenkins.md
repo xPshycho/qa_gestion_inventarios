@@ -7,55 +7,67 @@ El repositorio incluye un Jenkins local reproducible para demostrar el pipeline 
 Desde la raiz del repositorio:
 
 ```bash
-docker compose -p inventory-jenkins -f compose.jenkins.yml up -d --build --wait
+./scripts/security/init-secret-env.sh jenkins
+docker compose --env-file .env.jenkins \
+  -p inventory-jenkins \
+  -f compose.jenkins.yml \
+  up -d --build --wait
 ```
 
-Acceso de demostracion:
+Acceso local:
 
-| Dato | Valor |
+| Dato | Fuente |
 |---|---|
 | URL | `http://localhost:18080` |
-| Usuario | `admin` |
-| Password | `admin123` |
+| Usuario | `JENKINS_ADMIN_ID` en `.env.jenkins` |
+| Password | `JENKINS_ADMIN_PASSWORD` en `.env.jenkins` |
 | Job | `inventory-avance-ci` |
 
-La credencial es exclusivamente local y no debe reutilizarse en un servidor expuesto. El asistente inicial está desactivado; no se utiliza `initialAdminPassword`.
+`.env.jenkins` está ignorado, usa permisos `0600` y no debe copiarse a logs,
+capturas ni artifacts. El asistente inicial está desactivado; no se utiliza
+`initialAdminPassword`.
 
-El job se crea automáticamente mediante Jenkins Configuration as Code y Job DSL. Está configurado como Pipeline from SCM para leer `Jenkinsfile` desde la rama `develop` de `https://github.com/xPshycho/qa_gestion_inventarios.git`.
+El job se crea automáticamente mediante Jenkins Configuration as Code y Job
+DSL. Está configurado como Pipeline from SCM sobre
+`https://github.com/xPshycho/qa_gestion_inventarios.git`. El parámetro
+`GIT_BRANCH` selecciona una rama confiable y usa `develop` por defecto.
 
 ## Flujo para la demostracion
 
-1. Publicar previamente en `origin/develop` cualquier cambio del `Jenkinsfile`.
+1. Publicar la rama que contiene el `Jenkinsfile` que se desea validar.
 2. Ejecutar el comando de arranque y abrir `http://localhost:18080`.
-3. Iniciar sesion con `admin` / `admin123`.
+3. Iniciar sesión con los valores locales de `.env.jenkins`.
 4. Abrir `inventory-avance-ci`.
-5. Pulsar **Build Now**. El parametro `RUN_SONAR` es `false` por defecto.
+5. Pulsar **Build with Parameters**, indicar `GIT_BRANCH` y mantener
+   `RUN_SONAR=false` salvo que se valide SonarQube Cloud.
 6. Abrir la ejecucion y seleccionar **Console Output** o **Stage View**.
 7. Al finalizar, revisar los enlaces de pruebas, cobertura y artifacts.
 
-No es necesario reiniciar Jenkins cuando cambia el `Jenkinsfile`: cada build obtiene la version actual de `develop` desde GitHub.
+No es necesario reiniciar Jenkins cuando cambia el `Jenkinsfile`: cada build
+obtiene la versión actual de la rama indicada desde GitHub.
 
 ## Comandos de operacion
 
 ```bash
 # Estado
-docker compose -p inventory-jenkins -f compose.jenkins.yml ps
+docker compose --env-file .env.jenkins -p inventory-jenkins -f compose.jenkins.yml ps
 
 # Logs de Jenkins
-docker compose -p inventory-jenkins -f compose.jenkins.yml logs -f jenkins
+docker compose --env-file .env.jenkins -p inventory-jenkins -f compose.jenkins.yml logs -f jenkins
 
 # Reiniciar Jenkins conservando job, historial y caches
-docker compose -p inventory-jenkins -f compose.jenkins.yml restart jenkins
+docker compose --env-file .env.jenkins -p inventory-jenkins -f compose.jenkins.yml restart jenkins
 
 # Detener conservando datos
-docker compose -p inventory-jenkins -f compose.jenkins.yml down
+docker compose --env-file .env.jenkins -p inventory-jenkins -f compose.jenkins.yml down
 
 # Eliminar Jenkins, historial, caches e imagenes del daemon interno
-docker compose -p inventory-jenkins -f compose.jenkins.yml down -v
+docker compose --env-file .env.jenkins -p inventory-jenkins -f compose.jenkins.yml down -v
 
 # Recrear una instalacion limpia
-docker compose -p inventory-jenkins -f compose.jenkins.yml down -v
-docker compose -p inventory-jenkins -f compose.jenkins.yml up -d --build --wait
+docker compose --env-file .env.jenkins -p inventory-jenkins -f compose.jenkins.yml down -v
+./scripts/security/init-secret-env.sh jenkins --rotate
+docker compose --env-file .env.jenkins -p inventory-jenkins -f compose.jenkins.yml up -d --build --wait
 ```
 
 Los archivos del job los crea el proceso `jenkins`, no `root`. No se debe crear `/var/jenkins_home/jobs/.../config.xml` con `docker exec -u root`; eso fue la causa de los errores `Permission denied` al generar builds.
@@ -82,11 +94,17 @@ El build normal deja `RUN_SONAR=false`, por lo que no necesita secretos. Para ej
 2. Usar exactamente el ID `sonarcloud-token`.
 3. Ejecutar **Build with Parameters** con `RUN_SONAR=true`.
 
-El token se inyecta solo durante el stage de SonarCloud y no debe aparecer en logs.
+El token se inyecta solo durante el stage de SonarCloud y no debe aparecer en
+logs. Su valor no se incluye en JCasC; `infra/jenkins/jenkins.yaml` únicamente
+configura Jenkins y el job.
+
+La rotación coordinada con GitHub Actions, el responsable y la evidencia
+redactada están documentados en
+`docs/security/secrets-management.md`.
 
 ## Stages y resultados
 
-- `Checkout`: descarga `develop` desde GitHub.
+- `Checkout`: descarga la rama confiable indicada por `GIT_BRANCH`.
 - `Environment`: valida Java, Docker, Compose y pnpm.
 - `Backend Build`: compila el backend.
 - `Unit Tests + Coverage Gate`: ejecuta JUnit y exige al menos 60% de cobertura de lineas.
@@ -97,6 +115,11 @@ El token se inyecta solo durante el stage de SonarCloud y no debe aparecer en lo
 - `Docker Build` y `Deploy Preview`: construyen y levantan el stack en el daemon aislado.
 - `E2E Tests`: ejecuta Playwright Chromium contra el preview.
 
-Jenkins publica JUnit, reportes HTML de pruebas, JaCoCo, el JAR, el build frontend y las evidencias Playwright. `pnpm audit` puede dejar el build como `UNSTABLE` si detecta vulnerabilidades; los fallos de compilacion o pruebas producen `FAILURE`.
+Jenkins publica JUnit, reportes HTML de pruebas backend, JaCoCo, el JAR y el
+build frontend. El JUnit de Playwright solo se archiva después de superar
+`verify-artifacts.sh`; HTML, screenshots automáticos, traces, videos y HAR de
+Playwright permanecen desactivados. `pnpm audit` puede dejar el build como
+`UNSTABLE` si detecta vulnerabilidades; los fallos de compilación o pruebas
+producen `FAILURE`.
 
 El bloque `post` elimina los contenedores, redes y volumenes temporales de cada build. Las caches de Gradle, pnpm, Playwright y las capas Docker persisten para acelerar la siguiente demostracion.

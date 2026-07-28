@@ -1,9 +1,10 @@
 # Guía de reporting, cobertura y CI
 
 Esta guía consolida los comandos y reportes de calidad, incluido el ambiente
-validable del issue #86. Staging puede publicar diagnóstico si falla el
-despliegue o una prueba post-deploy, pero solo cuando la revisión de seguridad
-ejecutada después de la última recolección de evidencia da `PASS`.
+validable del issue #86. Los artifacts de diagnóstico solo se publican cuando
+su contenido es seguro. Staging puede publicar diagnóstico si falla el
+despliegue o una prueba post-deploy, pero únicamente cuando la revisión de
+seguridad ejecutada después de la última recolección de evidencia da `PASS`.
 
 ## Comandos locales
 
@@ -15,8 +16,8 @@ ejecutada después de la última recolección de evidencia da `PASS`.
 | Integration Testcontainers | `cd backend && ./gradlew integrationTest --no-daemon` | `backend/build/reports/tests/integrationTest/index.html`, `backend/build/reports/jacoco/integrationTest/html/index.html` |
 | Frontend unit + coverage | `cd frontend && pnpm exec ng test --watch=false --browsers=ChromeHeadlessNoSandbox --code-coverage` | `frontend/coverage/qa-gestion-inventarios-frontend/index.html` |
 | Frontend build | `cd frontend && pnpm build` | `frontend/dist/` |
-| E2E Playwright | `cd tests/e2e && pnpm test` | `tests/e2e/playwright-report/index.html`, `tests/e2e/test-results/playwright-results.xml` |
-| E2E contra stack existente | `cd tests/e2e && E2E_MANAGE_STACK=false pnpm exec playwright test` | `tests/e2e/playwright-report/index.html`, `tests/e2e/test-results/**` |
+| E2E Playwright local | `cd tests/e2e && pnpm test` | HTML, JUnit y evidencia UX locales ignorados por Git |
+| E2E contra stack existente | `cd tests/e2e && E2E_MANAGE_STACK=false pnpm exec playwright test` | En CI: JUnit y evidencia UX controlada después de `verify-artifacts.sh` |
 | Staging completo | `./scripts/staging/deploy.sh && ./scripts/staging/post-deploy.sh` | `.staging/evidence/post-deploy/summary.{md,json}` y evidencia por fase |
 | Recolectar evidencia de staging | `./scripts/staging/collect-evidence.sh` | `.staging/evidence/deployment.json`, resumen, servicios, imágenes y logs redactados |
 
@@ -26,12 +27,22 @@ ejecutada después de la última recolección de evidencia da `PASS`.
 |---|---|---|
 | `Backend CI` | build, unit tests, API tests, integration tests | `backend-build-*`, `backend-unit-test-reports-*`, `backend-api-test-reports-*`, `backend-integration-test-reports-*` |
 | `Frontend CI` | build Angular, unit tests con coverage | `frontend-coverage-*`, `frontend-diagnostics-*` si falla |
-| `Playwright E2E` | stack Docker Compose, Playwright, diagnosticos Docker | `playwright-e2e-*` |
-| `SonarCloud` | analisis de calidad y cobertura JaCoCo | Quality Gate en el PR |
-| `Conventional Commits` | validacion de commits del PR | Check de formato |
+| `Playwright E2E` | stack Docker Compose, matriz Playwright y safety | JUnit, diagnósticos Docker y evidencia UX controlada, solo después de `verify-artifacts.sh` |
+| `Security Testing` | Trivy, ZAP y safety de evidencia | JSON y diagnósticos, solo después de `verify-artifacts.sh` |
+| `Secret Scanning` | Gitleaks sobre PR y push | No publica artifacts ni comentarios con detecciones |
+| `SonarCloud` | análisis de calidad y cobertura JaCoCo | Quality Gate en el PR |
+| `Conventional Commits` | validación de commits del PR | Check de formato |
 | `Staging Preview` | gates backend/frontend, deploy Compose aislado y siete fases post-deploy | `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`, solo con evidence safety `PASS` |
 
-El quality gate de backend se aplica con `jacocoTestCoverageVerification` y exige cobertura de lineas >= 60%.
+El quality gate de backend exige cobertura de líneas >= 60% mediante
+`jacocoTestCoverageVerification`.
+
+Playwright utiliza `list` y JUnit en CI. Los screenshots automáticos, HTML,
+traces y videos se desactivan porque pueden conservar credenciales introducidas
+en formularios. Antes del upload, `scripts/security/verify-artifacts.sh`
+protege también la evidencia Trivy/ZAP y los logs Docker: rechaza formatos de
+alto riesgo y busca los secretos configurados en texto, Base64, Basic auth,
+JWT, ZIP y gzip.
 
 ### Evidencia oficial de staging
 
@@ -99,21 +110,18 @@ del check.
 
 ## Jenkins
 
-El `Jenkinsfile` replica el flujo visual requerido por la asignación:
+El `Jenkinsfile` ejecuta checkout, build, pruebas, cobertura, análisis,
+Docker Compose y E2E contra el stack levantado. Los artifacts generales incluyen
+JAR, reportes Gradle, JaCoCo, frontend y auditoría de dependencias.
 
-- checkout, environment, backend build, unit tests, coverage gate, integration tests y API tests;
-- frontend build, audit de dependencias frontend y SonarCloud;
-- Docker build, deploy preview con Docker Compose y E2E Playwright contra el stack levantado;
-- publicacion de JUnit, HTML de pruebas backend, HTML de JaCoCo y HTML de Playwright.
-
-Los artifacts de Jenkins incluyen JAR backend, reportes Gradle, resultados
-JUnit, cobertura JaCoCo, build frontend, audit frontend y evidencia Playwright.
-Ese preview local/académico no sustituye `Staging Preview` como evidencia del
-issue #86.
+La evidencia Playwright se trata por separado: Jenkins no publica HTML, traces,
+videos ni HAR. El JUnit E2E y la evidencia UX controlada solo se archivan
+después de superar `verify-artifacts.sh`. Este preview local/académico no
+sustituye `Staging Preview` como evidencia del issue #86.
 
 ## Evidencia para Pull Requests
 
-Cada PR de testing o CI debe incluir:
+Cada PR debe incluir:
 
 - issue enlazado con `Closes #...`;
 - comando ejecutado localmente o workflow usado, distinguiendo pre-deploy y
@@ -121,7 +129,8 @@ Cada PR de testing o CI debe incluir:
 - resultado del job o salida relevante y SHA probado;
 - nombre exacto del artifact generado;
 - enlace a SonarCloud cuando aplique;
-- confirmación de que no se publicaron secretos.
+- confirmación de que no se publicaron secretos;
+- revisión cruzada.
 
 Cuando aplique staging, además debe incluir el enlace al run, el SHA de
 `deployment.json`, nombre basado en ese `DEPLOYED_SHA`, ciclo de vida,

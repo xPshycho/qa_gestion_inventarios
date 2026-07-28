@@ -25,6 +25,7 @@ hs_err_pid*
 replay_pid*
 backend/.gradle/
 backend/build/
+backend/bin/
 
 frontend/.angular/
 frontend/coverage/
@@ -40,6 +41,10 @@ tests/e2e/ux-evidence/
 tests/e2e/safe-screenshots/
 
 .env
+.env.*
+!.env.example
+!.env.staging.example
+!.env.jenkins.example
 .staging/
 __pycache__/
 *.py[cod]

@@ -34,8 +34,8 @@ services:
   docker-images:
     image: inventory-jenkins-jenkins:local
     build:
-      context: ./infra/jenkins
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: infra/jenkins/Dockerfile
     depends_on:
       docker:
         condition: service_healthy
@@ -80,8 +80,8 @@ services:
     environment:
       CASC_JENKINS_CONFIG: /usr/share/jenkins/ref/casc/jenkins.yaml
       JAVA_OPTS: -Djenkins.install.runSetupWizard=false
-      JENKINS_ADMIN_ID: admin
-      JENKINS_ADMIN_PASSWORD: admin123
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:?JENKINS_ADMIN_ID is required}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?JENKINS_ADMIN_PASSWORD is required}
       JENKINS_URL: http://localhost:18080/
       DOCKER_HOST: tcp://docker:2376
       DOCKER_CERT_PATH: /certs/client
