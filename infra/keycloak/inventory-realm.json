@@ -1,0 +1,681 @@
+{
+  "realm": "inventory",
+  "displayName": "Sistema de Gestion de Inventarios",
+  "enabled": true,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "sslRequired": "external",
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "roles": {
+    "realm": [
+      {
+        "id": "role-product-view",
+        "name": "product:view",
+        "description": "Ver productos",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "role-product-manage",
+        "name": "product:manage",
+        "description": "Crear, editar y eliminar productos",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "role-stock-view",
+        "name": "stock:view",
+        "description": "Ver existencia e historial",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "role-stock-manage",
+        "name": "stock:manage",
+        "description": "Registrar entradas, salidas y ajustes",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "role-report-view",
+        "name": "report:view",
+        "description": "Ver reportes y dashboard",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "role-user-manage",
+        "name": "user:manage",
+        "description": "Gestionar usuarios, roles y permisos",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "role-audit-view",
+        "name": "audit:view",
+        "description": "Consultar auditoria del sistema",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "role-inventory-admin",
+        "name": "INVENTORY_ADMIN",
+        "description": "Acceso completo a operacion y seguridad",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "product:view",
+            "product:manage",
+            "stock:view",
+            "stock:manage",
+            "report:view",
+            "user:manage",
+            "audit:view"
+          ]
+        },
+        "clientRole": false
+      },
+      {
+        "id": "role-stock-operator",
+        "name": "STOCK_OPERATOR",
+        "description": "Gestiona entradas, salidas y ajustes de stock",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "product:view",
+            "stock:view",
+            "stock:manage",
+            "report:view"
+          ]
+        },
+        "clientRole": false
+      },
+      {
+        "id": "role-inventory-viewer",
+        "name": "INVENTORY_VIEWER",
+        "description": "Consulta productos, stock y reportes",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "product:view",
+            "stock:view",
+            "report:view"
+          ]
+        },
+        "clientRole": false
+      },
+      {
+        "id": "role-audit-reviewer",
+        "name": "AUDIT_REVIEWER",
+        "description": "Consulta trazabilidad y auditoria",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "product:view",
+            "stock:view",
+            "audit:view"
+          ]
+        },
+        "clientRole": false
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "id": "scope-product-view",
+      "name": "product:view",
+      "description": "OAuth2 scope para consultar productos",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true",
+        "consent.screen.text": "Ver productos"
+      }
+    },
+    {
+      "id": "scope-product-manage",
+      "name": "product:manage",
+      "description": "OAuth2 scope para gestionar productos",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true",
+        "consent.screen.text": "Gestionar productos"
+      }
+    },
+    {
+      "id": "scope-stock-view",
+      "name": "stock:view",
+      "description": "OAuth2 scope para consultar stock",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true",
+        "consent.screen.text": "Ver stock"
+      }
+    },
+    {
+      "id": "scope-stock-manage",
+      "name": "stock:manage",
+      "description": "OAuth2 scope para gestionar movimientos de stock",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true",
+        "consent.screen.text": "Gestionar stock"
+      }
+    },
+    {
+      "id": "scope-report-view",
+      "name": "report:view",
+      "description": "OAuth2 scope para consultar reportes",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true",
+        "consent.screen.text": "Ver reportes"
+      }
+    },
+    {
+      "id": "scope-user-manage",
+      "name": "user:manage",
+      "description": "OAuth2 scope para administrar usuarios y permisos",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true",
+        "consent.screen.text": "Gestionar usuarios"
+      }
+    },
+    {
+      "id": "scope-audit-view",
+      "name": "audit:view",
+      "description": "OAuth2 scope para consultar auditoria",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true",
+        "consent.screen.text": "Ver auditoria"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "id": "client-inventory-frontend",
+      "clientId": "inventory-frontend",
+      "name": "Inventory Frontend",
+      "description": "Cliente publico para la interfaz Angular",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*",
+        "http://docker:15173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://docker:15173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://127.0.0.1:5173/*##http://docker:15173/*"
+      },
+      "optionalClientScopes": [
+        "product:view",
+        "product:manage",
+        "stock:view",
+        "stock:manage",
+        "report:view",
+        "user:manage",
+        "audit:view"
+      ],
+      "protocolMappers": [
+        {
+          "id": "mapper-frontend-permissions",
+          "name": "inventory permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "id": "mapper-frontend-backend-audience",
+          "name": "inventory backend audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "inventory-backend",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "id": "mapper-frontend-preferred-username",
+          "name": "preferred username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "id": "client-inventory-backend",
+      "clientId": "inventory-backend",
+      "name": "Inventory Backend API",
+      "description": "Resource server para la API REST de inventario",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "authorizationServicesEnabled": true,
+      "attributes": {
+        "access.token.lifespan": "300"
+      },
+      "authorizationSettings": {
+        "allowRemoteResourceManagement": false,
+        "policyEnforcementMode": "ENFORCING",
+        "decisionStrategy": "UNANIMOUS",
+        "resources": [
+          {
+            "_id": "resource-products",
+            "name": "products",
+            "displayName": "Productos",
+            "type": "urn:inventory:resources:products",
+            "ownerManagedAccess": false,
+            "uris": [
+              "/products",
+              "/products/*"
+            ],
+            "scopes": [
+              {
+                "name": "product:view"
+              },
+              {
+                "name": "product:manage"
+              },
+              {
+                "name": "stock:view"
+              },
+              {
+                "name": "stock:manage"
+              }
+            ]
+          },
+          {
+            "_id": "resource-reports",
+            "name": "reports",
+            "displayName": "Reportes",
+            "type": "urn:inventory:resources:reports",
+            "ownerManagedAccess": false,
+            "uris": [
+              "/reports",
+              "/reports/*"
+            ],
+            "scopes": [
+              {
+                "name": "report:view"
+              }
+            ]
+          },
+          {
+            "_id": "resource-security",
+            "name": "security",
+            "displayName": "Seguridad",
+            "type": "urn:inventory:resources:security",
+            "ownerManagedAccess": false,
+            "uris": [
+              "/users",
+              "/users/*",
+              "/roles",
+              "/roles/*"
+            ],
+            "scopes": [
+              {
+                "name": "user:manage"
+              }
+            ]
+          },
+          {
+            "_id": "resource-audit",
+            "name": "audit",
+            "displayName": "Auditoria",
+            "type": "urn:inventory:resources:audit",
+            "ownerManagedAccess": false,
+            "uris": [
+              "/audit",
+              "/audit/*"
+            ],
+            "scopes": [
+              {
+                "name": "audit:view"
+              }
+            ]
+          }
+        ],
+        "scopes": [
+          {
+            "id": "authz-scope-product-view",
+            "name": "product:view",
+            "displayName": "Ver productos"
+          },
+          {
+            "id": "authz-scope-product-manage",
+            "name": "product:manage",
+            "displayName": "Gestionar productos"
+          },
+          {
+            "id": "authz-scope-stock-view",
+            "name": "stock:view",
+            "displayName": "Ver stock"
+          },
+          {
+            "id": "authz-scope-stock-manage",
+            "name": "stock:manage",
+            "displayName": "Gestionar stock"
+          },
+          {
+            "id": "authz-scope-report-view",
+            "name": "report:view",
+            "displayName": "Ver reportes"
+          },
+          {
+            "id": "authz-scope-user-manage",
+            "name": "user:manage",
+            "displayName": "Gestionar usuarios"
+          },
+          {
+            "id": "authz-scope-audit-view",
+            "name": "audit:view",
+            "displayName": "Ver auditoria"
+          }
+        ],
+        "policies": [
+          {
+            "id": "policy-inventory-admin",
+            "name": "role:inventory-admin",
+            "description": "Permite operaciones administrativas completas",
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "roles": "[{\"id\":\"role-inventory-admin\",\"required\":true}]"
+            }
+          },
+          {
+            "id": "policy-stock-operator",
+            "name": "role:stock-operator",
+            "description": "Permite operar stock y consultar inventario",
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "roles": "[{\"id\":\"role-stock-operator\",\"required\":true}]"
+            }
+          },
+          {
+            "id": "policy-inventory-viewer",
+            "name": "role:inventory-viewer",
+            "description": "Permite consultar inventario y reportes",
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "roles": "[{\"id\":\"role-inventory-viewer\",\"required\":true}]"
+            }
+          },
+          {
+            "id": "policy-audit-reviewer",
+            "name": "role:audit-reviewer",
+            "description": "Permite consultar trazabilidad y auditoria",
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "roles": "[{\"id\":\"role-audit-reviewer\",\"required\":true}]"
+            }
+          },
+          {
+            "id": "permission-product-view",
+            "name": "permission:product:view",
+            "description": "Permite consultar productos",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"products\"]",
+              "scopes": "[\"product:view\"]",
+              "applyPolicies": "[\"role:inventory-admin\",\"role:stock-operator\",\"role:inventory-viewer\",\"role:audit-reviewer\"]"
+            }
+          },
+          {
+            "id": "permission-product-manage",
+            "name": "permission:product:manage",
+            "description": "Permite crear, editar y eliminar productos",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"products\"]",
+              "scopes": "[\"product:manage\"]",
+              "applyPolicies": "[\"role:inventory-admin\"]"
+            }
+          },
+          {
+            "id": "permission-stock-view",
+            "name": "permission:stock:view",
+            "description": "Permite consultar historial y existencia",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"products\"]",
+              "scopes": "[\"stock:view\"]",
+              "applyPolicies": "[\"role:inventory-admin\",\"role:stock-operator\",\"role:inventory-viewer\",\"role:audit-reviewer\"]"
+            }
+          },
+          {
+            "id": "permission-stock-manage",
+            "name": "permission:stock:manage",
+            "description": "Permite registrar entradas, salidas y ajustes",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"products\"]",
+              "scopes": "[\"stock:manage\"]",
+              "applyPolicies": "[\"role:inventory-admin\",\"role:stock-operator\"]"
+            }
+          },
+          {
+            "id": "permission-report-view",
+            "name": "permission:report:view",
+            "description": "Permite consultar reportes y dashboard",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"reports\"]",
+              "scopes": "[\"report:view\"]",
+              "applyPolicies": "[\"role:inventory-admin\",\"role:stock-operator\",\"role:inventory-viewer\"]"
+            }
+          },
+          {
+            "id": "permission-user-manage",
+            "name": "permission:user:manage",
+            "description": "Permite gestionar usuarios, roles y permisos",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"security\"]",
+              "scopes": "[\"user:manage\"]",
+              "applyPolicies": "[\"role:inventory-admin\"]"
+            }
+          },
+          {
+            "id": "permission-audit-view",
+            "name": "permission:audit:view",
+            "description": "Permite consultar auditoria",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"audit\"]",
+              "scopes": "[\"audit:view\"]",
+              "applyPolicies": "[\"role:inventory-admin\",\"role:audit-reviewer\"]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "client-inventory-admin-service",
+      "clientId": "inventory-admin-service",
+      "name": "Inventory Admin Service",
+      "description": "Cliente confidencial usado por el backend para administrar usuarios y roles funcionales",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "frontchannelLogout": false,
+      "authorizationServicesEnabled": false,
+      "secret": "${KEYCLOAK_ADMIN_CLIENT_SECRET}",
+      "attributes": {
+        "access.token.lifespan": "300"
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "48248925-71ef-449b-bda3-f057d89304a3",
+      "username": "service-account-inventory-admin-service",
+      "enabled": true,
+      "emailVerified": false,
+      "serviceAccountClientId": "inventory-admin-service",
+      "clientRoles": {
+        "realm-management": [
+          "view-realm",
+          "query-users",
+          "view-users",
+          "manage-users"
+        ]
+      }
+    },
+    {
+      "id": "user-carlos",
+      "username": "carlos",
+      "firstName": "Carlos",
+      "lastName": "Hernandez",
+      "email": "carlos@example.local",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "INVENTORY_ADMIN"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${E2E_ADMIN_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "user-edwin",
+      "username": "edwin",
+      "firstName": "Edwin",
+      "lastName": "Balbuena",
+      "email": "edwin@example.local",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "STOCK_OPERATOR"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${E2E_OPERATOR_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "user-viewer",
+      "username": "viewer",
+      "firstName": "Usuario",
+      "lastName": "Consulta",
+      "email": "viewer@example.local",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "INVENTORY_VIEWER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${E2E_VIEWER_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "user-auditor",
+      "username": "auditor",
+      "firstName": "Usuario",
+      "lastName": "Auditoria",
+      "email": "auditor@example.local",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "AUDIT_REVIEWER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${E2E_AUDITOR_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-07-25T11:14:59-04:00",
+  "p95DashboardQuery": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": []
+    }
+  },
+  "inventoryMetricsQuery": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": []
+    }
+  }
+}

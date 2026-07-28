@@ -1,0 +1,284 @@
+<main id="main-content" class="inventory-page page-shell" tabindex="-1">
+  <mat-card class="page-heading-card">
+    <mat-card-content class="page-heading-content">
+      <div>
+        <p class="eyebrow">Productos</p>
+        <h1>Catálogo de inventario</h1>
+      </div>
+      <div class="header-actions">
+        <a
+          *ngIf="auth.hasPermission('product:manage')"
+          routerLink="/productos/nuevo"
+          class="primary-action"
+          mat-flat-button
+          color="primary"
+        >
+          Nuevo producto
+        </a>
+        <div class="metric">
+          <strong>{{ page.totalElements }}</strong>
+          <span>registros</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div *ngIf="successMessage" class="page-message page-message-success" role="status">
+    {{ successMessage }}
+  </div>
+
+  <mat-card class="filters-card">
+    <mat-card-content class="filters" aria-label="Filtros de productos">
+      <mat-form-field appearance="outline" class="field-wide">
+        <mat-label>Búsqueda por nombre o SKU</mat-label>
+        <input
+          matInput
+          type="search"
+          name="search"
+          [(ngModel)]="query.search"
+          (input)="queueSearch()"
+          placeholder="Ej. Latitude o DELL-LAT"
+        >
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Categoría</mat-label>
+        <input
+          matInput
+          type="text"
+          name="category"
+          [(ngModel)]="query.category"
+          (input)="queueSearch()"
+          placeholder="Ej. Laptops"
+        >
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select name="status" [(ngModel)]="query.status" (selectionChange)="applyFilters()">
+          <mat-option value="">Todos</mat-option>
+          <mat-option value="ACTIVE">Activo</mat-option>
+          <mat-option value="INACTIVE">Inactivo</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field-compact">
+        <mat-label>Filas</mat-label>
+        <mat-select name="size" [(ngModel)]="query.size" (selectionChange)="changePageSize()">
+          <mat-option [value]="5">5</mat-option>
+          <mat-option [value]="10">10</mat-option>
+          <mat-option [value]="20">20</mat-option>
+          <mat-option [value]="50">50</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button class="ghost-button" type="button" (click)="clearFilters()" [disabled]="!hasFilters()">
+        Limpiar
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-panel" aria-label="Listado de productos">
+    <div class="table-toolbar">
+      <div>
+        <strong>Listado</strong>
+        <span>{{ firstItem() }}-{{ lastItem() }} de {{ page.totalElements }}</span>
+      </div>
+      <button
+        #productsRefreshButton
+        mat-flat-button
+        color="primary"
+        class="refresh-button"
+        type="button"
+        (click)="loadProducts()"
+        [disabled]="loading"
+      >
+        Actualizar
+      </button>
+    </div>
+
+    <mat-progress-bar
+      *ngIf="loading"
+      mode="indeterminate"
+      aria-label="Cargando productos"
+    ></mat-progress-bar>
+
+    <div *ngIf="errorMessage" class="state state-error" role="alert">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="loading" class="state" aria-live="polite">
+      Cargando productos...
+    </div>
+
+    <div class="table-scroll" *ngIf="!loading">
+      <table class="data-table products-table">
+        <thead>
+          <tr>
+            <th [attr.aria-sort]="sortAria('sku')">
+              <button type="button" class="sort-button" (click)="changeSort('sku')" [attr.aria-label]="sortButtonLabel('sku', 'SKU')">
+                SKU <span aria-hidden="true">{{ sortLabel('sku') }}</span>
+              </button>
+            </th>
+            <th [attr.aria-sort]="sortAria('name')">
+              <button type="button" class="sort-button" (click)="changeSort('name')" [attr.aria-label]="sortButtonLabel('name', 'nombre')">
+                Nombre <span aria-hidden="true">{{ sortLabel('name') }}</span>
+              </button>
+            </th>
+            <th [attr.aria-sort]="sortAria('category')">
+              <button type="button" class="sort-button" (click)="changeSort('category')" [attr.aria-label]="sortButtonLabel('category', 'categoría')">
+                Categoría <span aria-hidden="true">{{ sortLabel('category') }}</span>
+              </button>
+            </th>
+            <th [attr.aria-sort]="sortAria('price')">
+              <button type="button" class="sort-button" (click)="changeSort('price')" [attr.aria-label]="sortButtonLabel('price', 'precio')">
+                Precio <span aria-hidden="true">{{ sortLabel('price') }}</span>
+              </button>
+            </th>
+            <th [attr.aria-sort]="sortAria('currentStock')">
+              <button type="button" class="sort-button" (click)="changeSort('currentStock')" [attr.aria-label]="sortButtonLabel('currentStock', 'stock')">
+                Stock <span aria-hidden="true">{{ sortLabel('currentStock') }}</span>
+              </button>
+            </th>
+            <th [attr.aria-sort]="sortAria('minimumStock')">
+              <button type="button" class="sort-button" (click)="changeSort('minimumStock')" [attr.aria-label]="sortButtonLabel('minimumStock', 'stock mínimo')">
+                Mínimo <span aria-hidden="true">{{ sortLabel('minimumStock') }}</span>
+              </button>
+            </th>
+            <th [attr.aria-sort]="sortAria('status')">
+              <button type="button" class="sort-button" (click)="changeSort('status')" [attr.aria-label]="sortButtonLabel('status', 'estado')">
+                Estado <span aria-hidden="true">{{ sortLabel('status') }}</span>
+              </button>
+            </th>
+            <th *ngIf="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') || auth.hasPermission('stock:view')">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let product of products; trackBy: trackByProductId">
+            <td class="sku">{{ product.sku }}</td>
+            <td>
+              <strong>{{ product.name }}</strong>
+              <span class="description">{{ product.description || 'Sin descripción' }}</span>
+            </td>
+            <td>{{ product.category }}</td>
+            <td>{{ product.price | currency:'DOP':'symbol':'1.2-2' }}</td>
+            <td>{{ product.currentStock }}</td>
+            <td>{{ product.minimumStock }}</td>
+            <td>
+              <span class="status" [class.status-active]="product.status === 'ACTIVE'">
+                {{ statusLabel(product.status) }}
+              </span>
+            </td>
+            <td *ngIf="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') || auth.hasPermission('stock:view')">
+              <div class="row-actions">
+                <a
+                  *ngIf="auth.hasPermission('product:manage')"
+                  [routerLink]="['/productos', product.id, 'editar']"
+                  class="row-action"
+                  mat-stroked-button
+                >
+                  Editar
+                </a>
+                <a
+                  *ngIf="auth.hasPermission('audit:view')"
+                  [routerLink]="['/productos', product.id, 'auditoria']"
+                  class="row-action"
+                  mat-stroked-button
+                >
+                  Auditoría
+                </a>
+                <a
+                  *ngIf="auth.hasPermission('stock:view')"
+                  [routerLink]="['/productos', product.id, 'stock']"
+                  class="row-action"
+                  mat-stroked-button
+                >
+                  Movimientos
+                </a>
+                <button
+                  *ngIf="auth.hasPermission('product:manage')"
+                  type="button"
+                  class="row-action row-action-danger"
+                  mat-stroked-button
+                  (click)="requestDelete(product)"
+                  [disabled]="deletingProductId !== null"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="products.length === 0 && !errorMessage">
+            <td
+              [attr.colspan]="auth.hasPermission('product:manage') || auth.hasPermission('audit:view') || auth.hasPermission('stock:view') ? 8 : 7"
+              class="empty"
+            >
+              No hay productos para los criterios seleccionados.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button mat-stroked-button type="button" (click)="changePage(query.page - 1)" [disabled]="query.page === 0 || loading">
+        Anterior
+      </button>
+      <span>Página {{ page.page + 1 }} de {{ totalPages() }}</span>
+      <button mat-stroked-button type="button" (click)="changePage(query.page + 1)" [disabled]="query.page + 1 >= totalPages() || loading">
+        Siguiente
+      </button>
+    </div>
+  </mat-card>
+
+  <div
+    *ngIf="productPendingDelete"
+    class="dialog-backdrop"
+    role="presentation"
+    (click)="cancelDelete()"
+  >
+    <mat-card
+      class="confirm-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-title"
+      aria-describedby="delete-description"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+      (click)="$event.stopPropagation()"
+    >
+      <mat-card-content>
+        <p class="eyebrow">Confirmar eliminación</p>
+        <h2 id="delete-title">Eliminar {{ productPendingDelete.name }}</h2>
+        <p id="delete-description">
+          Esta acción eliminará el producto con SKU
+          <strong>{{ productPendingDelete.sku }}</strong>. No se puede deshacer.
+        </p>
+
+        <div class="dialog-actions">
+          <button
+            #deleteCancelButton
+            cdkFocusInitial
+            type="button"
+            mat-stroked-button
+            class="ghost-button"
+            (click)="cancelDelete()"
+            [disabled]="deletingProductId !== null"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            mat-flat-button
+            color="warn"
+            class="danger-button"
+            (click)="confirmDelete()"
+            [disabled]="deletingProductId !== null"
+          >
+            {{ deletingProductId !== null ? 'Eliminando...' : 'Eliminar producto' }}
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</main>

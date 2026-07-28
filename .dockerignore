@@ -1,0 +1,7 @@
+**
+
+!backend/gradle/
+!backend/gradle/**
+!backend/gradlew
+!infra/jenkins/
+!infra/jenkins/**

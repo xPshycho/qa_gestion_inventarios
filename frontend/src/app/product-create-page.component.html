@@ -1,0 +1,27 @@
+<main id="main-content" class="product-page page-shell" tabindex="-1">
+  <mat-card class="page-heading-card">
+    <mat-card-content class="page-heading-content">
+      <div>
+        <p class="eyebrow">Productos</p>
+        <h1>Crear producto</h1>
+        <p class="page-subtitle">Registra un nuevo producto y su existencia inicial en el inventario.</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="form-panel" aria-labelledby="product-form-title">
+    <mat-card-content>
+      <h2 id="product-form-title">Información del producto</h2>
+
+      <div *ngIf="errorMessage" class="page-message page-message-error" role="alert">
+        {{ errorMessage }}
+      </div>
+
+      <app-product-form
+        submitLabel="Crear producto"
+        [submitting]="saving"
+        (saveProduct)="createProduct($event)"
+      ></app-product-form>
+    </mat-card-content>
+  </mat-card>
+</main>

@@ -1,0 +1,269 @@
+name: Staging Preview
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - staging
+      - main
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+    inputs:
+      deploy_ref:
+        description: Commit, tag or branch to deploy
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-quality:
+    name: Backend quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout deployment revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.deploy_ref || github.sha }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: Run unit, API, integration and coverage gates
+        working-directory: backend
+        run: >-
+          ./gradlew
+          test
+          apiTest
+          integrationTest
+          jacocoTestReport
+          jacocoTestCoverageVerification
+          --no-daemon
+
+  frontend-quality:
+    name: Frontend quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout deployment revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.deploy_ref || github.sha }}
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm 10.12.1
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.12.1 --activate
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Resolve Chromium
+        run: |
+          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -z "$CHROME_PATH" ]; then
+            echo "No Chrome or Chromium binary was found." >&2
+            exit 1
+          fi
+          echo "CHROME_BIN=$CHROME_PATH" >> "$GITHUB_ENV"
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: >-
+          pnpm exec ng test
+          --watch=false
+          --browsers=ChromeHeadlessNoSandbox
+          --code-coverage
+
+  deploy-and-validate:
+    name: Deploy and validate runner-private staging
+    needs:
+      - backend-quality
+      - frontend-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: staging
+    env:
+      COMPOSE_PROJECT_NAME: inventory-staging-${{ github.run_id }}-${{ github.run_attempt }}
+      STAGING_DEPLOYMENT_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
+      STAGING_LIFECYCLE: ephemeral
+      STAGING_VISIBILITY: runner-private
+
+    steps:
+      - name: Checkout deployment revision
+        id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.deploy_ref || github.sha }}
+
+      - name: Enforce staging as the source of main promotions
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        env:
+          PROMOTION_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          PROMOTION_SOURCE: ${{ github.head_ref }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "$PROMOTION_REPOSITORY" != "$TARGET_REPOSITORY" ]; then
+            echo "::error::Promotions to main must originate in this repository."
+            exit 1
+          fi
+          if [ "$PROMOTION_SOURCE" != staging ]; then
+            echo "::error::PRs targeting main must originate from staging. Merge this branch into staging first."
+            exit 1
+          fi
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm 10.12.1
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.12.1 --activate
+
+      - name: Install E2E dependencies
+        working-directory: tests/e2e
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve Playwright browser
+        working-directory: tests/e2e
+        run: |
+          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -n "$CHROME_PATH" ]; then
+            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          else
+            pnpm exec playwright install chromium
+          fi
+          pnpm exec playwright install ffmpeg
+
+      - name: Record the exact deployed revision
+        run: |
+          test -z "$(git status --porcelain --untracked-files=all)"
+          DEPLOYED_SHA="$(git rev-parse HEAD)"
+          echo "APP_VERSION=$DEPLOYED_SHA" >> "$GITHUB_ENV"
+          echo "DEPLOYED_SHA=$DEPLOYED_SHA" >> "$GITHUB_ENV"
+
+      - name: Generate ephemeral staging secrets
+        run: |
+          ./scripts/staging/init-env.sh --force
+          for variable in \
+            POSTGRES_PASSWORD \
+            KEYCLOAK_DB_PASSWORD \
+            KEYCLOAK_ADMIN_PASSWORD \
+            KEYCLOAK_ADMIN_CLIENT_SECRET \
+            E2E_ADMIN_PASSWORD \
+            E2E_OPERATOR_PASSWORD \
+            E2E_VIEWER_PASSWORD \
+            E2E_AUDITOR_PASSWORD \
+            GRAFANA_ADMIN_PASSWORD; do
+            value="$(awk -F= -v key="$variable" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' .staging/staging.env)"
+            test -n "$value"
+            echo "::add-mask::$value"
+          done
+
+      - name: Validate staging Compose model
+        run: >-
+          docker compose
+          --env-file .staging/staging.env
+          --project-name "$COMPOSE_PROJECT_NAME"
+          --file docker-compose.yml
+          --file docker-compose.staging.yml
+          config --quiet
+
+      - name: Deploy staging preview
+        id: deploy
+        continue-on-error: true
+        run: ./scripts/staging/deploy.sh
+
+      - name: Run mandatory post-deploy gate
+        id: post_deploy
+        if: steps.deploy.outcome == 'success'
+        continue-on-error: true
+        run: ./scripts/staging/post-deploy.sh
+
+      - name: Collect deployment diagnostics
+        id: final_collection
+        if: always() && steps.deploy.outcome != 'skipped'
+        continue-on-error: true
+        run: ./scripts/staging/collect-evidence.sh
+
+      - name: Verify evidence is safe to publish
+        id: evidence_safety
+        if: always() && steps.deploy.outcome != 'skipped'
+        continue-on-error: true
+        run: ./scripts/staging/verify-evidence-safety.sh
+
+      - name: Publish job summary
+        if: always()
+        run: |
+          {
+            echo "## Staging preview"
+            echo ""
+            echo "- Revision: \`${DEPLOYED_SHA:-unknown}\`"
+            echo "- Lifecycle: ephemeral"
+            echo "- Visibility: runner-private; URLs use loopback and are not public"
+            echo "- Compose project: \`${COMPOSE_PROJECT_NAME}\`"
+            echo "- Artifact: \`staging-evidence-${DEPLOYED_SHA:-unknown}-${GITHUB_RUN_ATTEMPT}\`"
+            echo "- Evidence safety: \`${{ steps.evidence_safety.outcome }}\`"
+            echo "- Final evidence collection: \`${{ steps.final_collection.outcome }}\`"
+            echo ""
+            if [ "${{ steps.evidence_safety.outcome }}" = success ] && \
+              [ -f .staging/evidence/post-deploy/summary.md ]; then
+              cat .staging/evidence/post-deploy/summary.md
+            elif [ "${{ steps.evidence_safety.outcome }}" != success ]; then
+              echo "Detailed evidence was withheld because the safety gate did not pass."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload staging evidence
+        if: always() && steps.evidence_safety.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-evidence-${{ env.DEPLOYED_SHA }}-${{ github.run_attempt }}
+          path: .staging/evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Destroy ephemeral preview
+        if: always() && steps.deploy.outcome != 'skipped'
+        continue-on-error: true
+        run: ./scripts/staging/destroy.sh --volumes
+
+      - name: Enforce deployment and post-deploy results
+        if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          POST_DEPLOY_OUTCOME: ${{ steps.post_deploy.outcome }}
+          EVIDENCE_SAFETY_OUTCOME: ${{ steps.evidence_safety.outcome }}
+          FINAL_COLLECTION_OUTCOME: ${{ steps.final_collection.outcome }}
+        run: |
+          test "$DEPLOY_OUTCOME" = success
+          test "$POST_DEPLOY_OUTCOME" = success
+          test "$FINAL_COLLECTION_OUTCOME" = success
+          test "$EVIDENCE_SAFETY_OUTCOME" = success

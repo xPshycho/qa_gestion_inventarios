@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-07-25T11:13:48-04:00",
+  "backendHealth": {
+    "status": "UP"
+  },
+  "prometheusBackendUp": [
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "backend:8080",
+        "job": "inventory-backend"
+      },
+      "value": [
+        1784992428.684,
+        "1"
+      ]
+    }
+  ],
+  "backendDownRule": {
+    "name": "InventoryBackendDown",
+    "state": "inactive",
+    "health": "ok",
+    "lastEvaluation": "2026-07-25T15:13:38.505633366Z",
+    "alerts": []
+  },
+  "alertmanagerActiveAlerts": []
+}

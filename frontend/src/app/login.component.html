@@ -1,0 +1,45 @@
+<main id="main-content" class="login-page" tabindex="-1">
+  <mat-card class="login-panel" aria-labelledby="login-title">
+    <mat-card-content>
+      <p class="eyebrow">Acceso seguro</p>
+      <h1 id="login-title">Gestión de inventarios</h1>
+      <p class="login-description">
+        Inicia sesión con tu cuenta empresarial para acceder a los módulos autorizados.
+      </p>
+
+      <div *ngIf="sessionExpired" class="login-message login-message-warning" role="alert">
+        Tu sesión expiró. Inicia sesión nuevamente para continuar.
+      </div>
+
+      <div *ngIf="authenticationUnavailable" class="login-message login-message-error" role="alert">
+        El servicio de autenticación no está disponible. Verifica la configuración de Keycloak.
+      </div>
+
+      <div *ngIf="loginError" class="login-message login-message-error" role="alert">
+        {{ loginError }}
+      </div>
+
+      <mat-progress-bar
+        *ngIf="loginInProgress"
+        mode="indeterminate"
+        aria-label="Iniciando sesión"
+      ></mat-progress-bar>
+
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        class="login-button"
+        aria-label="Iniciar sesión con Keycloak"
+        (click)="login()"
+        [disabled]="loginInProgress || authenticationUnavailable"
+      >
+        {{ loginInProgress ? 'Redirigiendo...' : 'Iniciar sesión con Keycloak' }}
+      </button>
+
+      <p class="login-note">
+        La autenticación utiliza OAuth2, OpenID Connect y PKCE. Los tokens no se guardan en el navegador.
+      </p>
+    </mat-card-content>
+  </mat-card>
+</main>

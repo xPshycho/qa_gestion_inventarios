@@ -1,0 +1,45 @@
+.forbidden-page {
+  width: min(760px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 56px 0;
+}
+
+.forbidden-panel {
+  border-color: #ffd5d2;
+}
+
+.forbidden-panel mat-card-content {
+  display: grid;
+  gap: 16px;
+  padding: 32px;
+}
+
+.eyebrow {
+  color: var(--danger);
+}
+
+h1 {
+  margin: 0;
+  line-height: 1.12;
+}
+
+p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+a {
+  width: fit-content;
+}
+
+@media (max-width: 560px) {
+  .forbidden-page {
+    width: min(100% - 20px, 760px);
+    padding-top: 28px;
+  }
+
+  a {
+    width: 100%;
+  }
+}

@@ -1,0 +1,15 @@
+title = "qa_gestion_inventarios secret scanning"
+minVersion = "v8.21.0"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Ignore empty secret assignments in the production environment template"
+condition = "AND"
+regexTarget = "match"
+regexes = ['''(?m)^[A-Z][A-Z0-9_]*(?:PASSWORD|SECRET)=\r?\n(?:\r?\n|\z)''']
+paths = ['''(?:^|/)\.env\.production\.example$''']
