@@ -441,6 +441,10 @@ activa desde `develop` o `staging`. Su secuencia es:
 12. Recolección, revisión de seguridad, rollback cuando corresponde, segunda
     recolección y revisión final.
 13. Descarga y publicación solo si la revisión final de evidencia da `PASS`.
+14. Retención remota: se conservan únicamente los releases actual y anterior,
+    el último backup pre-deploy y la evidencia de esos dos SHA. También se
+    eliminan imágenes etiquetadas de releases descartados, caché de build y
+    paquetes temporales del workflow.
 
 La concurrencia de producción no cancela un despliegue en curso. Un push
 posterior espera; no interrumpe una migración o un rollback ya iniciado.
@@ -499,6 +503,28 @@ backup pre-deploy queda para una recuperación manual expresamente aprobada.
 Por ello las migraciones de producción deben ser compatibles hacia atrás con la
 versión anterior. Una migración destructiva requiere su propio plan de
 restauración y no queda autorizada por este workflow.
+
+## Retención y uso de disco
+
+Cada SHA se despliega primero en `releases/<SHA>` para que el release sea
+inmutable y verificable. Después de publicar la evidencia segura,
+`scripts/gcp/cleanup-retention.sh` aplica una retención acotada:
+
+- conserva `current-release` y `previous-release`;
+- elimina cualquier release más antiguo;
+- conserva únicamente el último backup pre-deploy;
+- conserva en la VM la evidencia del SHA actual y del anterior;
+- elimina las etiquetas `inventory-backend:<SHA>` e
+  `inventory-frontend:<SHA>` que ya no pertenecen a esos releases;
+- elimina imágenes Docker colgantes y toda la caché de build no utilizada;
+- elimina paquetes temporales antiguos y el workflow borra los paquetes
+  exactos de la ejecución al finalizar.
+
+Los artifacts descargables de GitHub mantienen su retención independiente de
+30 días. La limpieza no usa `docker system prune`, `docker volume prune` ni
+`docker compose down -v`; los volúmenes de PostgreSQL, Keycloak y
+observabilidad no se eliminan. Si la limpieza falla, el gate final queda rojo
+para evitar que el crecimiento de disco pase inadvertido.
 
 En el primer despliegue no existe una versión anterior. Si ese intento falla, no
 hay release al cual volver: el job queda rojo, conserva diagnóstico seguro y el

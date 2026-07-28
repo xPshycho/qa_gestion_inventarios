@@ -667,6 +667,55 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Apply bounded VM retention policy
+        id: retention_cleanup
+        if: always() && steps.artifact_upload.outcome == 'success'
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q bash scripts/gcp/cleanup-retention.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Remove remote deployment packages
+        id: remote_package_cleanup
+        if: always() && steps.release_upload.outcome == 'success'
+        continue-on-error: true
+        run: |
+          bundle_remote="/tmp/$(basename "$RELEASE_BUNDLE")"
+          bootstrap_remote="/tmp/$(basename "$BOOTSTRAP_SCRIPT")"
+          checksum_remote="/tmp/$(basename "$RELEASE_CHECKSUM")"
+          evidence_archive="/tmp/$EVIDENCE_ARTIFACT_NAME.tar.gz"
+          evidence_checksum="$evidence_archive.sha256"
+
+          printf -v remote_command \
+            'sudo rm -f -- %q %q %q %q %q; [[ ! -e %q && ! -e %q && ! -e %q && ! -e %q && ! -e %q ]]' \
+            "$bundle_remote" \
+            "$bootstrap_remote" \
+            "$checksum_remote" \
+            "$evidence_archive" \
+            "$evidence_checksum" \
+            "$bundle_remote" \
+            "$bootstrap_remote" \
+            "$checksum_remote" \
+            "$evidence_archive" \
+            "$evidence_checksum"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
       - name: Publish production deployment summary
         if: always()
         env:
@@ -689,6 +738,8 @@ jobs:
             echo "- Final evidence collection: \`${{ steps.final_collection.outcome }}\`"
             echo "- Final evidence safety: \`${{ steps.final_evidence_safety.outcome }}\`"
             echo "- Artifact upload: \`${{ steps.artifact_upload.outcome }}\`"
+            echo "- VM retention cleanup: \`${{ steps.retention_cleanup.outcome }}\`"
+            echo "- Remote package cleanup: \`${{ steps.remote_package_cleanup.outcome }}\`"
             echo ""
             if [ "${{ steps.final_evidence_safety.outcome }}" != success ]; then
               echo "Detailed evidence was withheld because the final safety gate did not pass."
@@ -715,6 +766,8 @@ jobs:
           FINAL_SAFETY_OUTCOME: ${{ steps.final_evidence_safety.outcome }}
           DOWNLOAD_OUTCOME: ${{ steps.download_evidence.outcome }}
           ARTIFACT_UPLOAD_OUTCOME: ${{ steps.artifact_upload.outcome }}
+          RETENTION_CLEANUP_OUTCOME: ${{ steps.retention_cleanup.outcome }}
+          REMOTE_PACKAGE_CLEANUP_OUTCOME: ${{ steps.remote_package_cleanup.outcome }}
         run: |
           test "$RELEASE_UPLOAD_OUTCOME" = success
           test "$DEPLOY_OUTCOME" = success
@@ -730,4 +783,6 @@ jobs:
           test "$FINAL_SAFETY_OUTCOME" = success
           test "$DOWNLOAD_OUTCOME" = success
           test "$ARTIFACT_UPLOAD_OUTCOME" = success
+          test "$RETENTION_CLEANUP_OUTCOME" = success
+          test "$REMOTE_PACKAGE_CLEANUP_OUTCOME" = success
           test "$ROLLBACK_OUTCOME" != failure

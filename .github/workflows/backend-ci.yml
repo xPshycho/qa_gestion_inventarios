@@ -32,6 +32,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate GCP retention policy
+        working-directory: .
+        run: |
+          bash -n scripts/gcp/cleanup-retention.sh tests/gcp/cleanup-retention.sh
+          ./tests/gcp/cleanup-retention.sh
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
