@@ -37,6 +37,7 @@ seguridad, observabilidad, integracion y despliegue continuos.
 - Docker Compose >= 2.20
 - Java 21
 - Node.js 20.19+, 22.12+ o 24.x
+- `bash`, `curl`, `jq` y `openssl`
 
 ## Instalacion local
 
@@ -70,6 +71,9 @@ docker compose ps
 | Flyway | Servicio interno | Aplica migraciones antes de iniciar el backend |
 | Prometheus | http://localhost:9090 | Scraping de metricas del backend y Keycloak |
 | Grafana | http://localhost:3000 | Dashboard operativo con datasource Prometheus |
+| Loki | http://localhost:3100 | Agregacion de logs |
+| Tempo | http://localhost:3200 | Almacenamiento y consulta de trazas |
+| Alertmanager | http://localhost:9093 | Enrutamiento de alertas |
 
 Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT`, `KEYCLOAK_PORT`
 y `POSTGRES_PORT`, `PROMETHEUS_PORT` y `GRAFANA_PORT`.
@@ -86,9 +90,9 @@ usar el boton **Authorize** con un access token emitido por Keycloak.
 curl http://localhost:8080/v3/api-docs
 ```
 
-OpenTelemetry queda deshabilitado por defecto en Docker Compose con `OTEL_SDK_DISABLED=true`.
-Las metricas operativas se exponen por Actuator en `/actuator/prometheus` y Prometheus las
-scrapea desde la red interna de Docker Compose.
+`OTEL_SDK_DISABLED` controla la exportacion de trazas en desarrollo. El perfil staging la
+habilita y etiqueta la telemetria con ambiente y version. Las metricas operativas se exponen por
+Actuator en `/actuator/prometheus` y Prometheus las scrapea desde la red interna de Compose.
 
 ## Credenciales demo locales
 
@@ -133,7 +137,7 @@ docker compose exec postgres \
 .
 ├── .github/
 │   ├── ISSUE_TEMPLATE/         # Plantillas de issues
-│   ├── workflows/              # GitHub Actions pipelines
+│   ├── workflows/              # CI y staging preview en GitHub Actions
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── backend/                    # API REST Spring Boot
 ├── frontend/                   # Interfaz Angular
@@ -145,12 +149,16 @@ docker compose exec postgres \
 ├── tests/
 │   ├── e2e/                    # Playwright
 │   ├── performance/            # k6 / JMeter
+│   ├── staging/                # Verificacion black-box post-deploy
 │   └── security/               # OWASP ZAP
+├── scripts/staging/            # Deploy, evidencia, backup, rollback y limpieza
 ├── docs/                       # Documentacion tecnica y de pruebas
 ├── .env.example
+├── .env.staging.example
 ├── .gitignore
 ├── commitlint.config.js
 ├── docker-compose.override.yml
+├── docker-compose.staging.yml
 └── docker-compose.yml
 ```
 
@@ -159,8 +167,29 @@ docker compose exec postgres \
 | Ambiente | Descripcion | URL |
 |----------|-------------|-----|
 | Development | Local con Docker Compose | http://localhost:5173 |
-| Staging | Replica de produccion para pruebas post-deploy | Pendiente de issue de deployment/staging |
-| Production | Ambiente final | Pendiente de release final |
+| Staging local | Overlay aislado, secretos generados y puertos solo en loopback | http://127.0.0.1:15173 |
+| Staging CI | Preview efimero por SHA en el runner de GitHub Actions | Runner-private; no publica URL externa |
+| Production | Ambiente final | Fuera del alcance del preview de staging |
+
+El staging no usa `docker-compose.override.yml`, no comparte proyecto ni volumenes con desarrollo
+y ejecuta Keycloak en modo `start` con PostgreSQL propio. El runbook completo, el contrato de
+variables, las URLs, el flujo de promocion y el rollback estan en
+[`docs/deployment/staging.md`](docs/deployment/staging.md).
+
+```bash
+./scripts/staging/init-env.sh
+./scripts/staging/deploy.sh
+./scripts/staging/post-deploy.sh
+```
+
+Los secretos, el realm renderizado y la evidencia local viven bajo `.staging/`, que esta ignorado
+por Git. `post-deploy.sh` es un gate: valida integracion real, API, login, flujo principal,
+Playwright, headers, ZAP, k6, observabilidad y seguridad de evidencia antes de devolver exito.
+
+El workflow `Staging Preview` se activa en PR hacia `develop`, PR hacia `main`, push a
+`staging` y manualmente con un `deploy_ref` opcional. Un PR hacia `main` solo es valido si
+proviene exactamente de `staging`. El preview usa un proyecto Compose exclusivo, valida que
+todos los puertos y URLs permanezcan en `127.0.0.1` y se destruye al terminar.
 
 ## Permisos del sistema
 
@@ -258,7 +287,14 @@ K6_PROFILE=smoke K6_PASSWORD="<password-local>" k6 run tests/performance/perform
 # Guia completa: tests/performance/README.md
 
 # Security scan
-# Jenkins ejecuta pnpm audit --prod; ZAP/dependency scan dedicados pertenecen al issue de security testing
+ZAP_TARGET_URL=http://127.0.0.1:15173 \
+ZAP_DOCKER_NETWORK=host \
+./tests/security/run-zap-baseline.sh
+
+# Staging completo contra una instancia ya desplegada
+./scripts/staging/init-env.sh
+./scripts/staging/deploy.sh
+./scripts/staging/post-deploy.sh
 ```
 
 Las pruebas de integracion levantan PostgreSQL 16 y Keycloak 26.6.3 con Testcontainers. Si el
@@ -299,6 +335,7 @@ limpieza esta en `docs/ci/jenkins.md`.
 | API tests | `cd backend && ./gradlew apiTest` | `backend/build/reports/tests/apiTest/index.html` | `backend-api-test-reports-*` |
 | Frontend unit + coverage | `cd frontend && pnpm exec ng test --watch=false --browsers=ChromeHeadless --code-coverage` | `frontend/coverage/qa-gestion-inventarios-frontend/index.html` | `frontend-coverage-*` |
 | E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | `tests/e2e/playwright-report/index.html`, `tests/e2e/test-results/playwright-results.xml` | `playwright-e2e-*`, Jenkins Pipeline |
+| Staging post-deploy | `./scripts/staging/post-deploy.sh` | `.staging/evidence/post-deploy/summary.md` | `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`, solo con safety `PASS` |
 
 Estado de automatizacion de testing:
 
@@ -308,7 +345,8 @@ Estado de automatizacion de testing:
 | Integration | Automatizada | Testcontainers ejecutado por `./gradlew integrationTest`; los reportes se publican para diagnosticar fallos de entorno. |
 | API | Automatizada en CI | RestAssured valida contratos REST, status codes, errores y permisos en `backend/src/apiTest`. |
 | Frontend | Automatizada en CI | Angular/Karma ejecuta unit tests con cobertura y publica artifact `frontend-coverage-*`. |
-| E2E | Automatizada en GitHub Actions y Jenkins | Playwright cubre login, CRUD de productos, roles y responsive; se publican HTML, JUnit, screenshots, videos, traces y diagnosticos Docker. |
+| E2E | Automatizada en GitHub Actions y Jenkins | Playwright cubre login, CRUD de productos, roles y responsive; fuera de staging conserva HTML, JUnit y artifacts de diagnostico configurados por ese flujo. |
+| Post-deploy staging | Automatizada en GitHub Actions | Despliega `DEPLOYED_SHA`, ejecuta siete fases y solo publica evidencia tras el safety final. Playwright staging usa `list` + JUnit y capturas controladas, sin HTML, traces ni videos. |
 
 La guia consolidada de comandos, reportes y artifacts esta en `docs/testing/ci-reporting.md`.
 
@@ -318,12 +356,20 @@ Una vez levantado el sistema:
 
 | Herramienta | URL |
 |-------------|-----|
-| Grafana | Pendiente de issue #52 |
-| Prometheus | Pendiente de issue #52 |
-| Alertmanager | Pendiente de issue #52 |
+| Grafana | Development `http://localhost:3000`; staging `http://127.0.0.1:13000` |
+| Prometheus | Development `http://localhost:9090`; staging `http://127.0.0.1:19090` |
+| Loki | Development `http://localhost:3100`; staging `http://127.0.0.1:13100` |
+| Tempo | Development `http://localhost:3200`; staging `http://127.0.0.1:13200` |
+| Alertmanager | Development `http://localhost:9093`; staging `http://127.0.0.1:19093` |
+
+Los puertos staging se enlazan exclusivamente a loopback. El gate post-deploy comprueba readiness,
+el target actual del backend en Prometheus y los datasources de Grafana. Alloy filtra por el
+proyecto Compose actual; Loki exige un marcador nuevo con esa label y Tempo exige una traza
+posterior al inicio del check con el `deployment.id` de este preview.
 
 
 ## Documentacion
 - `docs/security/keycloak.md`: configuracion de seguridad, usuarios demo, scopes y permisos.
 - `docs/ci/jenkins.md`: pipeline Jenkins, credenciales, stages, reportes y artifacts.
+- `docs/deployment/staging.md`: despliegue staging reproducible, secretos, validacion, promocion y rollback.
 - `docs/testing/ci-reporting.md`: guia de testing, cobertura, artifacts y evidencia para PRs.

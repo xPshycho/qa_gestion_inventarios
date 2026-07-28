@@ -29,4 +29,9 @@ require_header "X-Content-Type-Options: nosniff"
 require_header "Referrer-Policy: strict-origin-when-cross-origin"
 require_header "Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=()"
 
+if [[ -n "${SECURITY_HEADERS_REPORT_FILE:-}" ]]; then
+  mkdir -p -- "$(dirname -- "$SECURITY_HEADERS_REPORT_FILE")"
+  cp -- "$headers_file" "$SECURITY_HEADERS_REPORT_FILE"
+fi
+
 echo "Security headers verified for $frontend_url"

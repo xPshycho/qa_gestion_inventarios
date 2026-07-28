@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,12 +29,20 @@ public class SecurityConfig {
     public static final String REPORT_VIEW = "report:view";
     public static final String USER_MANAGE = "user:manage";
     public static final String AUDIT_VIEW = "audit:view";
-    private static final List<String> ALLOWED_CORS_ORIGINS = List.of(
-            "http://localhost:5173",
-            "http://127.0.0.1:5173"
-    );
     private static final List<String> ALLOWED_CORS_METHODS = List.of("GET", "POST", "PUT", "DELETE", "OPTIONS");
     private static final List<String> ALLOWED_CORS_HEADERS = List.of("Authorization", "Content-Type", "Accept");
+    private final List<String> allowedCorsOrigins;
+
+    public SecurityConfig(@Value("${inventory.cors.allowed-origins}") List<String> allowedCorsOrigins) {
+        this.allowedCorsOrigins = allowedCorsOrigins.stream()
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+
+        if (this.allowedCorsOrigins.isEmpty()) {
+            throw new IllegalArgumentException("At least one CORS origin must be configured");
+        }
+    }
 
     @Bean
     @SuppressWarnings("java:S4502")
@@ -63,7 +72,7 @@ public class SecurityConfig {
     @Bean
     UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(ALLOWED_CORS_ORIGINS);
+        configuration.setAllowedOrigins(allowedCorsOrigins);
         configuration.setAllowedMethods(ALLOWED_CORS_METHODS);
         configuration.setAllowedHeaders(ALLOWED_CORS_HEADERS);
         configuration.setAllowCredentials(false);

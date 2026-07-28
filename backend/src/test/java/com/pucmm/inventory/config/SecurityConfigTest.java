@@ -36,11 +36,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ProductController.class)
 @Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@TestPropertySource(properties = {
+        "inventory.cors.allowed-origins=http://localhost:5173,http://127.0.0.1:5173,https://staging.example.test"
+})
 class SecurityConfigTest {
     private static final OffsetDateTime TIMESTAMP = OffsetDateTime.parse("2026-06-07T12:00:00-04:00");
 
@@ -114,6 +118,16 @@ class SecurityConfigTest {
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
                 .andExpect(header().string("Access-Control-Allow-Methods", containsString("POST")))
                 .andExpect(header().string("Access-Control-Allow-Headers", containsString("Authorization")));
+    }
+
+    @Test
+    void preflightFromConfiguredStagingOriginReturnsCorsHeaders() throws Exception {
+        mockMvc.perform(options("/products")
+                        .header("Origin", "https://staging.example.test")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "Authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://staging.example.test"));
     }
 
     @Test
