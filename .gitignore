@@ -38,3 +38,6 @@ tests/e2e/test-results/
 tests/e2e/blob-report/
 
 .env
+.staging/
+__pycache__/
+*.py[cod]

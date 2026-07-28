@@ -12,7 +12,10 @@ docker compose up --build -d
 Generar una solicitud al backend y abrir Grafana en `http://localhost:3000`:
 
 1. En **Inventory Final Observability**, verificar infraestructura, aplicación, negocio y seguridad.
-2. En **Explore / Loki**, consultar `{container=~".*backend.*"}` y copiar un `traceId` de una línea.
+2. En **Explore / Loki**, consultar
+   `{compose_project="inventory-platform", compose_service="backend"}` en
+   desarrollo. Para staging, sustituir el proyecto por el
+   `COMPOSE_PROJECT_NAME` registrado en `deployment.json`.
 3. En **Explore / Tempo**, buscar `{ resource.service.name = "inventory-backend" }` o el identificador de traza.
 4. En Prometheus o Alertmanager, verificar las reglas `InventoryBackendDown`, `InventoryHighErrorRate` y `InventoryHighLatencyP95`.
 
