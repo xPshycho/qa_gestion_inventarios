@@ -1,4 +1,4 @@
-<main class="stock-page page-shell">
+<main id="main-content" class="stock-page page-shell" tabindex="-1">
   <mat-card class="page-heading-card">
     <mat-card-content class="page-heading-content">
       <div>
@@ -18,9 +18,13 @@
     {{ errorMessage }}
   </div>
 
-  <mat-progress-bar *ngIf="productLoading" mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar
+    *ngIf="productLoading"
+    mode="indeterminate"
+    aria-label="Cargando producto"
+  ></mat-progress-bar>
 
-  <div *ngIf="productLoading" class="state">
+  <div *ngIf="productLoading" class="state" role="status" aria-live="polite">
     Cargando producto...
   </div>
 
@@ -156,9 +160,13 @@
           </button>
         </div>
 
-        <mat-progress-bar *ngIf="movementsLoading" mode="indeterminate"></mat-progress-bar>
+        <mat-progress-bar
+          *ngIf="movementsLoading"
+          mode="indeterminate"
+          aria-label="Cargando historial de movimientos"
+        ></mat-progress-bar>
 
-        <div *ngIf="movementsLoading" class="state">
+        <div *ngIf="movementsLoading" class="state" role="status" aria-live="polite">
           Cargando historial...
         </div>
 

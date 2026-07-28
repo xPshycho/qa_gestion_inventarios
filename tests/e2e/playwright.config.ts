@@ -13,6 +13,13 @@ const retainSensitiveArtifacts =
 const safeReporting = process.env.PLAYWRIGHT_SAFE_REPORTING === 'true';
 const safeScreenshotOutputDir =
   process.env.PLAYWRIGHT_SAFE_SCREENSHOT_DIR ?? './safe-screenshots';
+const uxEvidenceOutputDir =
+  process.env.PLAYWRIGHT_UX_EVIDENCE_DIR ?? './ux-evidence';
+const chromiumLaunchOptions = executablePath
+  ? { launchOptions: { executablePath } }
+  : {};
+const responsiveSpec = /responsive\.spec\.ts/;
+const browserCompatibilitySpec = /browser-compatibility\.spec\.ts/;
 
 export default defineConfig({
   testDir: './specs',
@@ -30,11 +37,13 @@ export default defineConfig({
         ['list'],
         ['junit', { outputFile: junitOutputFile }],
         ['./safe-screenshot-reporter.ts', { outputDir: safeScreenshotOutputDir }],
+        ['./ux-evidence-reporter.ts', { outputDir: uxEvidenceOutputDir }],
       ]
     : [
         ['list'],
         ['html', { outputFolder: htmlOutputDir, open: 'never' }],
         ['junit', { outputFile: junitOutputFile }],
+        ['./ux-evidence-reporter.ts', { outputDir: uxEvidenceOutputDir }],
       ],
   use: {
     baseURL,
@@ -43,21 +52,63 @@ export default defineConfig({
     screenshot: safeReporting ? 'off' : 'only-on-failure',
     trace: retainSensitiveArtifacts ? 'retain-on-failure' : 'off',
     video: retainSensitiveArtifacts ? 'retain-on-failure' : 'off',
-    launchOptions: executablePath ? { executablePath } : undefined,
   },
   projects: [
     {
       name: 'chromium',
-      testIgnore: /responsive\.spec\.ts/,
+      testIgnore: [responsiveSpec, browserCompatibilitySpec],
       use: {
         ...devices['Desktop Chrome'],
+        ...chromiumLaunchOptions,
       },
     },
     {
-      name: 'mobile-chromium',
-      testMatch: /responsive\.spec\.ts/,
+      name: 'browser-chromium',
+      testMatch: browserCompatibilitySpec,
+      use: {
+        ...devices['Desktop Chrome'],
+        ...chromiumLaunchOptions,
+      },
+    },
+    {
+      name: 'browser-firefox',
+      testMatch: browserCompatibilitySpec,
+      use: {
+        ...devices['Desktop Firefox'],
+      },
+    },
+    {
+      name: 'browser-webkit',
+      testMatch: browserCompatibilitySpec,
+      use: {
+        ...devices['Desktop Safari'],
+      },
+    },
+    {
+      name: 'responsive-mobile',
+      testMatch: responsiveSpec,
       use: {
         ...devices['Pixel 7'],
+        ...chromiumLaunchOptions,
+      },
+    },
+    {
+      name: 'responsive-tablet',
+      testMatch: responsiveSpec,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 768, height: 1024 },
+        hasTouch: true,
+        ...chromiumLaunchOptions,
+      },
+    },
+    {
+      name: 'responsive-desktop',
+      testMatch: responsiveSpec,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1440, height: 900 },
+        ...chromiumLaunchOptions,
       },
     },
   ],

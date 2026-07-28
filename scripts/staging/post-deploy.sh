@@ -116,9 +116,14 @@ e2e_phase() {
   PLAYWRIGHT_OUTPUT_DIR="$post_deploy_dir/e2e/test-results" \
   PLAYWRIGHT_JUNIT_OUTPUT_NAME="$post_deploy_dir/e2e/junit.xml" \
   PLAYWRIGHT_SAFE_SCREENSHOT_DIR="$post_deploy_dir/e2e/screenshots" \
+  PLAYWRIGHT_UX_EVIDENCE_DIR="$post_deploy_dir/e2e/ux-evidence" \
   PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS=false \
   PLAYWRIGHT_SAFE_REPORTING=true \
-    pnpm --dir "$e2e_directory" exec playwright test
+    pnpm --dir "$e2e_directory" exec playwright test \
+      --project=chromium \
+      --project=responsive-mobile \
+      --project=responsive-tablet \
+      --project=responsive-desktop
 }
 
 security_headers_phase() {

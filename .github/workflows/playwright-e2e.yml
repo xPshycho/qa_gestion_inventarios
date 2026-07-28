@@ -49,19 +49,8 @@ jobs:
       - name: Install E2E dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Resolve Chromium binary
-        run: |
-          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
-          if [ -n "$CHROME_PATH" ]; then
-            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${CHROME_PATH}" >> "$GITHUB_ENV"
-          fi
-
-      - name: Install Playwright ffmpeg
-        run: pnpm exec playwright install ffmpeg
-
-      - name: Install Playwright Chromium
-        if: env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH == ''
-        run: pnpm exec playwright install chromium
+      - name: Install Playwright browser matrix
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Start Docker Compose stack
         working-directory: ${{ github.workspace }}
@@ -94,6 +83,7 @@ jobs:
           path: |
             tests/e2e/playwright-report/**
             tests/e2e/test-results/**
+            tests/e2e/ux-evidence/**
           if-no-files-found: warn
           retention-days: 14
 
@@ -107,6 +97,9 @@ jobs:
             echo "- HTML report: \`tests/e2e/playwright-report/index.html\`"
             echo "- JUnit report: \`tests/e2e/test-results/playwright-results.xml\`"
             echo "- Failure assets: \`tests/e2e/test-results/**\`"
+            echo "- Accessibility, keyboard, responsive and browser evidence: \`tests/e2e/ux-evidence/**\`"
+            echo "- Browser matrix: Chromium, Firefox and WebKit"
+            echo "- Responsive matrix: 412x839, 768x1024 and 1440x900"
             echo "- Artifact: \`playwright-e2e-${{ github.run_number }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 

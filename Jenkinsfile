@@ -184,7 +184,7 @@ pipeline {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
                         pnpm install --frozen-lockfile
-                        pnpm exec playwright install chromium
+                        pnpm exec playwright install chromium firefox webkit
                         E2E_MANAGE_STACK=false pnpm run stack:ready
                         PLAYWRIGHT_JUNIT_OUTPUT_NAME=playwright-results.xml pnpm exec playwright test
                     '''
@@ -253,7 +253,7 @@ pipeline {
                 reportName: 'Playwright E2E Report'
             ])
 
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,backend/build/reports/**,backend/build/test-results/**,backend/build/jacoco/*.exec,frontend/dist/**,frontend-audit.json,tests/e2e/playwright-results.xml,tests/e2e/playwright-report/**,tests/e2e/test-results/**'
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,backend/build/reports/**,backend/build/test-results/**,backend/build/jacoco/*.exec,frontend/dist/**,frontend-audit.json,tests/e2e/playwright-results.xml,tests/e2e/playwright-report/**,tests/e2e/test-results/**,tests/e2e/ux-evidence/**'
 
             sh '''#!/usr/bin/env bash
                 set +e

@@ -22,6 +22,7 @@ const controlledScreenshotNames = new Set([
 const pngSignature = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);
+const issue90ScreenshotName = /^(responsive|browser|keyboard)-[A-Za-z0-9._-]+$/;
 
 interface SafeScreenshotReporterOptions {
   outputDir?: string;
@@ -40,7 +41,8 @@ export default class SafeScreenshotReporter implements Reporter {
     let attachmentIndex = 0;
     for (const attachment of result.attachments) {
       if (
-        !controlledScreenshotNames.has(attachment.name)
+        (!controlledScreenshotNames.has(attachment.name)
+          && !issue90ScreenshotName.test(attachment.name))
         || attachment.contentType !== 'image/png'
         || !attachment.body
         || attachment.body.length > 10 * 1024 * 1024
