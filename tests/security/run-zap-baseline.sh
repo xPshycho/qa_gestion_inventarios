@@ -23,6 +23,8 @@ main() {
   # GitHub Actions runner.  The directory is a short-lived CI report volume.
   chmod 0777 -- "$report_dir"
 
+  # HTML reports are intentionally excluded because the artifact-safety gate
+  # rejects browser-renderable evidence. JSON and Markdown remain uploadable.
   docker run --rm \
     --network "$ZAP_DOCKER_NETWORK" \
     --volume "$(pwd)/$report_dir:/zap/wrk:rw" \
@@ -31,7 +33,6 @@ main() {
     -t "$ZAP_TARGET_URL" \
     -m 2 \
     -I \
-    -r zap-baseline-report.html \
     -w zap-baseline-report.md \
     -J zap-baseline-report.json
 
