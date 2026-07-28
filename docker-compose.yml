@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-inventory}
       POSTGRES_USER: ${POSTGRES_USER:-inventory_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambiar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -29,7 +29,7 @@ services:
     command:
       - -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
       - -user=${POSTGRES_USER:-inventory_user}
-      - -password=${POSTGRES_PASSWORD:-cambiar}
+      - -password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       - -locations=filesystem:/flyway/sql
       - -connectRetries=10
       - migrate
@@ -41,7 +41,12 @@ services:
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin123}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?KEYCLOAK_ADMIN_CLIENT_SECRET is required}
+      E2E_ADMIN_PASSWORD: ${E2E_ADMIN_PASSWORD:?E2E_ADMIN_PASSWORD is required}
+      E2E_OPERATOR_PASSWORD: ${E2E_OPERATOR_PASSWORD:?E2E_OPERATOR_PASSWORD is required}
+      E2E_VIEWER_PASSWORD: ${E2E_VIEWER_PASSWORD:?E2E_VIEWER_PASSWORD is required}
+      E2E_AUDITOR_PASSWORD: ${E2E_AUDITOR_PASSWORD:?E2E_AUDITOR_PASSWORD is required}
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
       KC_HOSTNAME_STRICT: "false"
@@ -84,13 +89,13 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-inventory_user}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cambiar}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${KEYCLOAK_URL:-http://localhost:8081}/realms/${KEYCLOAK_REALM:-inventory}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-inventory}/protocol/openid-connect/certs
       KEYCLOAK_ADMIN_URL: http://keycloak:8080
       KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_REALM:-inventory}
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-inventory-admin-service}
-      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-cambiar-admin-service}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?KEYCLOAK_ADMIN_CLIENT_SECRET is required}
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
       OTEL_SERVICE_NAME: inventory-backend
       OTEL_RESOURCE_ATTRIBUTES: deployment.environment=${OTEL_DEPLOYMENT_ENVIRONMENT:-development},service.version=${APP_VERSION:-local}
@@ -162,7 +167,7 @@ services:
       - tempo
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_USERS_DEFAULT_THEME: light
     volumes:
       - grafana-data:/var/lib/grafana

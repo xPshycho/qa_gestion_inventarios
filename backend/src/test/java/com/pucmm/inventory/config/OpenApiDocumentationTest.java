@@ -11,11 +11,14 @@ import com.pucmm.inventory.security.repository.SecurityCatalogRepository;
 import com.pucmm.inventory.security.service.SecurityAdminService;
 import com.pucmm.inventory.stock.service.AuthenticatedInventoryUserResolver;
 import com.pucmm.inventory.stock.service.StockService;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
@@ -27,6 +30,17 @@ import org.springframework.test.web.servlet.MockMvc;
 })
 @AutoConfigureMockMvc
 class OpenApiDocumentationTest {
+    private static final String SYNTHETIC_DATASOURCE_PASSWORD = UUID.randomUUID().toString();
+    private static final String SYNTHETIC_KEYCLOAK_CLIENT_SECRET = UUID.randomUUID().toString();
+
+    @DynamicPropertySource
+    static void registerSyntheticSecrets(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.password", () -> SYNTHETIC_DATASOURCE_PASSWORD);
+        registry.add(
+                "inventory.keycloak.admin-client-secret",
+                () -> SYNTHETIC_KEYCLOAK_CLIENT_SECRET);
+    }
+
     @Autowired
     private MockMvc mockMvc;
 

@@ -9,6 +9,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -23,14 +24,22 @@ import org.testcontainers.utility.MountableFile;
 public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest {
     private static final String REALM = "inventory";
     private static final String ADMIN_CLIENT_ID = "inventory-admin-service";
-    private static final String ADMIN_CLIENT_SECRET = "cambiar-admin-service";
+    protected static final String SYNTHETIC_USER_PASSWORD = UUID.randomUUID().toString();
+    private static final String BOOTSTRAP_ADMIN_PASSWORD = UUID.randomUUID().toString();
     private static final Logger KEYCLOAK_LOGGER = LoggerFactory.getLogger("testcontainers.keycloak");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final GenericContainer<?> KEYCLOAK =
             new GenericContainer<>(DockerImageName.parse("quay.io/keycloak/keycloak:26.6.3"))
                     .withEnv("KC_BOOTSTRAP_ADMIN_USERNAME", "integration-admin")
-                    .withEnv("KC_BOOTSTRAP_ADMIN_PASSWORD", "integration-password")
+                    .withEnv("KC_BOOTSTRAP_ADMIN_PASSWORD", BOOTSTRAP_ADMIN_PASSWORD)
+                    .withEnv(
+                            "KEYCLOAK_ADMIN_CLIENT_SECRET",
+                            SYNTHETIC_KEYCLOAK_CLIENT_SECRET)
+                    .withEnv("E2E_ADMIN_PASSWORD", SYNTHETIC_USER_PASSWORD)
+                    .withEnv("E2E_OPERATOR_PASSWORD", SYNTHETIC_USER_PASSWORD)
+                    .withEnv("E2E_VIEWER_PASSWORD", SYNTHETIC_USER_PASSWORD)
+                    .withEnv("E2E_AUDITOR_PASSWORD", SYNTHETIC_USER_PASSWORD)
                     .withCopyFileToContainer(
                             MountableFile.forClasspathResource("inventory-realm.json"),
                             "/opt/keycloak/data/import/inventory-realm.json"
@@ -59,7 +68,9 @@ public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest 
         registry.add("inventory.keycloak.admin-url", KeycloakIntegrationTest::keycloakUrl);
         registry.add("inventory.keycloak.admin-realm", () -> REALM);
         registry.add("inventory.keycloak.admin-client-id", () -> ADMIN_CLIENT_ID);
-        registry.add("inventory.keycloak.admin-client-secret", () -> ADMIN_CLIENT_SECRET);
+        registry.add(
+                "inventory.keycloak.admin-client-secret",
+                () -> SYNTHETIC_KEYCLOAK_CLIENT_SECRET);
     }
 
     protected static String keycloakUrl() {
@@ -89,7 +100,9 @@ public abstract class KeycloakIntegrationTest extends PostgreSqlIntegrationTest 
     protected static String adminServiceAccessToken() throws Exception {
         String requestBody = formParameter("grant_type", "client_credentials")
                 + "&" + formParameter("client_id", ADMIN_CLIENT_ID)
-                + "&" + formParameter("client_secret", ADMIN_CLIENT_SECRET);
+                + "&" + formParameter(
+                        "client_secret",
+                        SYNTHETIC_KEYCLOAK_CLIENT_SECRET);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(keycloakUrl() + "/realms/" + REALM + "/protocol/openid-connect/token"))
                 .header("Content-Type", MediaType.APPLICATION_FORM_URLENCODED_VALUE)

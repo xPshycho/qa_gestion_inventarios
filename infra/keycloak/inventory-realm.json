@@ -579,7 +579,7 @@
       "serviceAccountsEnabled": true,
       "frontchannelLogout": false,
       "authorizationServicesEnabled": false,
-      "secret": "cambiar-admin-service",
+      "secret": "${KEYCLOAK_ADMIN_CLIENT_SECRET}",
       "attributes": {
         "access.token.lifespan": "300"
       }
@@ -615,7 +615,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123",
+          "value": "${E2E_ADMIN_PASSWORD}",
           "temporary": false
         }
       ]
@@ -634,7 +634,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123",
+          "value": "${E2E_OPERATOR_PASSWORD}",
           "temporary": false
         }
       ]
@@ -653,7 +653,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123",
+          "value": "${E2E_VIEWER_PASSWORD}",
           "temporary": false
         }
       ]
@@ -672,7 +672,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123",
+          "value": "${E2E_AUDITOR_PASSWORD}",
           "temporary": false
         }
       ]
