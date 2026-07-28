@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 readonly report_dir="${ZAP_REPORT_DIR:-tests/security/reports}"
-readonly zap_image="${ZAP_IMAGE:-zaproxy/zap-stable:2.16.1@sha256:7840969c7c9fead565bf9734b12f49f6886db90b1d35b1f74d79710bbd081dab}"
+readonly zap_image="${ZAP_IMAGE:-zaproxy/zap-stable:2.17.0@sha256:c558ee87358911ab17278c70991e856f57793e115d9cd0f88ca475cf82907a1a}"
 if [[ "$report_dir" == /* ]]; then
   readonly report_dir_absolute="$report_dir"
 else

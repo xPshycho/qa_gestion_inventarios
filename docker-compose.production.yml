@@ -1,0 +1,245 @@
+x-production-logging: &production-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-production-labels: &production-labels
+  com.inventory.environment: production
+  com.inventory.version: "${APP_VERSION:?APP_VERSION is required}"
+  com.inventory.sha: "${DEPLOYED_SHA:?DEPLOYED_SHA is required}"
+  com.inventory.deployment-id: "${PRODUCTION_DEPLOYMENT_ID:?PRODUCTION_DEPLOYMENT_ID is required}"
+  org.opencontainers.image.revision: "${DEPLOYED_SHA:?DEPLOYED_SHA is required}"
+
+x-production-service: &production-service
+  restart: unless-stopped
+  logging: *production-logging
+  labels: *production-labels
+  stop_grace_period: 30s
+
+services:
+  postgres:
+    <<: *production-service
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 768M
+
+  keycloak-postgres:
+    <<: *production-service
+    image: postgres:16-alpine@sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB:?KEYCLOAK_DB is required}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:?KEYCLOAK_DB_USER is required}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - inventory-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+
+  flyway:
+    restart: "no"
+    logging: *production-logging
+    labels: *production-labels
+    command:
+      - -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      - -user=${POSTGRES_USER:?POSTGRES_USER is required}
+      - -password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      - -locations=filesystem:/flyway/sql
+      - -connectRetries=10
+      - migrate
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+
+  keycloak:
+    <<: *production-service
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN is required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${KEYCLOAK_DB:?KEYCLOAK_DB is required}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:?KEYCLOAK_DB_USER is required}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${PRODUCTION_KEYCLOAK_URL:?PRODUCTION_KEYCLOAK_URL is required}
+      KC_HOSTNAME_STRICT: "true"
+      KC_PROXY_HEADERS: xforwarded
+    command:
+      - start
+      - --import-realm
+    deploy:
+      resources:
+        limits:
+          cpus: "1.50"
+          memory: 1G
+
+  backend:
+    <<: *production-service
+    image: inventory-backend:${APP_VERSION:?APP_VERSION is required}
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${PRODUCTION_KEYCLOAK_URL:?PRODUCTION_KEYCLOAK_URL is required}/realms/${KEYCLOAK_REALM:?KEYCLOAK_REALM is required}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:?KEYCLOAK_REALM is required}/protocol/openid-connect/certs
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_REALM:?KEYCLOAK_REALM is required}
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:?KEYCLOAK_ADMIN_CLIENT_ID is required}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?KEYCLOAK_ADMIN_CLIENT_SECRET is required}
+      INVENTORY_CORS_ALLOWED_ORIGINS: ${INVENTORY_CORS_ALLOWED_ORIGINS:?INVENTORY_CORS_ALLOWED_ORIGINS is required}
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:?OTEL_SDK_DISABLED is required}
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production,deployment.id=${PRODUCTION_DEPLOYMENT_ID:?PRODUCTION_DEPLOYMENT_ID is required},service.version=${APP_VERSION:?APP_VERSION is required},service.sha=${DEPLOYED_SHA:?DEPLOYED_SHA is required}
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.50"
+          memory: 1G
+
+  frontend:
+    <<: *production-service
+    image: inventory-frontend:${APP_VERSION:?APP_VERSION is required}
+    environment:
+      KEYCLOAK_PUBLIC_URL: ${PRODUCTION_KEYCLOAK_URL:?PRODUCTION_KEYCLOAK_URL is required}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:?KEYCLOAK_REALM is required}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:?KEYCLOAK_CLIENT_ID is required}
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  prometheus:
+    <<: *production-service
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 768M
+
+  grafana:
+    <<: *production-service
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: lax
+      GF_SERVER_DOMAIN: ${PRODUCTION_PUBLIC_IP:?PRODUCTION_PUBLIC_IP is required}
+      GF_SERVER_ENFORCE_DOMAIN: "true"
+      GF_SERVER_ROOT_URL: ${PRODUCTION_GRAFANA_URL:?PRODUCTION_GRAFANA_URL is required}/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+
+  alloy:
+    <<: *production-service
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:?COMPOSE_PROJECT_NAME is required}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 384M
+
+  loki:
+    <<: *production-service
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 768M
+
+  tempo:
+    <<: *production-service
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 768M
+
+  alertmanager:
+    <<: *production-service
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  gateway:
+    <<: *production-service
+    image: nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      grafana:
+        condition: service_started
+    environment:
+      NGINX_ENVSUBST_FILTER: ^(PRODUCTION_PUBLIC_IP|TLS_CERTIFICATE_NAME)$
+      PRODUCTION_PUBLIC_IP: ${PRODUCTION_PUBLIC_IP:?PRODUCTION_PUBLIC_IP is required}
+      TLS_CERTIFICATE_NAME: ${TLS_CERTIFICATE_NAME:?TLS_CERTIFICATE_NAME is required}
+    volumes:
+      - ./infra/gcp/gateway/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --no-check-certificate -qO- https://127.0.0.1/gateway-health >/dev/null
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - inventory-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+volumes:
+  keycloak-postgres-data:
