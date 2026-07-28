@@ -1,0 +1,166 @@
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+    stop_grace_period: 30s
+
+  keycloak-postgres:
+    image: postgres:16-alpine@sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB:?KEYCLOAK_DB is required}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:?KEYCLOAK_DB_USER is required}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+    networks:
+      - inventory-network
+    stop_grace_period: 30s
+
+  flyway:
+    command:
+      - -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      - -user=${POSTGRES_USER:?POSTGRES_USER is required}
+      - -password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      - -locations=filesystem:/flyway/sql
+      - -connectRetries=10
+      - migrate
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+
+  keycloak:
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN is required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${KEYCLOAK_DB:?KEYCLOAK_DB is required}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:?KEYCLOAK_DB_USER is required}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${STAGING_KEYCLOAK_URL:?STAGING_KEYCLOAK_URL is required}
+      KC_HOSTNAME_STRICT: "true"
+    command:
+      - start
+      - --import-realm
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_PORT:-18081}:8080"
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_MANAGEMENT_PORT:-19000}:9000"
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+    stop_grace_period: 30s
+
+  backend:
+    image: inventory-backend:${APP_VERSION:?APP_VERSION is required}
+    environment:
+      SPRING_PROFILES_ACTIVE: staging
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${STAGING_KEYCLOAK_URL:?STAGING_KEYCLOAK_URL is required}/realms/${KEYCLOAK_REALM:-inventory}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-inventory}/protocol/openid-connect/certs
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_REALM:-inventory}
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:?KEYCLOAK_ADMIN_CLIENT_ID is required}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?KEYCLOAK_ADMIN_CLIENT_SECRET is required}
+      INVENTORY_CORS_ALLOWED_ORIGINS: ${INVENTORY_CORS_ALLOWED_ORIGINS:?INVENTORY_CORS_ALLOWED_ORIGINS is required}
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=staging,deployment.id=${STAGING_DEPLOYMENT_ID:?STAGING_DEPLOYMENT_ID is required},service.version=${APP_VERSION:?APP_VERSION is required}
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-18082}:8080"
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+      com.inventory.deployment-id: ${STAGING_DEPLOYMENT_ID:?STAGING_DEPLOYMENT_ID is required}
+    stop_grace_period: 30s
+
+  frontend:
+    image: inventory-frontend:${APP_VERSION:?APP_VERSION is required}
+    environment:
+      KEYCLOAK_PUBLIC_URL: ${STAGING_KEYCLOAK_URL:?STAGING_KEYCLOAK_URL is required}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-inventory}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:?KEYCLOAK_CLIENT_ID is required}
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-15173}:8080"
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+      com.inventory.deployment-id: ${STAGING_DEPLOYMENT_ID:?STAGING_DEPLOYMENT_ID is required}
+
+  prometheus:
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-19090}:9090"
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+
+  grafana:
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-13000}:3000"
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+
+  alloy:
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:?COMPOSE_PROJECT_NAME is required}
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${ALLOY_HTTP_PORT:-12346}:12345"
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+
+  loki:
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${LOKI_PORT:-13100}:3100"
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+
+  tempo:
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${TEMPO_PORT:-13200}:3200"
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+
+  alertmanager:
+    ports:
+      - "${STAGING_BIND_ADDRESS:-127.0.0.1}:${ALERTMANAGER_PORT:-19093}:9093"
+    labels:
+      com.inventory.environment: staging
+      com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+
+volumes:
+  keycloak-postgres-data:

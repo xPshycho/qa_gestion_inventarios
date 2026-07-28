@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { FormsModule, NgForm } from '@angular/forms';
 import { forkJoin, Subscription, finalize } from 'rxjs';
 import { SecurityPermission, SecurityRole, SecurityUser, SecurityUserRequest } from './security-admin.model';
 import { SecurityAdminService } from './security-admin.service';
@@ -25,6 +25,9 @@ const EMPTY_FORM: SecurityUserRequest = {
 export class SecurityAdminComponent implements OnInit, OnDestroy {
   private readonly securityAdminService = inject(SecurityAdminService);
   private subscription?: Subscription;
+
+  @ViewChild('userForm') userForm?: NgForm;
+  @ViewChild('userFormElement') userFormElement?: ElementRef<HTMLFormElement>;
 
   users: SecurityUser[] = [];
   roles: SecurityRole[] = [];
@@ -94,6 +97,18 @@ export class SecurityAdminComponent implements OnInit, OnDestroy {
   }
 
   saveUser(): void {
+    if (this.userForm?.invalid) {
+      this.userForm.form.markAllAsTouched();
+      this.errorMessage = 'Revisa los campos obligatorios antes de guardar el usuario.';
+      this.successMessage = '';
+      setTimeout(() => {
+        this.userFormElement?.nativeElement
+          .querySelector<HTMLElement>('input.ng-invalid, textarea.ng-invalid, select.ng-invalid')
+          ?.focus();
+      });
+      return;
+    }
+
     this.saving = true;
     this.errorMessage = '';
     this.successMessage = '';

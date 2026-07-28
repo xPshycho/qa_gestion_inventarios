@@ -7,7 +7,7 @@ import { MATERIAL_IMPORTS } from './shared/material.imports';
   standalone: true,
   imports: [DashboardComponent, ...MATERIAL_IMPORTS],
   template: `
-    <main class="dashboard-page page-shell">
+    <main id="main-content" class="dashboard-page page-shell" tabindex="-1">
       <mat-card class="page-heading-card">
         <mat-card-content class="page-heading-content">
           <div>

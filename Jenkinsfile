@@ -192,7 +192,7 @@ pipeline {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
                         pnpm install --frozen-lockfile
-                        pnpm exec playwright install chromium
+                        pnpm exec playwright install chromium firefox webkit
                         E2E_MANAGE_STACK=false pnpm run stack:ready
                         PLAYWRIGHT_JUNIT_OUTPUT_NAME=playwright-results.xml pnpm exec playwright test
                     '''
@@ -260,14 +260,15 @@ pipeline {
                         script: '''#!/usr/bin/env bash
                             set -euo pipefail
                             ./scripts/security/verify-artifacts.sh \
-                                tests/e2e/playwright-results.xml
+                                tests/e2e/playwright-results.xml \
+                                tests/e2e/ux-evidence
                         ''',
                         returnStatus: true
                     )
                     if (artifactSafetyStatus == 0) {
                         archiveArtifacts(
                             allowEmptyArchive: false,
-                            artifacts: 'tests/e2e/playwright-results.xml'
+                            artifacts: 'tests/e2e/playwright-results.xml,tests/e2e/ux-evidence/**'
                         )
                     } else {
                         echo 'Playwright evidence was withheld because artifact safety did not pass.'

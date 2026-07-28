@@ -1,4 +1,4 @@
-<main class="security-page page-shell">
+<main id="main-content" class="security-page page-shell" tabindex="-1">
   <mat-card class="page-heading-card">
     <mat-card-content class="page-heading-content">
       <div>
@@ -25,9 +25,13 @@
     {{ errorMessage }}
   </div>
 
-  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar
+    *ngIf="loading"
+    mode="indeterminate"
+    aria-label="Cargando configuración de seguridad"
+  ></mat-progress-bar>
 
-  <section class="state" *ngIf="loading">
+  <section class="state" *ngIf="loading" role="status" aria-live="polite">
     Cargando configuración de seguridad...
   </section>
 
@@ -88,26 +92,84 @@
         </div>
       </div>
 
-      <form (ngSubmit)="saveUser()" class="user-form">
+      <form
+        #userForm="ngForm"
+        #userFormElement
+        (ngSubmit)="saveUser()"
+        class="user-form"
+        novalidate
+      >
         <mat-form-field appearance="outline">
           <mat-label>Usuario</mat-label>
-          <input matInput type="text" name="username" [(ngModel)]="form.username" required maxlength="80" autocomplete="username">
+          <input
+            #usernameModel="ngModel"
+            matInput
+            type="text"
+            name="username"
+            [(ngModel)]="form.username"
+            required
+            maxlength="80"
+            autocomplete="username"
+            [attr.aria-invalid]="usernameModel.invalid && usernameModel.touched ? 'true' : null"
+          >
+          <mat-error *ngIf="usernameModel.invalid && usernameModel.touched">
+            El usuario es obligatorio.
+          </mat-error>
         </mat-form-field>
 
         <div class="field-grid">
           <mat-form-field appearance="outline">
             <mat-label>Nombre</mat-label>
-            <input matInput type="text" name="firstName" [(ngModel)]="form.firstName" required maxlength="80" autocomplete="given-name">
+            <input
+              #firstNameModel="ngModel"
+              matInput
+              type="text"
+              name="firstName"
+              [(ngModel)]="form.firstName"
+              required
+              maxlength="80"
+              autocomplete="given-name"
+              [attr.aria-invalid]="firstNameModel.invalid && firstNameModel.touched ? 'true' : null"
+            >
+            <mat-error *ngIf="firstNameModel.invalid && firstNameModel.touched">
+              El nombre es obligatorio.
+            </mat-error>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Apellido</mat-label>
-            <input matInput type="text" name="lastName" [(ngModel)]="form.lastName" required maxlength="80" autocomplete="family-name">
+            <input
+              #lastNameModel="ngModel"
+              matInput
+              type="text"
+              name="lastName"
+              [(ngModel)]="form.lastName"
+              required
+              maxlength="80"
+              autocomplete="family-name"
+              [attr.aria-invalid]="lastNameModel.invalid && lastNameModel.touched ? 'true' : null"
+            >
+            <mat-error *ngIf="lastNameModel.invalid && lastNameModel.touched">
+              El apellido es obligatorio.
+            </mat-error>
           </mat-form-field>
         </div>
 
         <mat-form-field appearance="outline">
           <mat-label>Correo</mat-label>
-          <input matInput type="email" name="email" [(ngModel)]="form.email" maxlength="180" autocomplete="email">
+          <input
+            #emailModel="ngModel"
+            matInput
+            type="email"
+            name="email"
+            [(ngModel)]="form.email"
+            email
+            maxlength="180"
+            autocomplete="email"
+            [attr.aria-invalid]="emailModel.invalid && emailModel.touched ? 'true' : null"
+          >
+          <mat-error *ngIf="emailModel.invalid && emailModel.touched">
+            Introduce un correo válido.
+          </mat-error>
         </mat-form-field>
 
         <mat-checkbox name="enabled" [(ngModel)]="form.enabled">

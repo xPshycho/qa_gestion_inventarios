@@ -1,4 +1,4 @@
-<main class="audit-page page-shell">
+<main id="main-content" class="audit-page page-shell" tabindex="-1">
   <mat-card class="page-heading-card">
     <mat-card-content class="page-heading-content">
       <div>
@@ -19,9 +19,13 @@
     {{ errorMessage }}
   </div>
 
-  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar
+    *ngIf="loading"
+    mode="indeterminate"
+    aria-label="Cargando auditoría"
+  ></mat-progress-bar>
 
-  <div *ngIf="loading" class="state">
+  <div *ngIf="loading" class="state" role="status" aria-live="polite">
     Cargando auditoría...
   </div>
 

@@ -1,3 +1,5 @@
+<a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+
 <header *ngIf="auth.isAuthenticated()" class="application-header">
   <mat-toolbar class="app-toolbar">
     <a class="brand" routerLink="/" aria-label="Ir al inicio">
@@ -11,6 +13,7 @@
         mat-button
         routerLink="/dashboard"
         routerLinkActive="active-link"
+        ariaCurrentWhenActive="page"
       >
         Dashboard
       </a>
@@ -19,6 +22,7 @@
         mat-button
         routerLink="/productos"
         routerLinkActive="active-link"
+        ariaCurrentWhenActive="page"
       >
         Productos
       </a>
@@ -27,6 +31,7 @@
         mat-button
         routerLink="/seguridad"
         routerLinkActive="active-link"
+        ariaCurrentWhenActive="page"
       >
         Seguridad
       </a>

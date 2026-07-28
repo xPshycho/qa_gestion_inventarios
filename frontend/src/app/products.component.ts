@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
 import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -15,14 +16,14 @@ const DEFAULT_QUERY: ProductQuery = {
   search: '',
   category: '',
   status: '',
-  sort: 'id',
+  sort: 'name',
   direction: 'asc'
 };
 
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ...MATERIAL_IMPORTS],
+  imports: [CommonModule, FormsModule, RouterLink, A11yModule, ...MATERIAL_IMPORTS],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
@@ -31,8 +32,12 @@ export class ProductsComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private productsSubscription?: Subscription;
   private searchTimer?: ReturnType<typeof setTimeout>;
+  private dialogTrigger?: HTMLElement;
 
-  @ViewChild('deleteConfirmButton') deleteConfirmButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('deleteCancelButton', { read: ElementRef })
+  deleteCancelButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('productsRefreshButton', { read: ElementRef })
+  productsRefreshButton?: ElementRef<HTMLButtonElement>;
 
   products: Product[] = [];
   page: ProductPage = {
@@ -130,13 +135,17 @@ export class ProductsComponent implements OnInit, OnDestroy {
   }
 
   requestDelete(product: Product): void {
+    this.dialogTrigger = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : undefined;
     this.productPendingDelete = product;
-    setTimeout(() => this.deleteConfirmButton?.nativeElement.focus());
+    setTimeout(() => this.deleteCancelButton?.nativeElement.focus());
   }
 
   cancelDelete(): void {
     if (this.deletingProductId === null) {
       this.productPendingDelete = null;
+      this.restoreDialogTriggerFocus();
     }
   }
 
@@ -158,12 +167,14 @@ export class ProductsComponent implements OnInit, OnDestroy {
         next: () => {
           this.productPendingDelete = null;
           this.successMessage = `Producto ${product.sku} eliminado correctamente.`;
+          this.dialogTrigger = undefined;
 
           if (this.products.length === 1 && this.query.page > 0) {
             this.query.page -= 1;
           }
 
           this.loadProducts();
+          setTimeout(() => this.productsRefreshButton?.nativeElement.focus());
         },
         error: (error: unknown) => {
           this.productPendingDelete = null;
@@ -171,12 +182,18 @@ export class ProductsComponent implements OnInit, OnDestroy {
             error,
             'No se pudo eliminar el producto. Puede tener movimientos de inventario asociados.'
           );
+          this.restoreDialogTriggerFocus();
         }
       });
   }
 
-  @HostListener('document:keydown.escape')
-  closeDeleteDialog(): void {
+  @HostListener('document:keydown.escape', ['$event'])
+  closeDeleteDialog(event?: KeyboardEvent): void {
+    if (!this.productPendingDelete || this.deletingProductId !== null) {
+      return;
+    }
+
+    event?.preventDefault();
     this.cancelDelete();
   }
 
@@ -204,6 +221,23 @@ export class ProductsComponent implements OnInit, OnDestroy {
     return this.query.direction.toUpperCase();
   }
 
+  sortAria(field: SortField): 'ascending' | 'descending' | null {
+    if (this.query.sort !== field) {
+      return null;
+    }
+
+    return this.query.direction === 'asc' ? 'ascending' : 'descending';
+  }
+
+  sortButtonLabel(field: SortField, label: string): string {
+    const direction = this.sortAria(field);
+    if (!direction) {
+      return `Ordenar por ${label}`;
+    }
+
+    return `Ordenar por ${label}; orden actual ${direction === 'ascending' ? 'ascendente' : 'descendente'}`;
+  }
+
   statusLabel(status: ProductStatus): string {
     return status === 'ACTIVE' ? 'Activo' : 'Inactivo';
   }
@@ -220,5 +254,11 @@ export class ProductsComponent implements OnInit, OnDestroy {
     if (this.searchTimer) {
       clearTimeout(this.searchTimer);
     }
+  }
+
+  private restoreDialogTriggerFocus(): void {
+    const trigger = this.dialogTrigger;
+    this.dialogTrigger = undefined;
+    setTimeout(() => trigger?.focus());
   }
 }

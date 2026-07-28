@@ -1,4 +1,4 @@
-<main class="product-page page-shell">
+<main id="main-content" class="product-page page-shell" tabindex="-1">
   <mat-card class="page-heading-card">
     <mat-card-content class="page-heading-content">
       <div>
@@ -13,7 +13,11 @@
     <mat-card-content>
       <h2 id="product-form-title">Información del producto</h2>
 
-      <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+      <mat-progress-bar
+        *ngIf="loading"
+        mode="indeterminate"
+        aria-label="Cargando producto"
+      ></mat-progress-bar>
 
       <div *ngIf="loading" class="page-message" role="status">
         Cargando producto...
