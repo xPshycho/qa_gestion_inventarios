@@ -228,7 +228,13 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - wget --no-check-certificate -qO- https://127.0.0.1/gateway-health >/dev/null
+        - >-
+          wget
+          --no-check-certificate
+          --header="Host: $${PRODUCTION_PUBLIC_IP}"
+          -qO-
+          https://127.0.0.1/gateway-health
+          >/dev/null
       interval: 15s
       timeout: 5s
       retries: 10
