@@ -4,6 +4,11 @@ const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const junitOutputFile =
   process.env.PLAYWRIGHT_JUNIT_OUTPUT_NAME ?? 'test-results/playwright-results.xml';
+const safeReporting =
+  process.env.PLAYWRIGHT_SAFE_REPORTING === 'true' || Boolean(process.env.CI);
+const retainSensitiveArtifacts =
+  !safeReporting
+  && process.env.PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS !== 'false';
 
 export default defineConfig({
   testDir: './specs',
@@ -16,18 +21,23 @@ export default defineConfig({
   },
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  reporter: [
-    ['list'],
-    ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['junit', { outputFile: junitOutputFile }],
-  ],
+  reporter: safeReporting
+    ? [
+        ['list'],
+        ['junit', { outputFile: junitOutputFile }],
+      ]
+    : [
+        ['list'],
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        ['junit', { outputFile: junitOutputFile }],
+      ],
   use: {
     baseURL,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-    screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    screenshot: safeReporting ? 'off' : 'only-on-failure',
+    trace: retainSensitiveArtifacts ? 'retain-on-failure' : 'off',
+    video: retainSensitiveArtifacts ? 'retain-on-failure' : 'off',
     launchOptions: executablePath ? { executablePath } : undefined,
   },
   projects: [

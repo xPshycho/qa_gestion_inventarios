@@ -1,0 +1,4 @@
+title = "qa_gestion_inventarios secret scanning"
+
+[extend]
+useDefault = true

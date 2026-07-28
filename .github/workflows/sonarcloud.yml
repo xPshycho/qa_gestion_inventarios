@@ -40,9 +40,19 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
           restore-keys: ${{ runner.os }}-gradle
  
+      - name: Validate trusted SonarCloud credential
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: test -n "$SONAR_TOKEN"
+
       - name: Build and analyze
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         working-directory: backend
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew build sonar --info
- 
+
+      - name: Explain fork safety policy
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: echo "Authenticated SonarCloud analysis is intentionally skipped for fork pull requests."
