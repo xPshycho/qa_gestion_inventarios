@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - develop
+      - staging
       - main
   push:
     branches:
@@ -113,6 +114,12 @@ jobs:
       STAGING_VISIBILITY: runner-private
 
     steps:
+      - name: Checkout deployment revision
+        id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.deploy_ref || github.sha }}
+
       - name: Enforce staging as the source of main promotions
         if: github.event_name == 'pull_request' && github.base_ref == 'main'
         env:
@@ -120,13 +127,14 @@ jobs:
           PROMOTION_SOURCE: ${{ github.head_ref }}
           TARGET_REPOSITORY: ${{ github.repository }}
         run: |
-          test "$PROMOTION_REPOSITORY" = "$TARGET_REPOSITORY"
-          test "$PROMOTION_SOURCE" = staging
-
-      - name: Checkout deployment revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ inputs.deploy_ref || github.sha }}
+          if [ "$PROMOTION_REPOSITORY" != "$TARGET_REPOSITORY" ]; then
+            echo "::error::Promotions to main must originate in this repository."
+            exit 1
+          fi
+          if [ "$PROMOTION_SOURCE" != staging ]; then
+            echo "::error::PRs targeting main must originate from staging. Merge this branch into staging first."
+            exit 1
+          fi
 
       - name: Set up Node.js 20
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -200,13 +208,13 @@ jobs:
 
       - name: Collect deployment diagnostics
         id: final_collection
-        if: always()
+        if: always() && steps.deploy.outcome != 'skipped'
         continue-on-error: true
         run: ./scripts/staging/collect-evidence.sh
 
       - name: Verify evidence is safe to publish
         id: evidence_safety
-        if: always()
+        if: always() && steps.deploy.outcome != 'skipped'
         continue-on-error: true
         run: ./scripts/staging/verify-evidence-safety.sh
 
@@ -243,7 +251,7 @@ jobs:
           retention-days: 30
 
       - name: Destroy ephemeral preview
-        if: always()
+        if: always() && steps.deploy.outcome != 'skipped'
         continue-on-error: true
         run: ./scripts/staging/destroy.sh --volumes
 

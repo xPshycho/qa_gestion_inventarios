@@ -35,6 +35,7 @@ case "$mode" in
     readonly default_output="$repository_root/.env"
     secret_keys=(
       POSTGRES_PASSWORD
+      KEYCLOAK_DB_PASSWORD
       KEYCLOAK_ADMIN_PASSWORD
       KEYCLOAK_ADMIN_CLIENT_SECRET
       E2E_ADMIN_PASSWORD

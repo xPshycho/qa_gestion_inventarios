@@ -16,6 +16,7 @@ import zipfile
 
 SECRET_ENVIRONMENT_VARIABLES = (
     "POSTGRES_PASSWORD",
+    "KEYCLOAK_DB_PASSWORD",
     "KEYCLOAK_ADMIN_PASSWORD",
     "KEYCLOAK_ADMIN_CLIENT_SECRET",
     "E2E_ADMIN_PASSWORD",
@@ -59,7 +60,7 @@ BASIC_AUTH_ENCODINGS = tuple(
     )
     for user_name, password_name in zip(
         USER_ENVIRONMENT_VARIABLES,
-        SECRET_ENVIRONMENT_VARIABLES[3:],
+        SECRET_ENVIRONMENT_VARIABLES[4:],
         strict=True,
     )
 )
