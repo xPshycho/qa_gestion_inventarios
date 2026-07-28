@@ -1,0 +1,10 @@
+{
+  "request": "DELETE /api/products/29",
+  "status": 500,
+  "body": {
+    "timestamp": "2026-07-25T14:39:54.107+00:00",
+    "status": 500,
+    "error": "Internal Server Error",
+    "path": "/products/29"
+  }
+}

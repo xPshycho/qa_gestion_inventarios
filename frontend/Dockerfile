@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS build
 
 WORKDIR /app
 
@@ -18,14 +18,18 @@ COPY public ./public
 COPY src ./src
 RUN pnpm build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN apk upgrade --no-cache
+
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY security-headers.conf.template /etc/nginx/templates/security-headers.conf.template
+COPY silent-sso-headers.conf.template /etc/nginx/templates/silent-sso-headers.conf.template
 COPY docker-entrypoint.sh /usr/local/bin/inventory-frontend-entrypoint
 COPY --from=build /app/dist/qa-gestion-inventarios-frontend/browser /usr/share/nginx/html
 
 RUN chmod +x /usr/local/bin/inventory-frontend-entrypoint \
-    && chown -R nginx:nginx /run /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html
+    && chown -R nginx:nginx /etc/nginx/conf.d /run /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html
 
 USER nginx
 

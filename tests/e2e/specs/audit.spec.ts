@@ -68,14 +68,13 @@ test('permite consultar auditoria de productos y movimientos de stock', async ({
     });
 
     await page.goto('/productos');
-    const seedRow = await findProductRow(page, 'DELL-LAT-5440');
+    const seedRow = await findProductRow(page, 'MON-DELL-P2422H');
     await seedRow.getByRole('link', { name: 'Auditoría' }).click();
-    await expect(
-      page.getByText('Revisiones de movimientos de stock', { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText('No hay revisiones de movimientos de stock para este producto.'),
-    ).toBeVisible();
+    const stockAuditPanel = page.locator('mat-card').filter({
+      hasText: 'Revisiones de movimientos de stock',
+    });
+    await expect(stockAuditPanel).toBeVisible();
+    await expect(stockAuditPanel.locator('.revision-item').first()).toBeVisible();
 
     await testInfo.attach('auditoria-stock', {
       body: await page.screenshot({ fullPage: true }),

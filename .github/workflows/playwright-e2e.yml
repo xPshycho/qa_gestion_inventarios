@@ -6,9 +6,6 @@ on:
       - main
       - develop
       - staging
-      - 'feature/**'
-      - 'test/**'
-      - 'ci/**'
   pull_request:
     branches:
       - main
@@ -18,6 +15,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: playwright-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   COMPOSE_PROJECT_NAME: inventory-e2e-${{ github.run_id }}
@@ -48,19 +49,12 @@ jobs:
       - name: Install E2E dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Resolve Chromium binary
-        run: |
-          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
-          if [ -n "$CHROME_PATH" ]; then
-            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${CHROME_PATH}" >> "$GITHUB_ENV"
-          fi
+      - name: Install Playwright browser matrix
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
-      - name: Install Playwright ffmpeg
-        run: pnpm exec playwright install ffmpeg
-
-      - name: Install Playwright Chromium
-        if: env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH == ''
-        run: pnpm exec playwright install chromium
+      - name: Generate ephemeral local credentials
+        working-directory: ${{ github.workspace }}
+        run: ./scripts/security/init-secret-env.sh local
 
       - name: Start Docker Compose stack
         working-directory: ${{ github.workspace }}
@@ -75,6 +69,8 @@ jobs:
         env:
           E2E_MANAGE_STACK: 'false'
           PLAYWRIGHT_JUNIT_OUTPUT_NAME: test-results/playwright-results.xml
+          PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS: 'false'
+          PLAYWRIGHT_SAFE_REPORTING: 'true'
         run: pnpm exec playwright test
 
       - name: Collect Docker Compose diagnostics
@@ -85,14 +81,24 @@ jobs:
           docker compose ps > tests/e2e/test-results/docker/compose-ps.txt || true
           docker compose logs --no-color > tests/e2e/test-results/docker/compose.log || true
 
-      - name: Upload Playwright artifacts
+      - name: Verify artifact safety
+        id: artifact_safety
         if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          ./scripts/security/verify-artifacts.sh \
+            tests/e2e/test-results \
+            tests/e2e/ux-evidence
+
+      - name: Upload safe Playwright artifacts
+        if: always() && steps.artifact_safety.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-e2e-${{ github.run_number }}
           path: |
-            tests/e2e/playwright-report/**
-            tests/e2e/test-results/**
+            tests/e2e/test-results/playwright-results.xml
+            tests/e2e/test-results/docker/**
+            tests/e2e/ux-evidence/**
           if-no-files-found: warn
           retention-days: 14
 
@@ -103,9 +109,11 @@ jobs:
             echo "## Playwright evidence"
             echo ""
             echo "- Command: \`pnpm exec playwright test\`"
-            echo "- HTML report: \`tests/e2e/playwright-report/index.html\`"
             echo "- JUnit report: \`tests/e2e/test-results/playwright-results.xml\`"
-            echo "- Failure assets: \`tests/e2e/test-results/**\`"
+            echo "- Artifact safety: \`${{ steps.artifact_safety.outcome }}\`"
+            echo "- Accessibility, keyboard, responsive and browser evidence: \`tests/e2e/ux-evidence/**\`"
+            echo "- Browser matrix: Chromium, Firefox and WebKit"
+            echo "- Responsive matrix: 412x839, 768x1024 and 1440x900"
             echo "- Artifact: \`playwright-e2e-${{ github.run_number }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 

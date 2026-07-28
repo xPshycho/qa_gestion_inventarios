@@ -1,23 +1,44 @@
 pipeline {
     agent { label 'linux && docker' }
 
-    tools {
-        jdk 'temurin-21'
+    parameters {
+        string(
+            name: 'GIT_BRANCH',
+            defaultValue: 'develop',
+            description: 'Rama confiable que fue seleccionada por el job Jenkins'
+        )
+        booleanParam(
+            name: 'RUN_SONAR',
+            defaultValue: false,
+            description: 'Ejecutar SonarCloud (requiere la credencial sonarcloud-token)'
+        )
     }
 
     options {
-        timestamps()
-        ansiColor('xterm')
         buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
         disableConcurrentBuilds()
     }
 
     environment {
-        GRADLE_USER_HOME = "${WORKSPACE}/.gradle"
+        GRADLE_USER_HOME = "/opt/gradle-cache"
         COMPOSE_PROJECT_NAME = "inventory-jenkins-${BUILD_TAG}"
         CI = 'true'
         E2E_STACK_TIMEOUT_MS = '360000'
         PNPM_VERSION = '10.12.1'
+        TESTCONTAINERS_HOST_OVERRIDE = 'docker'
+        PLAYWRIGHT_BROWSERS_PATH = '/ms-playwright'
+        POSTGRES_PORT = '55433'
+        BACKEND_PORT = '18082'
+        KEYCLOAK_PORT = '18081'
+        FRONTEND_PORT = '15173'
+        PROMETHEUS_PORT = '19090'
+        GRAFANA_PORT = '13000'
+        KEYCLOAK_URL = 'http://docker:18081'
+        E2E_BASE_URL = 'http://docker:15173'
+        E2E_BACKEND_URL = 'http://docker:18082'
+        E2E_KEYCLOAK_URL = 'http://docker:18081'
+        PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS = 'false'
+        PLAYWRIGHT_SAFE_REPORTING = 'true'
     }
 
     stages {
@@ -43,13 +64,13 @@ pipeline {
                     set -euo pipefail
                     export COMPOSE_PROJECT_NAME="$(printf '%s' "${COMPOSE_PROJECT_NAME}" | tr -c '[:alnum:]_-' '-' | tr '[:upper:]' '[:lower:]')"
                     echo "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}" > .jenkins-compose.env
+                    ./scripts/security/init-secret-env.sh local
                     java -version
                     docker version
                     docker compose version
                     chmod +x backend/gradlew
-                    corepack enable
-                    corepack prepare "pnpm@${PNPM_VERSION}" --activate
                     pnpm --version
+                    test "$(pnpm --version)" = "${PNPM_VERSION}"
                 '''
             }
         }
@@ -126,6 +147,9 @@ pipeline {
                 }
 
                 stage('SonarCloud Quality Analysis') {
+                    when {
+                        expression { params.RUN_SONAR }
+                    }
                     steps {
                         withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'SONAR_TOKEN')]) {
                             dir('backend') {
@@ -168,7 +192,7 @@ pipeline {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
                         pnpm install --frozen-lockfile
-                        pnpm exec playwright install --with-deps chromium || pnpm exec playwright install chromium
+                        pnpm exec playwright install chromium firefox webkit
                         E2E_MANAGE_STACK=false pnpm run stack:ready
                         PLAYWRIGHT_JUNIT_OUTPUT_NAME=playwright-results.xml pnpm exec playwright test
                     '''
@@ -228,16 +252,32 @@ pipeline {
 
             junit allowEmptyResults: true, testResults: 'tests/e2e/playwright-results.xml'
 
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'tests/e2e/playwright-report',
-                reportFiles: 'index.html',
-                reportName: 'Playwright E2E Report'
-            ])
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,backend/build/reports/**,backend/build/test-results/**,backend/build/jacoco/*.exec,frontend/dist/**,frontend-audit.json'
 
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,backend/build/reports/**,backend/build/test-results/**,backend/build/jacoco/*.exec,frontend/dist/**,frontend-audit.json,tests/e2e/playwright-results.xml,tests/e2e/playwright-report/**,tests/e2e/test-results/**'
+            script {
+                if (fileExists('tests/e2e/playwright-results.xml')) {
+                    int artifactSafetyStatus = sh(
+                        script: '''#!/usr/bin/env bash
+                            set -euo pipefail
+                            ./scripts/security/verify-artifacts.sh \
+                                tests/e2e/playwright-results.xml \
+                                tests/e2e/ux-evidence
+                        ''',
+                        returnStatus: true
+                    )
+                    if (artifactSafetyStatus == 0) {
+                        archiveArtifacts(
+                            allowEmptyArchive: false,
+                            artifacts: 'tests/e2e/playwright-results.xml,tests/e2e/ux-evidence/**'
+                        )
+                    } else {
+                        echo 'Playwright evidence was withheld because artifact safety did not pass.'
+                        currentBuild.result = 'FAILURE'
+                    }
+                } else {
+                    echo 'No Playwright evidence was generated; nothing was archived.'
+                }
+            }
 
             sh '''#!/usr/bin/env bash
                 set +e

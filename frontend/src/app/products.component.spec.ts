@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -79,7 +79,12 @@ describe('ProductsComponent', () => {
 
     const latestQuery = productService.listProducts.calls.mostRecent().args[0] as ProductQuery;
     expect(latestQuery.sort).toBe('name');
-    expect(latestQuery.direction).toBe('asc');
+    expect(latestQuery.direction).toBe('desc');
+    const nameHeader = fixture.debugElement
+      .queryAll(By.css('th'))
+      .find((header) => (header.nativeElement as HTMLElement).textContent?.includes('Nombre'));
+    expect((nameHeader?.nativeElement as HTMLElement).getAttribute('aria-sort'))
+      .toBe('descending');
   });
 
   it('muestra la accion de crear solo con product manage', () => {
@@ -101,7 +106,8 @@ describe('ProductsComponent', () => {
       .find((link) => (link.nativeElement as HTMLElement).textContent?.includes('Editar'));
 
     expect(editLink).toBeDefined();
-    expect(editLink?.attributes['ng-reflect-router-link']).toContain('1');
+    expect((editLink?.nativeElement as HTMLAnchorElement).getAttribute('href'))
+      .toBe('/productos/1/editar');
   });
 
   it('muestra la accion de auditoria solo con audit view', () => {
@@ -123,6 +129,23 @@ describe('ProductsComponent', () => {
     expect(component.productPendingDelete).toBeNull();
     expect(productService.deleteProduct).not.toHaveBeenCalled();
   });
+
+  it('restaura el foco al control que abrio el dialogo', fakeAsync(() => {
+    authService.hasPermission.and.callFake((permission) => permission === 'product:manage');
+    fixture.detectChanges();
+    const deleteButton = fixture.debugElement
+      .queryAll(By.css('button.row-action-danger'))[0].nativeElement as HTMLButtonElement;
+    deleteButton.focus();
+    deleteButton.click();
+    fixture.detectChanges();
+    tick();
+
+    component.cancelDelete();
+    fixture.detectChanges();
+    tick();
+
+    expect(document.activeElement).toBe(deleteButton);
+  }));
 
   it('cierra el dialogo con la tecla escape', () => {
     component.requestDelete(page.content[0]);

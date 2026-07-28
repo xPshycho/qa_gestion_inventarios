@@ -1,0 +1,788 @@
+name: GCP Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: gcp-production
+  cancel-in-progress: false
+
+jobs:
+  backend-quality:
+    name: Backend production gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout exact deployment revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: Run backend quality gates
+        working-directory: backend
+        run: >-
+          ./gradlew
+          test
+          apiTest
+          integrationTest
+          jacocoTestReport
+          jacocoTestCoverageVerification
+          --no-daemon
+
+  frontend-quality:
+    name: Frontend production gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout exact deployment revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm 10.12.1
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.12.1 --activate
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Resolve Chromium
+        run: |
+          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -z "$CHROME_PATH" ]; then
+            echo "No Chrome or Chromium binary was found." >&2
+            exit 1
+          fi
+          echo "CHROME_BIN=$CHROME_PATH" >> "$GITHUB_ENV"
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: >-
+          pnpm exec ng test
+          --watch=false
+          --browsers=ChromeHeadlessNoSandbox
+          --code-coverage
+
+  deploy-and-validate:
+    name: Deploy and validate production
+    needs:
+      - backend-quality
+      - frontend-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_ZONE: ${{ vars.GCP_ZONE }}
+      GCP_VM_NAME: ${{ vars.GCP_VM_NAME }}
+      GCP_VM_IP: ${{ vars.GCP_VM_IP }}
+      GCP_DEPLOY_PATH: ${{ vars.GCP_DEPLOY_PATH }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      E2E_VIEWER_USERNAME: ${{ vars.E2E_VIEWER_USERNAME }}
+      DEPLOYED_SHA: ${{ github.sha }}
+      PRODUCTION_STATE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/shared
+      PRODUCTION_ENV_FILE: ${{ vars.GCP_DEPLOY_PATH }}/shared/production.env
+      PRODUCTION_EVIDENCE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/shared/evidence/${{ github.sha }}
+      RELEASE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/releases/${{ github.sha }}
+      EVIDENCE_ARTIFACT_NAME: production-evidence-${{ github.sha }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Validate production configuration
+        env:
+          E2E_VIEWER_PASSWORD: ${{ secrets.E2E_VIEWER_PASSWORD }}
+        run: |
+          required_variables=(
+            GCP_PROJECT_ID
+            GCP_ZONE
+            GCP_VM_NAME
+            GCP_VM_IP
+            GCP_DEPLOY_PATH
+            GCP_WORKLOAD_IDENTITY_PROVIDER
+            GCP_DEPLOY_SERVICE_ACCOUNT
+            PRODUCTION_URL
+            E2E_VIEWER_USERNAME
+            E2E_VIEWER_PASSWORD
+          )
+          for variable_name in "${required_variables[@]}"; do
+            if [ -z "${!variable_name:-}" ]; then
+              echo "Required production configuration is missing: $variable_name" >&2
+              exit 1
+            fi
+          done
+
+          [[ "$GCP_PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
+          [[ "$GCP_ZONE" =~ ^[a-z0-9-]+$ ]]
+          [[ "$GCP_VM_NAME" =~ ^[a-z]([-a-z0-9]*[a-z0-9])?$ ]]
+          [[ "$GCP_VM_IP" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]
+          IFS=. read -r -a ip_octets <<< "$GCP_VM_IP"
+          for octet in "${ip_octets[@]}"; do
+            ((10#$octet >= 0 && 10#$octet <= 255))
+          done
+          [[ "$GCP_DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]]
+          [[ "$GCP_DEPLOY_PATH" != / ]]
+          [[ "$GCP_DEPLOY_PATH" != *"/../"* ]]
+          [[ "$GCP_DEPLOY_PATH" != */.. ]]
+          [[ "$GCP_WORKLOAD_IDENTITY_PROVIDER" =~ ^projects/[0-9]+/locations/global/workloadIdentityPools/[A-Za-z0-9_-]+/providers/[A-Za-z0-9_-]+$ ]]
+          [[ "$GCP_DEPLOY_SERVICE_ACCOUNT" =~ ^[A-Za-z0-9._+-]+@[a-z][a-z0-9-]{4,28}[a-z0-9]\.iam\.gserviceaccount\.com$ ]]
+          [[ "$PRODUCTION_URL" == "https://$GCP_VM_IP" ]]
+          [[ "$E2E_VIEWER_USERNAME" == viewer ]]
+          [[ "$E2E_VIEWER_PASSWORD" =~ ^[A-Za-z0-9._:/@+-]+$ ]]
+
+      - name: Checkout exact deployment revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify and package the exact SHA
+        run: |
+          test "$(git rev-parse HEAD)" = "$DEPLOYED_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+          release_bundle="$RUNNER_TEMP/inventory-$DEPLOYED_SHA.bundle"
+          bootstrap_script="$RUNNER_TEMP/bootstrap-$DEPLOYED_SHA.sh"
+          checksum_file="$RUNNER_TEMP/inventory-$DEPLOYED_SHA.sha256"
+
+          git bundle create "$release_bundle" HEAD
+          git bundle verify "$release_bundle"
+          test "$(
+            git bundle list-heads "$release_bundle" |
+              awk '$2 == "HEAD" { print $1 }'
+          )" = "$DEPLOYED_SHA"
+          cp scripts/gcp/bootstrap-vm.sh "$bootstrap_script"
+          chmod 0700 "$bootstrap_script"
+
+          (
+            cd "$RUNNER_TEMP"
+            sha256sum \
+              "$(basename "$release_bundle")" \
+              "$(basename "$bootstrap_script")" \
+              > "$(basename "$checksum_file")"
+          )
+
+          echo "RELEASE_BUNDLE=$release_bundle" >> "$GITHUB_ENV"
+          echo "BOOTSTRAP_SCRIPT=$bootstrap_script" >> "$GITHUB_ENV"
+          echo "RELEASE_CHECKSUM=$checksum_file" >> "$GITHUB_ENV"
+
+      - name: Authenticate to Google Cloud with Workload Identity Federation
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Set up Node.js for deployed smoke tests
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Install deployed smoke dependencies
+        working-directory: tests/e2e
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.12.1 --activate
+          pnpm install --frozen-lockfile
+
+          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -n "$CHROME_PATH" ]; then
+            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          else
+            pnpm exec playwright install chromium
+          fi
+
+      - name: Upload release through IAP
+        id: release_upload
+        continue-on-error: true
+        run: |
+          gcloud compute scp \
+            "$RELEASE_BUNDLE" \
+            "$BOOTSTRAP_SCRIPT" \
+            "$RELEASE_CHECKSUM" \
+            "$GCP_VM_NAME:/tmp/" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet
+
+      - name: Bootstrap VM and deploy exact release
+        id: deploy
+        if: steps.release_upload.outcome == 'success'
+        continue-on-error: true
+        env:
+          E2E_VIEWER_PASSWORD: ${{ secrets.E2E_VIEWER_PASSWORD }}
+        run: |
+          bundle_remote="/tmp/$(basename "$RELEASE_BUNDLE")"
+          bootstrap_remote="/tmp/$(basename "$BOOTSTRAP_SCRIPT")"
+          checksum_remote="/tmp/$(basename "$RELEASE_CHECKSUM")"
+          deployment_id="gh-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+
+          printf -v remote_command \
+            'set -Eeuo pipefail; cd /tmp; sha256sum --check %q; certbot_supported=false; certbot_version="$(certbot --version 2>/dev/null || true)"; if [[ "$certbot_version" =~ ^certbot[[:space:]]+([0-9]+)\.([0-9]+) ]] && ((10#${BASH_REMATCH[1]} > 5 || (10#${BASH_REMATCH[1]} == 5 && 10#${BASH_REMATCH[2]} >= 4))); then certbot_supported=true; fi; if ! command -v git >/dev/null || ! command -v docker >/dev/null || ! sudo docker compose version >/dev/null 2>&1 || [[ "$certbot_supported" != true ]]; then sudo env GCP_DEPLOY_PATH=%q bash %q; else sudo install -m 0755 -d %q/releases; sudo install -m 0700 -d %q/shared %q/shared/backups %q/shared/evidence; fi; if [[ -d %q/.git ]] && [[ "$(sudo git -C %q rev-parse HEAD)" == %q ]] && [[ -z "$(sudo git -C %q status --porcelain --untracked-files=all)" ]]; then true; else sudo rm -rf -- %q; sudo git clone --quiet %q %q; fi; sudo git -C %q checkout --quiet --detach %q; [[ "$(sudo git -C %q rev-parse HEAD)" == %q ]]; [[ -z "$(sudo git -C %q status --porcelain --untracked-files=all)" ]]; cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_DEPLOYMENT_ID=%q PRODUCTION_PUBLIC_IP=%q PRODUCTION_ORIGIN=%q PRODUCTION_URL=%q E2E_VIEWER_USERNAME=%q E2E_VIEWER_PASSWORD=%q GITHUB_SERVER_URL=%q GITHUB_REPOSITORY=%q GITHUB_RUN_ID=%q GITHUB_RUN_ATTEMPT=%q bash scripts/gcp/init-env.sh --force; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q GITHUB_SERVER_URL=%q GITHUB_REPOSITORY=%q GITHUB_RUN_ID=%q GITHUB_RUN_ATTEMPT=%q bash scripts/gcp/deploy.sh' \
+            "$checksum_remote" \
+            "$GCP_DEPLOY_PATH" \
+            "$bootstrap_remote" \
+            "$GCP_DEPLOY_PATH" \
+            "$GCP_DEPLOY_PATH" \
+            "$GCP_DEPLOY_PATH" \
+            "$GCP_DEPLOY_PATH" \
+            "$RELEASE_DIR" \
+            "$RELEASE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$RELEASE_DIR" \
+            "$RELEASE_DIR" \
+            "$bundle_remote" \
+            "$RELEASE_DIR" \
+            "$RELEASE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$RELEASE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$RELEASE_DIR" \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$deployment_id" \
+            "$GCP_VM_IP" \
+            "$PRODUCTION_URL" \
+            "$PRODUCTION_URL" \
+            "$E2E_VIEWER_USERNAME" \
+            "$E2E_VIEWER_PASSWORD" \
+            "$GITHUB_SERVER_URL" \
+            "$GITHUB_REPOSITORY" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL" \
+            "$GITHUB_SERVER_URL" \
+            "$GITHUB_REPOSITORY" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Run remote post-deploy checks
+        id: post_deploy
+        if: always() && steps.deploy.outcome == 'success'
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q GITHUB_SERVER_URL=%q GITHUB_REPOSITORY=%q GITHUB_RUN_ID=%q GITHUB_RUN_ATTEMPT=%q bash scripts/gcp/post-deploy.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL" \
+            "$GITHUB_SERVER_URL" \
+            "$GITHUB_REPOSITORY" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Run read-only Playwright smoke against production
+        id: playwright_smoke
+        if: always() && steps.post_deploy.outcome == 'success'
+        continue-on-error: true
+        working-directory: tests/e2e
+        env:
+          CI: "true"
+          E2E_MANAGE_STACK: "false"
+          E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}
+          E2E_BACKEND_URL: ${{ vars.PRODUCTION_URL }}
+          E2E_KEYCLOAK_URL: ${{ vars.PRODUCTION_URL }}/auth
+          E2E_KEYCLOAK_REALM: inventory
+          E2E_EXPECTED_OIDC_ISSUER: ${{ vars.PRODUCTION_URL }}/auth/realms/inventory
+          E2E_VIEWER_PASSWORD: ${{ secrets.E2E_VIEWER_PASSWORD }}
+          PLAYWRIGHT_OUTPUT_DIR: ${{ github.workspace }}/.production-runner-evidence/playwright/test-results
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME: ${{ github.workspace }}/.production-runner-evidence/playwright/junit.xml
+          PLAYWRIGHT_SAFE_SCREENSHOT_DIR: ${{ github.workspace }}/.production-runner-evidence/playwright/screenshots
+          PLAYWRIGHT_UX_EVIDENCE_DIR: ${{ github.workspace }}/.production-runner-evidence/playwright/ux-evidence
+          PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS: "false"
+          PLAYWRIGHT_SAFE_REPORTING: "true"
+        run: pnpm test:smoke
+
+      - name: Run OWASP ZAP baseline against production
+        id: zap_baseline
+        if: always() && steps.post_deploy.outcome == 'success'
+        continue-on-error: true
+        env:
+          ZAP_TARGET_URL: ${{ vars.PRODUCTION_URL }}
+          ZAP_DOCKER_NETWORK: bridge
+          ZAP_REPORT_DIR: ${{ github.workspace }}/.production-runner-evidence/zap
+        run: tests/security/run-zap-baseline.sh
+
+      - name: Prepare runner validation evidence
+        id: runner_evidence
+        if: always() && steps.release_upload.outcome == 'success'
+        continue-on-error: true
+        run: |
+          mkdir -p .production-runner-evidence
+          jq --null-input \
+            --arg environment production \
+            --arg url "$PRODUCTION_URL" \
+            --arg sha "$DEPLOYED_SHA" \
+            --arg runUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg deploy "${{ steps.deploy.outcome }}" \
+            --arg postDeploy "${{ steps.post_deploy.outcome }}" \
+            --arg playwright "${{ steps.playwright_smoke.outcome }}" \
+            --arg zap "${{ steps.zap_baseline.outcome }}" \
+            '{
+              environment: $environment,
+              url: $url,
+              deployedSha: $sha,
+              runUrl: $runUrl,
+              outcomes: {
+                deploy: $deploy,
+                postDeploy: $postDeploy,
+                playwrightSmoke: $playwright,
+                zapBaseline: $zap
+              }
+            }' > .production-runner-evidence/validation.json
+
+          runner_evidence_archive="$RUNNER_TEMP/runner-evidence-$DEPLOYED_SHA-$GITHUB_RUN_ATTEMPT.tar.gz"
+          tar -C .production-runner-evidence -czf "$runner_evidence_archive" .
+          echo "RUNNER_EVIDENCE_ARCHIVE=$runner_evidence_archive" >> "$GITHUB_ENV"
+
+      - name: Transfer runner evidence to the VM
+        id: runner_evidence_transfer
+        if: always() && steps.runner_evidence.outcome == 'success'
+        continue-on-error: true
+        run: |
+          gcloud compute scp \
+            "$RUNNER_EVIDENCE_ARCHIVE" \
+            "$GCP_VM_NAME:/tmp/" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet
+
+          runner_evidence_remote="/tmp/$(basename "$RUNNER_EVIDENCE_ARCHIVE")"
+          printf -v remote_command \
+            'set -Eeuo pipefail; trap "sudo rm -f -- %q" EXIT; sudo install -m 0700 -d %q; sudo rm -rf -- %q/runner; sudo install -m 0700 -d %q/runner; sudo tar -xzf %q -C %q/runner; sudo rm -f -- %q; trap - EXIT' \
+            "$runner_evidence_remote" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$runner_evidence_remote" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$runner_evidence_remote"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Collect pre-rollback production evidence
+        id: initial_collection
+        if: always() && steps.release_upload.outcome == 'success'
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q GITHUB_SERVER_URL=%q GITHUB_REPOSITORY=%q GITHUB_RUN_ID=%q GITHUB_RUN_ATTEMPT=%q bash scripts/gcp/collect-evidence.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL" \
+            "$GITHUB_SERVER_URL" \
+            "$GITHUB_REPOSITORY" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Verify pre-rollback evidence safety
+        id: initial_evidence_safety
+        if: always() && steps.initial_collection.outcome == 'success'
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q bash scripts/gcp/verify-evidence-safety.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Remove remote runner evidence archive
+        id: runner_archive_cleanup
+        if: always() && steps.runner_evidence.outcome == 'success'
+        continue-on-error: true
+        run: |
+          runner_evidence_remote="/tmp/$(basename "$RUNNER_EVIDENCE_ARCHIVE")"
+          printf -v remote_command \
+            'sudo rm -f -- %q; [[ ! -e %q ]]' \
+            "$runner_evidence_remote" \
+            "$runner_evidence_remote"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Roll back failed production validation
+        id: rollback
+        if: >-
+          always() &&
+          steps.release_upload.outcome == 'success' &&
+          (
+            steps.deploy.outcome == 'failure' ||
+            steps.post_deploy.outcome == 'failure' ||
+            steps.playwright_smoke.outcome == 'failure' ||
+            steps.zap_baseline.outcome == 'failure' ||
+            steps.runner_evidence.outcome == 'failure' ||
+            steps.runner_evidence_transfer.outcome == 'failure' ||
+            steps.runner_archive_cleanup.outcome == 'failure' ||
+            steps.initial_collection.outcome == 'failure' ||
+            steps.initial_evidence_safety.outcome == 'failure'
+          )
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q GITHUB_SERVER_URL=%q GITHUB_REPOSITORY=%q GITHUB_RUN_ID=%q GITHUB_RUN_ATTEMPT=%q bash scripts/gcp/rollback.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL" \
+            "$GITHUB_SERVER_URL" \
+            "$GITHUB_REPOSITORY" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Collect final production evidence
+        id: final_collection
+        if: always() && steps.release_upload.outcome == 'success'
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q GITHUB_SERVER_URL=%q GITHUB_REPOSITORY=%q GITHUB_RUN_ID=%q GITHUB_RUN_ATTEMPT=%q bash scripts/gcp/collect-evidence.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL" \
+            "$GITHUB_SERVER_URL" \
+            "$GITHUB_REPOSITORY" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Verify final evidence safety
+        id: final_evidence_safety
+        if: always() && steps.final_collection.outcome == 'success'
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q bash scripts/gcp/verify-evidence-safety.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Download safe production evidence
+        id: download_evidence
+        if: always() && steps.final_evidence_safety.outcome == 'success'
+        continue-on-error: true
+        run: |
+          evidence_archive="/tmp/$EVIDENCE_ARTIFACT_NAME.tar.gz"
+          evidence_checksum="$evidence_archive.sha256"
+
+          printf -v remote_command \
+            'set -Eeuo pipefail; cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q PRODUCTION_ENV_FILE=%q PRODUCTION_EVIDENCE_DIR=%q APP_VERSION=%q DEPLOYED_SHA=%q PRODUCTION_URL=%q bash %q/scripts/gcp/verify-evidence-safety.sh; sudo tar -C %q -czf %q .; sudo chown "$(id -u):$(id -g)" %q; cd /tmp; sha256sum %q > %q' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR" \
+            "$PRODUCTION_ENV_FILE" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$DEPLOYED_SHA" \
+            "$DEPLOYED_SHA" \
+            "$PRODUCTION_URL" \
+            "$RELEASE_DIR" \
+            "$PRODUCTION_EVIDENCE_DIR" \
+            "$evidence_archive" \
+            "$evidence_archive" \
+            "$(basename "$evidence_archive")" \
+            "$evidence_checksum"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+          gcloud compute scp \
+            "$GCP_VM_NAME:$evidence_archive" \
+            "$GCP_VM_NAME:$evidence_checksum" \
+            "$RUNNER_TEMP/" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet
+
+          (
+            cd "$RUNNER_TEMP"
+            sha256sum --check "$(basename "$evidence_checksum")"
+          )
+
+          mkdir -p .production-evidence
+          while IFS= read -r archive_entry; do
+            case "$archive_entry" in
+              /*|../*|*/../*)
+                echo "Unsafe path in evidence archive: $archive_entry" >&2
+                exit 1
+                ;;
+            esac
+          done < <(tar -tzf "$RUNNER_TEMP/$(basename "$evidence_archive")")
+          tar \
+            --extract \
+            --gzip \
+            --file "$RUNNER_TEMP/$(basename "$evidence_archive")" \
+            --directory .production-evidence \
+            --no-same-owner \
+            --no-same-permissions
+
+      - name: Upload safe production evidence
+        id: artifact_upload
+        if: always() && steps.download_evidence.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ env.EVIDENCE_ARTIFACT_NAME }}
+          path: .production-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Apply bounded VM retention policy
+        id: retention_cleanup
+        if: always() && steps.artifact_upload.outcome == 'success'
+        continue-on-error: true
+        run: |
+          printf -v remote_command \
+            'cd %q; sudo env GCP_DEPLOY_PATH=%q PRODUCTION_STATE_DIR=%q bash scripts/gcp/cleanup-retention.sh' \
+            "$RELEASE_DIR" \
+            "$GCP_DEPLOY_PATH" \
+            "$PRODUCTION_STATE_DIR"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Remove remote deployment packages
+        id: remote_package_cleanup
+        if: always() && steps.release_upload.outcome == 'success'
+        continue-on-error: true
+        run: |
+          bundle_remote="/tmp/$(basename "$RELEASE_BUNDLE")"
+          bootstrap_remote="/tmp/$(basename "$BOOTSTRAP_SCRIPT")"
+          checksum_remote="/tmp/$(basename "$RELEASE_CHECKSUM")"
+          evidence_archive="/tmp/$EVIDENCE_ARTIFACT_NAME.tar.gz"
+          evidence_checksum="$evidence_archive.sha256"
+
+          printf -v remote_command \
+            'sudo rm -f -- %q %q %q %q %q; [[ ! -e %q && ! -e %q && ! -e %q && ! -e %q && ! -e %q ]]' \
+            "$bundle_remote" \
+            "$bootstrap_remote" \
+            "$checksum_remote" \
+            "$evidence_archive" \
+            "$evidence_checksum" \
+            "$bundle_remote" \
+            "$bootstrap_remote" \
+            "$checksum_remote" \
+            "$evidence_archive" \
+            "$evidence_checksum"
+
+          gcloud compute ssh "$GCP_VM_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --zone="$GCP_ZONE" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="$remote_command"
+
+      - name: Publish production deployment summary
+        if: always()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "## GCP production deployment"
+            echo ""
+            echo "- URL: [$PRODUCTION_URL]($PRODUCTION_URL)"
+            echo "- Requested SHA: \`$DEPLOYED_SHA\`"
+            echo "- Release: \`$RELEASE_DIR\`"
+            echo "- GitHub Environment: \`production\`"
+            echo "- Run: [$GITHUB_RUN_ID]($RUN_URL)"
+            echo "- Artifact: [$EVIDENCE_ARTIFACT_NAME]($RUN_URL#artifacts)"
+            echo "- Deploy: \`${{ steps.deploy.outcome }}\`"
+            echo "- Remote post-deploy: \`${{ steps.post_deploy.outcome }}\`"
+            echo "- Playwright smoke: \`${{ steps.playwright_smoke.outcome }}\`"
+            echo "- OWASP ZAP baseline: \`${{ steps.zap_baseline.outcome }}\`"
+            echo "- Automatic rollback: \`${{ steps.rollback.outcome }}\`"
+            echo "- Final evidence collection: \`${{ steps.final_collection.outcome }}\`"
+            echo "- Final evidence safety: \`${{ steps.final_evidence_safety.outcome }}\`"
+            echo "- Artifact upload: \`${{ steps.artifact_upload.outcome }}\`"
+            echo "- VM retention cleanup: \`${{ steps.retention_cleanup.outcome }}\`"
+            echo "- Remote package cleanup: \`${{ steps.remote_package_cleanup.outcome }}\`"
+            echo ""
+            if [ "${{ steps.final_evidence_safety.outcome }}" != success ]; then
+              echo "Detailed evidence was withheld because the final safety gate did not pass."
+            elif [ -f .production-evidence/deployment-summary.md ]; then
+              cat .production-evidence/deployment-summary.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce production promotion result
+        if: always()
+        env:
+          RELEASE_UPLOAD_OUTCOME: ${{ steps.release_upload.outcome }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          POST_DEPLOY_OUTCOME: ${{ steps.post_deploy.outcome }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright_smoke.outcome }}
+          ZAP_OUTCOME: ${{ steps.zap_baseline.outcome }}
+          RUNNER_EVIDENCE_OUTCOME: ${{ steps.runner_evidence.outcome }}
+          RUNNER_TRANSFER_OUTCOME: ${{ steps.runner_evidence_transfer.outcome }}
+          RUNNER_ARCHIVE_CLEANUP_OUTCOME: ${{ steps.runner_archive_cleanup.outcome }}
+          INITIAL_COLLECTION_OUTCOME: ${{ steps.initial_collection.outcome }}
+          INITIAL_SAFETY_OUTCOME: ${{ steps.initial_evidence_safety.outcome }}
+          ROLLBACK_OUTCOME: ${{ steps.rollback.outcome }}
+          FINAL_COLLECTION_OUTCOME: ${{ steps.final_collection.outcome }}
+          FINAL_SAFETY_OUTCOME: ${{ steps.final_evidence_safety.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download_evidence.outcome }}
+          ARTIFACT_UPLOAD_OUTCOME: ${{ steps.artifact_upload.outcome }}
+          RETENTION_CLEANUP_OUTCOME: ${{ steps.retention_cleanup.outcome }}
+          REMOTE_PACKAGE_CLEANUP_OUTCOME: ${{ steps.remote_package_cleanup.outcome }}
+        run: |
+          test "$RELEASE_UPLOAD_OUTCOME" = success
+          test "$DEPLOY_OUTCOME" = success
+          test "$POST_DEPLOY_OUTCOME" = success
+          test "$PLAYWRIGHT_OUTCOME" = success
+          test "$ZAP_OUTCOME" = success
+          test "$RUNNER_EVIDENCE_OUTCOME" = success
+          test "$RUNNER_TRANSFER_OUTCOME" = success
+          test "$RUNNER_ARCHIVE_CLEANUP_OUTCOME" = success
+          test "$INITIAL_COLLECTION_OUTCOME" = success
+          test "$INITIAL_SAFETY_OUTCOME" = success
+          test "$FINAL_COLLECTION_OUTCOME" = success
+          test "$FINAL_SAFETY_OUTCOME" = success
+          test "$DOWNLOAD_OUTCOME" = success
+          test "$ARTIFACT_UPLOAD_OUTCOME" = success
+          test "$RETENTION_CLEANUP_OUTCOME" = success
+          test "$REMOTE_PACKAGE_CLEANUP_OUTCOME" = success
+          test "$ROLLBACK_OUTCOME" != failure

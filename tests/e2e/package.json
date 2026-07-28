@@ -8,10 +8,17 @@
     "test": "node scripts/ensure-stack.mjs && playwright test",
     "test:headed": "node scripts/ensure-stack.mjs && playwright test --headed",
     "test:ui": "node scripts/ensure-stack.mjs && playwright test --ui",
+    "test:issue-90": "node scripts/ensure-stack.mjs && playwright test accessibility.spec.ts keyboard.spec.ts responsive.spec.ts browser-compatibility.spec.ts",
+    "test:a11y": "node scripts/ensure-stack.mjs && playwright test accessibility.spec.ts --project=chromium",
+    "test:keyboard": "node scripts/ensure-stack.mjs && playwright test keyboard.spec.ts --project=chromium",
+    "test:responsive": "node scripts/ensure-stack.mjs && playwright test responsive.spec.ts",
+    "test:browsers": "node scripts/ensure-stack.mjs && playwright test browser-compatibility.spec.ts",
+    "test:smoke": "playwright test --grep @deployed-smoke --project=chromium",
     "test:list": "playwright test --list",
     "report": "playwright show-report"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@playwright/test": "1.60.0"
   }
 }

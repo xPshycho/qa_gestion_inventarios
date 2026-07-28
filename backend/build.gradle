@@ -66,7 +66,12 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
 
     // PostgreSQL
-    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.postgresql:postgresql:42.7.12'
+
+    // Security overrides for CVEs fixed after the Spring Boot 3.5.14 BOM release.
+    implementation 'org.apache.tomcat.embed:tomcat-embed-core:10.1.55'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.21.4'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.4'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

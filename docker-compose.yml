@@ -2,12 +2,12 @@ name: ${COMPOSE_PROJECT_NAME:-inventory-platform}
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-inventory}
       POSTGRES_USER: ${POSTGRES_USER:-inventory_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambiar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
       - inventory-network
 
   flyway:
-    image: flyway/flyway:11-alpine
+    image: flyway/flyway:11-alpine@sha256:df06535dfd6559ae5f0628c4761013dfa4ea6a30cf6e34294931d8091f55a18f
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,7 +29,7 @@ services:
     command:
       - -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
       - -user=${POSTGRES_USER:-inventory_user}
-      - -password=${POSTGRES_PASSWORD:-cambiar}
+      - -password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       - -locations=filesystem:/flyway/sql
       - -connectRetries=10
       - migrate
@@ -37,11 +37,16 @@ services:
       - inventory-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.6.3
+    image: quay.io/keycloak/keycloak:26.6.3@sha256:9b0330756022422149aa6502eb2def8cd47c6e1b000c7c65cdb13e7c0133e992
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin123}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?KEYCLOAK_ADMIN_CLIENT_SECRET is required}
+      E2E_ADMIN_PASSWORD: ${E2E_ADMIN_PASSWORD:?E2E_ADMIN_PASSWORD is required}
+      E2E_OPERATOR_PASSWORD: ${E2E_OPERATOR_PASSWORD:?E2E_OPERATOR_PASSWORD is required}
+      E2E_VIEWER_PASSWORD: ${E2E_VIEWER_PASSWORD:?E2E_VIEWER_PASSWORD is required}
+      E2E_AUDITOR_PASSWORD: ${E2E_AUDITOR_PASSWORD:?E2E_AUDITOR_PASSWORD is required}
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
       KC_HOSTNAME_STRICT: "false"
@@ -49,10 +54,23 @@ services:
       - start-dev
       - --import-realm
     volumes:
-      - ./infra/keycloak:/opt/keycloak/data/import:ro
+      - ${KEYCLOAK_IMPORT_DIR:-./infra/keycloak}:/opt/keycloak/data/import:ro
     expose:
       - "8080"
       - "9000"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -qE '^HTTP/[0-9.]+ 200 ' <&3
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
     networks:
       - inventory-network
 
@@ -64,25 +82,38 @@ services:
     depends_on:
       flyway:
         condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+      alloy:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-inventory_user}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cambiar}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${KEYCLOAK_URL:-http://localhost:8081}/realms/${KEYCLOAK_REALM:-inventory}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-inventory}/protocol/openid-connect/certs
       KEYCLOAK_ADMIN_URL: http://keycloak:8080
       KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_REALM:-inventory}
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-inventory-admin-service}
-      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-cambiar-admin-service}
-      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?KEYCLOAK_ADMIN_CLIENT_SECRET is required}
+      INVENTORY_CORS_ALLOWED_ORIGINS: ${INVENTORY_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
+      OTEL_SERVICE_NAME: inventory-backend
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=${OTEL_DEPLOYMENT_ENVIRONMENT:-development},service.version=${APP_VERSION:-local}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      # Alloy recolecta los logs del contenedor y los envía a Loki.
+      # Evita exportarlos también por OTLP, cuyo pipeline sólo gestiona trazas.
+      OTEL_LOGS_EXPORTER: none
     expose:
       - "8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health >/dev/null"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 12
+      start_period: 60s
     networks:
       - inventory-network
 
@@ -110,7 +141,7 @@ services:
       - inventory-network
 
   prometheus:
-    image: prom/prometheus:v2.55.1
+    image: prom/prometheus:v2.55.1@sha256:2659f4c2ebb718e7695cb9b25ffa7d6be64db013daba13e05c875451cf51b0d3
     restart: unless-stopped
     depends_on:
       backend:
@@ -121,6 +152,7 @@ services:
       - --web.enable-lifecycle
     volumes:
       - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
     expose:
       - "9090"
@@ -128,13 +160,15 @@ services:
       - inventory-network
 
   grafana:
-    image: grafana/grafana:11.3.1
+    image: grafana/grafana:11.3.1@sha256:fa801ab6e1ae035135309580891e09f7eb94d1abdbd2106bdc288030b028158c
     restart: unless-stopped
     depends_on:
       - prometheus
+      - loki
+      - tempo
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_USERS_DEFAULT_THEME: light
     volumes:
       - grafana-data:/var/lib/grafana
@@ -142,6 +176,59 @@ services:
       - ./infra/observability/grafana/dashboards:/etc/grafana/dashboards:ro
     expose:
       - "3000"
+    networks:
+      - inventory-network
+
+  alloy:
+    image: grafana/alloy:v1.7.5@sha256:b92703c13c32c20d629ffd89f40287ed385c12a335a7c9f31c720a5f912f9d6f
+    restart: unless-stopped
+    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-inventory-platform}
+    volumes:
+      - ./infra/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    expose:
+      - "4317"
+      - "4318"
+      - "12345"
+    networks:
+      - inventory-network
+
+  loki:
+    image: grafana/loki:3.4.2@sha256:58a6c186ce78ba04d58bfe2a927eff296ba733a430df09645d56cdc158f3ba08
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yaml
+    volumes:
+      - ./infra/observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    expose:
+      - "3100"
+    networks:
+      - inventory-network
+
+  tempo:
+    image: grafana/tempo:2.7.1@sha256:4443be217c396b065ee34845534199c36fdba4dc619cb96550e228d73fba6e69
+    restart: unless-stopped
+    command: -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./infra/observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    expose:
+      - "3200"
+      - "4317"
+      - "4318"
+    networks:
+      - inventory-network
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1@sha256:27c475db5fb156cab31d5c18a4251ac7ed567746a2483ff264516437a39b15ba
+    restart: unless-stopped
+    command: --config.file=/etc/alertmanager/alertmanager.yml
+    volumes:
+      - ./infra/observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    expose:
+      - "9093"
     networks:
       - inventory-network
 
@@ -153,3 +240,5 @@ volumes:
   postgres-data:
   prometheus-data:
   grafana-data:
+  loki-data:
+  tempo-data:

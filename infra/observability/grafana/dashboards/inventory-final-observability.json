@@ -1,0 +1,17 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"id": 1, "title": "Infraestructura · Backend disponible", "type": "stat", "datasource": {"uid": "prometheus"}, "targets": [{"expr": "up{job=\"inventory-backend\"}", "refId": "A"}], "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0}},
+    {"id": 2, "title": "Aplicación · Latencia P95", "type": "timeseries", "datasource": {"uid": "prometheus"}, "targets": [{"expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"inventory-backend\"}[5m])) by (le))", "refId": "A"}], "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0}},
+    {"id": 3, "title": "Negocio · Productos críticos", "type": "stat", "datasource": {"uid": "prometheus"}, "targets": [{"expr": "inventory_products_critical", "refId": "A"}], "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0}},
+    {"id": 4, "title": "Seguridad · Respuestas no autorizadas", "type": "timeseries", "datasource": {"uid": "prometheus"}, "targets": [{"expr": "sum(rate(http_server_requests_seconds_count{job=\"inventory-backend\",status=~\"401|403\"}[5m]))", "refId": "A"}], "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0}},
+    {"id": 5, "title": "Logs correlacionados", "type": "logs", "datasource": {"uid": "loki"}, "targets": [{"expr": "{container=~\".*backend.*\"}", "refId": "A"}], "gridPos": {"h": 9, "w": 12, "x": 0, "y": 5}},
+    {"id": 6, "title": "Trazas del backend", "type": "traces", "datasource": {"uid": "tempo"}, "targets": [{"query": "{ resource.service.name = \"inventory-backend\" }", "refId": "A"}], "gridPos": {"h": 9, "w": 12, "x": 12, "y": 5}}
+  ],
+  "schemaVersion": 39,
+  "tags": ["inventory", "observability"],
+  "title": "Inventory Final Observability",
+  "uid": "inventory-final-observability",
+  "version": 1
+}

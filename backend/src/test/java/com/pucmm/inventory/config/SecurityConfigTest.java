@@ -3,10 +3,13 @@ package com.pucmm.inventory.config;
 import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_VIEW;
 import static com.pucmm.inventory.config.SecurityConfig.PRODUCT_MANAGE;
 import static com.pucmm.inventory.config.SecurityConfig.REPORT_VIEW;
+import static org.hamcrest.Matchers.containsString;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,11 +37,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ProductController.class)
 @Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@TestPropertySource(properties = {
+        "inventory.cors.allowed-origins=http://localhost:5173,http://127.0.0.1:5173,https://staging.example.test"
+})
 class SecurityConfigTest {
     private static final OffsetDateTime TIMESTAMP = OffsetDateTime.parse("2026-06-07T12:00:00-04:00");
 
@@ -100,6 +107,65 @@ class SecurityConfigTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/products/1"));
+    }
+
+    @Test
+    void preflightFromAllowedOriginReturnsCorsHeaders() throws Exception {
+        mockMvc.perform(options("/products")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Methods", containsString("POST")))
+                .andExpect(header().string("Access-Control-Allow-Headers", containsString("Authorization")));
+    }
+
+    @Test
+    void preflightFromConfiguredStagingOriginReturnsCorsHeaders() throws Exception {
+        mockMvc.perform(options("/products")
+                        .header("Origin", "https://staging.example.test")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "Authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://staging.example.test"));
+    }
+
+    @Test
+    void preflightFromUnexpectedOriginIsRejected() throws Exception {
+        mockMvc.perform(options("/products")
+                        .header("Origin", "https://untrusted.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void corsOriginsAreTrimmedAndBlankEntriesAreIgnored() {
+        SecurityConfig securityConfig = new SecurityConfig(
+                List.of(" https://staging.example.test ", " ", "http://localhost:5173")
+        );
+
+        assertThat(securityConfig.corsConfigurationSource()
+                .getCorsConfigurations()
+                .get("/**")
+                .getAllowedOrigins())
+                .containsExactly("https://staging.example.test", "http://localhost:5173");
+    }
+
+    @Test
+    void corsConfigurationRejectsAListWithoutValidOrigins() {
+        assertThatThrownBy(() -> new SecurityConfig(List.of(" ", "\t")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("At least one CORS origin must be configured");
+    }
+
+    @Test
+    void allowedOriginStillRequiresJwt() throws Exception {
+        mockMvc.perform(get("/products/{id}", 1L)
+                        .header("Origin", "http://127.0.0.1:5173"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://127.0.0.1:5173"));
     }
 
     @Test

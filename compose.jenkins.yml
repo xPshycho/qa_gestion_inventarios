@@ -1,0 +1,123 @@
+name: inventory-jenkins
+
+services:
+  docker:
+    image: docker:28-dind
+    privileged: true
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\noptions timeout:2 attempts:3\n' > /etc/resolv.conf
+        sysctl -w net.ipv6.conf.all.disable_ipv6=1
+        exec /usr/local/bin/dockerd-entrypoint.sh --dns=1.1.1.1 --dns=8.8.8.8
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-home:/var/jenkins_home:ro
+      - jenkins-docker-data:/var/lib/docker
+    networks:
+      jenkins-network:
+        aliases:
+          - docker
+    healthcheck:
+      test: ["CMD-SHELL", "docker info >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  docker-images:
+    image: inventory-jenkins-jenkins:local
+    build:
+      context: .
+      dockerfile: infra/jenkins/Dockerfile
+    depends_on:
+      docker:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_CERT_PATH: /certs/client
+      DOCKER_TLS_VERIFY: "1"
+    volumes:
+      - jenkins-docker-certs:/certs/client:ro
+    networks:
+      - jenkins-network
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        for image in testcontainers/ryuk:0.11.0 postgres:16-alpine quay.io/keycloak/keycloak:26.6.3; do
+          attempt=1
+          until docker image inspect "$${image}" >/dev/null 2>&1 || docker pull "$${image}"; do
+            if [ "$${attempt}" -ge 6 ]; then
+              echo "No se pudo descargar $${image} despues de $${attempt} intentos" >&2
+              exit 1
+            fi
+            attempt=$$((attempt + 1))
+            sleep $$((attempt * 5))
+          done
+        done
+
+  jenkins:
+    image: inventory-jenkins-jenkins:local
+    build:
+      context: .
+      dockerfile: infra/jenkins/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      docker:
+        condition: service_healthy
+      docker-images:
+        condition: service_completed_successfully
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      CASC_JENKINS_CONFIG: /usr/share/jenkins/ref/casc/jenkins.yaml
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=false
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:?JENKINS_ADMIN_ID is required}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?JENKINS_ADMIN_PASSWORD is required}
+      JENKINS_URL: http://localhost:18080/
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_CERT_PATH: /certs/client
+      DOCKER_TLS_VERIFY: "1"
+      TESTCONTAINERS_HOST_OVERRIDE: docker
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      POSTGRES_PORT: "55433"
+      BACKEND_PORT: "18082"
+      KEYCLOAK_PORT: "18081"
+      FRONTEND_PORT: "15173"
+      PROMETHEUS_PORT: "19090"
+      GRAFANA_PORT: "13000"
+      KEYCLOAK_URL: http://docker:18081
+      E2E_BASE_URL: http://docker:15173
+      E2E_BACKEND_URL: http://docker:18082
+      E2E_KEYCLOAK_URL: http://docker:18081
+    ports:
+      - "18080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - jenkins-docker-certs:/certs/client:ro
+    networks:
+      - jenkins-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/login >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 45s
+
+networks:
+  jenkins-network:
+    driver: bridge
+
+volumes:
+  jenkins-home:
+  jenkins-docker-certs:
+  jenkins-docker-data:

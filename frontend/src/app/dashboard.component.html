@@ -15,9 +15,13 @@
     {{ dashboardErrorMessage }}
   </div>
 
-  <mat-progress-bar *ngIf="dashboardLoading" mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar
+    *ngIf="dashboardLoading"
+    mode="indeterminate"
+    aria-label="Cargando dashboard"
+  ></mat-progress-bar>
 
-  <div *ngIf="dashboardLoading" class="state">
+  <div *ngIf="dashboardLoading" class="state" role="status" aria-live="polite">
     Cargando dashboard...
   </div>
 

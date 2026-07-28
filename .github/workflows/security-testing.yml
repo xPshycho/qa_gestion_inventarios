@@ -1,0 +1,202 @@
+name: Security Testing
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Optional HTTPS staging URL for the ZAP baseline scan'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-testing-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  COMPOSE_PROJECT_NAME: inventory-security-${{ github.run_id }}
+
+jobs:
+  dependency-and-image-scan:
+    name: Dependency, configuration and image scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate ephemeral local credentials
+        run: ./scripts/security/init-secret-env.sh local
+
+      - name: Build application images
+        run: |
+          for attempt in 1 2 3; do
+            if docker compose build backend frontend; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Docker Compose image build failed after 3 attempts."
+              exit 1
+            fi
+            delay=$((attempt * 15))
+            echo "::warning::Image build attempt ${attempt} failed; retrying in ${delay}s."
+            sleep "$delay"
+          done
+
+      - name: Scan repository dependencies and configuration
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy-repository.json
+          exit-code: '0'
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: inventory-security-${{ github.run_id }}-backend:latest
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy-backend-image.json
+          exit-code: '0'
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: inventory-security-${{ github.run_id }}-frontend:latest
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy-frontend-image.json
+          exit-code: '0'
+
+      - name: Enforce vulnerability quality gate
+        run: |
+          jq -e '
+            [
+              .[]
+              | .Results[]?
+              | (.Vulnerabilities[]?, .Misconfigurations[]?)
+              | select(.Severity == "HIGH" or .Severity == "CRITICAL")
+            ]
+            | length == 0
+          ' --slurp trivy-repository.json trivy-backend-image.json trivy-frontend-image.json
+
+      - name: Verify Trivy report safety
+        id: trivy_artifact_safety
+        if: always()
+        run: ./scripts/security/verify-artifacts.sh trivy-repository.json trivy-backend-image.json trivy-frontend-image.json
+
+      - name: Upload safe Trivy reports
+        if: always() && steps.trivy_artifact_safety.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-security-reports-${{ github.run_number }}
+          path: trivy-*.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  zap-baseline:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate ephemeral artifact-scan credentials
+        run: ./scripts/security/init-secret-env.sh local
+
+      - name: Build Docker Compose application images
+        if: inputs.target_url == ''
+        run: |
+          for attempt in 1 2 3; do
+            if docker compose build backend frontend; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Docker Compose image build failed after 3 attempts."
+              exit 1
+            fi
+            delay=$((attempt * 15))
+            echo "::warning::Image build attempt ${attempt} failed; retrying in ${delay}s."
+            sleep "$delay"
+          done
+
+      - name: Start Docker Compose stack
+        if: inputs.target_url == ''
+        run: docker compose up --no-build --wait --wait-timeout 240 -d
+
+      - name: Verify Compose frontend health
+        if: inputs.target_url == ''
+        env:
+          FRONTEND_URL: http://frontend:8080
+        run: |
+          docker compose exec -T frontend sh -c 'wget -qO- http://127.0.0.1:8080/health >/dev/null'
+
+      - name: Run ZAP baseline against the Compose stack
+        if: inputs.target_url == ''
+        env:
+          ZAP_TARGET_URL: http://frontend:8080
+          ZAP_DOCKER_NETWORK: inventory-security-${{ github.run_id }}_inventory-network
+        run: tests/security/run-zap-baseline.sh
+
+      - name: Run ZAP baseline against staging
+        if: inputs.target_url != ''
+        env:
+          ZAP_TARGET_URL: ${{ inputs.target_url }}
+          ZAP_DOCKER_NETWORK: bridge
+        run: tests/security/run-zap-baseline.sh
+
+      - name: Collect Docker Compose diagnostics
+        if: always() && inputs.target_url == ''
+        run: docker compose logs --no-color > tests/security/compose.log || true
+
+      - name: Verify security artifact safety
+        id: security_artifact_safety
+        if: always()
+        run: |
+          artifact_paths=(tests/security/reports)
+          if [ -f tests/security/compose.log ]; then
+            artifact_paths+=(tests/security/compose.log)
+          fi
+          ./scripts/security/verify-artifacts.sh "${artifact_paths[@]}"
+
+      - name: Upload safe ZAP reports
+        if: always() && steps.security_artifact_safety.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report-${{ github.run_number }}
+          path: tests/security/reports/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload safe Docker Compose diagnostics
+        if: always() && inputs.target_url == '' && steps.security_artifact_safety.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-compose-diagnostics-${{ github.run_number }}
+          path: tests/security/compose.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop Docker Compose stack
+        if: always() && inputs.target_url == ''
+        run: docker compose down -v --remove-orphans

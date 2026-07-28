@@ -65,36 +65,37 @@ sin exponer credenciales administrativas al frontend.
 
 Cliente usado por la API:
 
-| Variable | Valor local por defecto |
-|----------|-------------------------|
+| Variable | Configuración local |
+|----------|---------------------|
 | `KEYCLOAK_ADMIN_URL` | `http://keycloak:8080` en Docker Compose |
 | `KEYCLOAK_ADMIN_REALM` | `inventory` |
 | `KEYCLOAK_ADMIN_CLIENT_ID` | `inventory-admin-service` |
-| `KEYCLOAK_ADMIN_CLIENT_SECRET` | `cambiar-admin-service` |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | Generado en `.env`; no tiene valor versionado |
 
 El cliente `inventory-admin-service` se importa desde `infra/keycloak/inventory-realm.json` con
 permisos minimos de `realm-management`: `view-realm`, `query-users`, `view-users` y `manage-users`. En ambientes
 reales el secreto debe inyectarse con un secret manager o variable protegida, no editarse en codigo.
+El realm usa el placeholder `${KEYCLOAK_ADMIN_CLIENT_SECRET}`, que Keycloak resuelve desde el
+entorno durante el import.
 
 La app administra roles funcionales (`INVENTORY_ADMIN`, `STOCK_OPERATOR`, `INVENTORY_VIEWER`,
 `AUDIT_REVIEWER`). Los permisos individuales se muestran como matriz de consulta y se heredan por
 roles compuestos en Keycloak. La gestion de contrasenas, reset temporal y politicas avanzadas quedan
 en la consola de Keycloak.
 
-## Usuarios demo locales
+## Usuarios locales
 
-Estas credenciales son solo para desarrollo local y pruebas demo.
+| Usuario | Variable de contraseña | Rol |
+|---------|------------------------|-----|
+| `carlos` | `E2E_ADMIN_PASSWORD` | `INVENTORY_ADMIN` |
+| `edwin` | `E2E_OPERATOR_PASSWORD` | `STOCK_OPERATOR` |
+| `viewer` | `E2E_VIEWER_PASSWORD` | `INVENTORY_VIEWER` |
+| `auditor` | `E2E_AUDITOR_PASSWORD` | `AUDIT_REVIEWER` |
 
-| Usuario | Contrasena | Rol |
-|---------|------------|-----|
-| `carlos` | `admin123` | `INVENTORY_ADMIN` |
-| `edwin` | `admin123` | `STOCK_OPERATOR` |
-| `viewer` | `admin123` | `INVENTORY_VIEWER` |
-| `auditor` | `admin123` | `AUDIT_REVIEWER` |
-
-La consola administrativa local de Keycloak usa `admin` / `admin123` por defecto. Si el volumen de
-Keycloak ya existia con otra clave, recrear el contenedor/volumen local para importar el realm
-actualizado.
+Las contraseñas y `KEYCLOAK_ADMIN_PASSWORD` se generan mediante
+`./scripts/security/init-secret-env.sh local`. El realm solo contiene
+placeholders. Si Keycloak ya importó valores anteriores, rotar `.env` y
+recrear los volúmenes locales.
 
 ## Comportamiento esperado
 
@@ -135,4 +136,23 @@ Comando de verificacion:
 ```bash
 cd backend
 ./gradlew test
+```
+
+## CORS y headers HTTP
+
+La API permite solicitudes CORS solo desde los orígenes de desarrollo `http://localhost:5173` y
+`http://127.0.0.1:5173`. Acepta los métodos `GET`, `POST`, `PUT`, `DELETE` y `OPTIONS`, con los
+headers `Authorization`, `Content-Type` y `Accept`. No permite credenciales de navegador porque la
+autenticación usa el header Bearer JWT.
+
+El frontend usa el proxy mismo-origen `/api` en Docker Compose y devuelve una Content Security
+Policy que permite recursos propios y el origen configurado en `KEYCLOAK_PUBLIC_URL`. También
+devuelve `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy`. Los estilos inline se
+mantienen permitidos únicamente por el mecanismo de estilos dinámicos de Angular; los scripts
+inline y `eval` permanecen bloqueados.
+
+Con el stack levantado, validar los headers con:
+
+```bash
+bash tests/security/verify-headers.sh
 ```
