@@ -99,7 +99,7 @@ jobs:
           DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           source: .
-          files: docker-compose.yml
+          files: docker-bake.hcl
           targets: backend,frontend
           load: true
           provenance: false
