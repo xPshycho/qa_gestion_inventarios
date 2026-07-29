@@ -60,3 +60,13 @@ test-results/performance/k6/k6-summary.md
 .production/
 __pycache__/
 *.py[cod]
+
+# OpenTofu working data and local plans. Lock files remain versioned.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log

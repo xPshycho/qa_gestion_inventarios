@@ -75,6 +75,7 @@ Los runners leen las URLs desde los puertos del `.env`; la fuente de verdad es
 | `make test-backend` | Unitarias y JaCoCo. |
 | `make test-api` | API/contrato RestAssured. |
 | `make test-integration` | Testcontainers. |
+| `make test-infra` | Formato, validación y planes contractuales OpenTofu con provider simulado; no llama APIs GCP. |
 | `make test-frontend` | Karma en Chromium Playwright/Docker. |
 | `make test-e2e` | Stack Compose y Playwright. |
 | `make test-performance` | k6 smoke. |
@@ -131,6 +132,7 @@ sin imprimirlos y limpia el proyecto Compose `inventory-e2e-local`.
 | `Quality Pipeline` | clasificación de rutas, pipelines aplicables, gate agregado `CI Required` y promoción | No genera evidencia propia; agrega los resultados de los workflows llamados |
 | `Backend CI` | build, unit tests, API tests, integration tests | `test-results-backend-unit-*`, `test-results-backend-api-*`, `test-results-backend-integration-*` |
 | `Frontend CI` | build Angular, unit tests con coverage | `test-results-frontend-unit-*`, `frontend-diagnostics-*` si falla |
+| `OpenTofu CI` | formato, validación y planes contractuales de development, staging y production | No publica planes ni credenciales; la salida queda en el log |
 | `Playwright E2E` | stack Docker Compose, matriz Playwright y safety | `test-results-e2e-playwright-*`, solo después de `verify-artifacts.sh` |
 | `Security Testing` | Trivy, ZAP y safety de evidencia | `test-results-security-trivy-*`, `test-results-security-zap-*` |
 | `Secret Scanning` | Gitleaks sobre PR y push | No publica artifacts ni comentarios con detecciones |
@@ -149,7 +151,8 @@ siguiendo las áreas y ramas definidas en el anexo del proyecto:
 | `tests/e2e/**` | Playwright y staging post-deploy |
 | `tests/security/**` o `scripts/security/**` | Security Testing y staging post-deploy |
 | `tests/performance/**` | Staging post-deploy, que ejecuta k6 smoke |
-| `infra/**`, Docker o Compose | Playwright, seguridad y staging |
+| `infra/opentofu/**` o scripts OpenTofu | OpenTofu CI; por afectar `infra/**`, también Playwright, seguridad y staging |
+| Otro `infra/**`, Docker o Compose | Playwright, seguridad y staging |
 | Workflows, Jenkins o scripts de reporting | Pipeline completo para validar el cambio de CI/CD |
 
 El job `CI Required` falla si una suite seleccionada falla o se omite, y también

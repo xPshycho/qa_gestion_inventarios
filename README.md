@@ -147,6 +147,7 @@ docker compose exec postgres \
 │   ├── docker/                 # Dockerfiles y compose
 │   ├── keycloak/               # Realm export y configuracion
 │   ├── migrations/             # Evidencias o recursos de migraciones
+│   ├── opentofu/               # GCP declarativo, state y ambientes aislados
 │   └── observability/          # Grafana, Prometheus, Loki, Tempo, Alloy
 ├── tests/
 │   ├── e2e/                    # Playwright
@@ -272,6 +273,7 @@ make test
 make test-backend
 make test-api
 make test-integration
+make test-infra
 make test-frontend
 make test-e2e
 make test-performance
@@ -419,4 +421,6 @@ posterior al inicio del check con el `deployment.id` de este preview.
 - `docs/security/secrets-management.md`: contrato de secretos, rotación, Gitleaks, Jenkins y GitHub Actions.
 - `docs/ci/jenkins.md`: pipeline Jenkins, credenciales, stages, reportes y artifacts.
 - `docs/deployment/staging.md`: despliegue staging reproducible, secretos, validacion, promocion y rollback.
+- `docs/deployment/opentofu-gcp.md`: bootstrap GCS, módulos OpenTofu, IAM, secretos y planes por ambiente.
+- `docs/deployment/gcp-vm.md`: operación de la producción vigente en una VM de Google Cloud.
 - `docs/testing/ci-reporting.md`: guia de testing, cobertura, artifacts y evidencia para PRs.

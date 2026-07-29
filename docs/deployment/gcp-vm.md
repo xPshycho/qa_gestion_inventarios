@@ -582,3 +582,8 @@ ofrece alta disponibilidad, rolling deploy real, base administrada ni failover
 regional. Para una producción con SLO estricto, migrar bases a servicios
 administrados, imágenes a Artifact Registry y workloads a MIG/GKE/Cloud Run,
 manteniendo los mismos gates por SHA.
+
+La base declarativa para esa evolución está documentada en
+[`opentofu-gcp.md`](opentofu-gcp.md). Sus recursos se crean en paralelo y no
+administran ni importan esta VM; cualquier cambio de tráfico requiere una
+migración posterior y un rollback explícito.

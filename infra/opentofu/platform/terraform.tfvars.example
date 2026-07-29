@@ -1,0 +1,7 @@
+project_id    = "replace-with-gcp-project-id"
+region        = "us-central1"
+repository_id = "inventory-images"
+
+labels = {
+  owner = "qa-team"
+}
