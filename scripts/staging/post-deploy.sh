@@ -15,14 +15,31 @@ ensure_evidence_dir
 
 readonly post_deploy_dir="$STAGING_EVIDENCE_DIR/post-deploy"
 readonly phase_log_dir="$post_deploy_dir/logs"
+readonly phase_result_dir="$STAGING_STATE_DIR/.post-deploy-phase-results-$STAGING_DEPLOYMENT_ID"
+readonly run_zap="${STAGING_RUN_ZAP:-true}"
+if [[ "$run_zap" != true && "$run_zap" != false ]]; then
+  staging_error "STAGING_RUN_ZAP must be either true or false"
+  exit 2
+fi
+
 reset_post_deploy_evidence
-mkdir -p -- "$phase_log_dir"
-chmod 0700 -- "$post_deploy_dir" "$phase_log_dir"
+mkdir -p -- "$phase_log_dir" "$phase_result_dir"
+chmod 0700 -- "$post_deploy_dir" "$phase_log_dir" "$phase_result_dir"
+
+cleanup_phase_results() {
+  if [[ -d "$phase_result_dir" ]]; then
+    find "$phase_result_dir" -type f -delete || true
+    rmdir "$phase_result_dir" 2>/dev/null || true
+  fi
+}
+trap cleanup_phase_results EXIT
 
 phase_records=()
 failed_phases=0
+parallel_phase_names=()
+parallel_phase_pids=()
 
-run_phase() {
+execute_phase() {
   local phase_name="$1"
   shift
   local started_at
@@ -44,28 +61,108 @@ run_phase() {
     result=PASS
   else
     result=FAIL
-    failed_phases=$((failed_phases + 1))
   fi
 
-  phase_records+=("$(
-    jq --compact-output --null-input \
-      --arg name "$phase_name" \
-      --arg result "$result" \
-      --arg startedAt "$started_at" \
-      --arg finishedAt "$finished_at" \
-      --arg log "logs/$phase_name.log" \
-      --argjson exitCode "$exit_code" \
-      '{
-        name: $name,
-        result: $result,
-        exitCode: $exitCode,
-        startedAt: $startedAt,
-        finishedAt: $finishedAt,
-        log: $log
-      }'
-  )")
+  jq --compact-output --null-input \
+    --arg name "$phase_name" \
+    --arg result "$result" \
+    --arg startedAt "$started_at" \
+    --arg finishedAt "$finished_at" \
+    --arg log "logs/$phase_name.log" \
+    --argjson exitCode "$exit_code" \
+    '{
+      name: $name,
+      result: $result,
+      exitCode: $exitCode,
+      startedAt: $startedAt,
+      finishedAt: $finishedAt,
+      log: $log
+    }' > "$phase_result_dir/$phase_name.json"
 
   printf '<== %s: %s\n' "$phase_name" "$result"
+}
+
+record_phase_result() {
+  local phase_name="$1"
+  local result_file="$phase_result_dir/$phase_name.json"
+
+  if [[ ! -s "$result_file" ]]; then
+    jq --compact-output --null-input \
+      --arg name "$phase_name" \
+      '{
+        name: $name,
+        result: "FAIL",
+        exitCode: 1,
+        error: "phase result was not produced"
+      }' > "$result_file"
+  fi
+
+  phase_records+=("$(<"$result_file")")
+  if ! jq --exit-status '.exitCode == 0' "$result_file" >/dev/null; then
+    failed_phases=$((failed_phases + 1))
+  fi
+}
+
+run_phase() {
+  local phase_name="$1"
+  shift
+
+  execute_phase "$phase_name" "$@"
+  record_phase_result "$phase_name"
+}
+
+start_parallel_phase() {
+  local phase_name="$1"
+  shift
+
+  execute_phase "$phase_name" "$@" &
+  parallel_phase_names+=("$phase_name")
+  parallel_phase_pids+=("$!")
+}
+
+wait_parallel_phases() {
+  local index
+  local wait_exit_code
+
+  for index in "${!parallel_phase_pids[@]}"; do
+    set +e
+    wait "${parallel_phase_pids[$index]}"
+    wait_exit_code=$?
+    set -e
+
+    if [[ "$wait_exit_code" -ne 0 ]]; then
+      printf 'Parallel phase %s terminated unexpectedly with exit code %s.\n' \
+        "${parallel_phase_names[$index]}" \
+        "$wait_exit_code" >&2
+    fi
+    record_phase_result "${parallel_phase_names[$index]}"
+  done
+}
+
+record_skipped_phase() {
+  local phase_name="$1"
+  local reason="$2"
+  local recorded_at
+  local log_file="$phase_log_dir/$phase_name.log"
+
+  recorded_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '%s\n' "$reason" | tee "$log_file"
+  jq --compact-output --null-input \
+    --arg name "$phase_name" \
+    --arg startedAt "$recorded_at" \
+    --arg finishedAt "$recorded_at" \
+    --arg log "logs/$phase_name.log" \
+    --arg reason "$reason" \
+    '{
+      name: $name,
+      result: "SKIP",
+      exitCode: 0,
+      startedAt: $startedAt,
+      finishedAt: $finishedAt,
+      log: $log,
+      reason: $reason
+    }' > "$phase_result_dir/$phase_name.json"
+  record_phase_result "$phase_name"
 }
 
 integration_phase() {
@@ -119,11 +216,7 @@ e2e_phase() {
   PLAYWRIGHT_UX_EVIDENCE_DIR="$post_deploy_dir/e2e/ux-evidence" \
   PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS=false \
   PLAYWRIGHT_SAFE_REPORTING=true \
-    pnpm --dir "$e2e_directory" exec playwright test \
-      --project=chromium \
-      --project=responsive-mobile \
-      --project=responsive-tablet \
-      --project=responsive-desktop
+    pnpm --dir "$e2e_directory" test:smoke
 }
 
 security_headers_phase() {
@@ -185,11 +278,19 @@ performance_smoke_phase() {
 }
 
 run_phase integration integration_phase
-run_phase api-and-observability api_and_observability_phase
-run_phase e2e e2e_phase
-run_phase security-headers security_headers_phase
-run_phase security-zap security_zap_phase
-run_phase performance-smoke performance_smoke_phase
+start_parallel_phase api-and-observability api_and_observability_phase
+start_parallel_phase e2e-smoke e2e_phase
+start_parallel_phase security-headers security_headers_phase
+start_parallel_phase performance-smoke performance_smoke_phase
+if [[ "$run_zap" == true ]]; then
+  start_parallel_phase security-zap security_zap_phase
+fi
+wait_parallel_phases
+if [[ "$run_zap" == false ]]; then
+  record_skipped_phase \
+    security-zap \
+    "ZAP is skipped in the PR staging preview because the dedicated Security Testing job already ran it."
+fi
 
 set +e
 "$script_dir/collect-evidence.sh"
