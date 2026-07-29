@@ -22,11 +22,14 @@ concurrency:
 
 env:
   COMPOSE_PROJECT_NAME: inventory-e2e-${{ github.run_id }}
+  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.60.0-noble
+  PLAYWRIGHT_CONTAINER_NAME: inventory-playwright-${{ github.run_id }}
 
 jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     defaults:
       run:
@@ -49,8 +52,10 @@ jobs:
       - name: Install E2E dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browser matrix
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Pull pinned Playwright browser image
+        timeout-minutes: 10
+        working-directory: ${{ github.workspace }}
+        run: docker pull "$PLAYWRIGHT_IMAGE"
 
       - name: Generate ephemeral local credentials
         working-directory: ${{ github.workspace }}
@@ -65,13 +70,32 @@ jobs:
           E2E_MANAGE_STACK: 'true'
         run: pnpm run stack:ready
 
-      - name: Run Playwright tests
-        env:
-          E2E_MANAGE_STACK: 'false'
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME: test-results/playwright-results.xml
-          PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS: 'false'
-          PLAYWRIGHT_SAFE_REPORTING: 'true'
-        run: pnpm exec playwright test
+      - name: Run Playwright tests in browser image
+        timeout-minutes: 20
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker run --rm --init --ipc=host --network=host \
+            --name "$PLAYWRIGHT_CONTAINER_NAME" \
+            --volume "${{ github.workspace }}:/work" \
+            --workdir /work/tests/e2e \
+            --env CI=true \
+            --env E2E_MANAGE_STACK=false \
+            --env PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            --env PLAYWRIGHT_JUNIT_OUTPUT_NAME=test-results/playwright-results.xml \
+            --env PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS=false \
+            --env PLAYWRIGHT_SAFE_REPORTING=true \
+            "$PLAYWRIGHT_IMAGE" \
+            /work/tests/e2e/node_modules/.bin/playwright test
+
+      - name: Normalize Playwright artifact ownership
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          for path in tests/e2e/test-results tests/e2e/ux-evidence; do
+            if [ -e "$path" ]; then
+              sudo chown -R "$(id -u):$(id -g)" "$path"
+            fi
+          done
 
       - name: Collect Docker Compose diagnostics
         if: always()
@@ -108,7 +132,8 @@ jobs:
           {
             echo "## Playwright evidence"
             echo ""
-            echo "- Command: \`pnpm exec playwright test\`"
+            echo "- Runtime: \`${PLAYWRIGHT_IMAGE}\`"
+            echo "- Command: \`playwright test\`"
             echo "- JUnit report: \`tests/e2e/test-results/playwright-results.xml\`"
             echo "- Artifact safety: \`${{ steps.artifact_safety.outcome }}\`"
             echo "- Accessibility, keyboard, responsive and browser evidence: \`tests/e2e/ux-evidence/**\`"
@@ -120,4 +145,6 @@ jobs:
       - name: Stop Docker Compose stack
         if: always()
         working-directory: ${{ github.workspace }}
-        run: docker compose down -v --remove-orphans
+        run: |
+          docker rm -f "$PLAYWRIGHT_CONTAINER_NAME" 2>/dev/null || true
+          docker compose down -v --remove-orphans
