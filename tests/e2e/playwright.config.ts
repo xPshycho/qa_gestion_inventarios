@@ -3,20 +3,25 @@ import { defineConfig, devices } from '@playwright/test';
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const junitOutputFile =
-  process.env.PLAYWRIGHT_JUNIT_OUTPUT_NAME ?? 'test-results/playwright-results.xml';
+  process.env.PLAYWRIGHT_JUNIT_OUTPUT_NAME
+  ?? '../../test-results/e2e/playwright/evidence/junit/playwright-results.xml';
 const outputDir =
-  process.env.PLAYWRIGHT_OUTPUT_DIR ?? './test-results';
+  process.env.PLAYWRIGHT_OUTPUT_DIR
+  ?? '../../test-results/e2e/playwright/evidence/artifacts';
 const htmlOutputDir =
-  process.env.PLAYWRIGHT_HTML_OUTPUT_DIR ?? './playwright-report';
+  process.env.PLAYWRIGHT_HTML_OUTPUT_DIR
+  ?? '../../test-results/e2e/playwright/evidence/html';
 const safeReporting =
   process.env.PLAYWRIGHT_SAFE_REPORTING === 'true' || Boolean(process.env.CI);
 const retainSensitiveArtifacts =
   !safeReporting
   && process.env.PLAYWRIGHT_RETAIN_SENSITIVE_ARTIFACTS !== 'false';
 const safeScreenshotOutputDir =
-  process.env.PLAYWRIGHT_SAFE_SCREENSHOT_DIR ?? './safe-screenshots';
+  process.env.PLAYWRIGHT_SAFE_SCREENSHOT_DIR
+  ?? '../../test-results/e2e/playwright/evidence/screenshots';
 const uxEvidenceOutputDir =
-  process.env.PLAYWRIGHT_UX_EVIDENCE_DIR ?? './ux-evidence';
+  process.env.PLAYWRIGHT_UX_EVIDENCE_DIR
+  ?? '../../test-results/e2e/playwright/evidence/ux';
 const chromiumLaunchOptions = executablePath
   ? { launchOptions: { executablePath } }
   : {};

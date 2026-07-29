@@ -194,7 +194,7 @@ pipeline {
                         pnpm install --frozen-lockfile
                         pnpm exec playwright install chromium firefox webkit
                         E2E_MANAGE_STACK=false pnpm run stack:ready
-                        PLAYWRIGHT_JUNIT_OUTPUT_NAME=playwright-results.xml pnpm exec playwright test
+                        pnpm exec playwright test
                     '''
                 }
             }
@@ -250,25 +250,64 @@ pipeline {
                 reportName: 'JaCoCo Integration Coverage'
             ])
 
-            junit allowEmptyResults: true, testResults: 'tests/e2e/playwright-results.xml'
-
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,backend/build/reports/**,backend/build/test-results/**,backend/build/jacoco/*.exec,frontend/dist/**,frontend-audit.json'
+            junit allowEmptyResults: true, testResults: 'test-results/e2e/playwright/evidence/junit/*.xml'
 
             script {
-                if (fileExists('tests/e2e/playwright-results.xml')) {
+                String suiteStatus = currentBuild.currentResult == 'SUCCESS' ? 'passed' : 'failed'
+                sh """#!/usr/bin/env bash
+                    set -euo pipefail
+                    python3 scripts/testing/collect_test_results.py \
+                        --suite backend/unit \
+                        --status '${suiteStatus}' \
+                        --junit backend/build/test-results/test \
+                        --copy junit=backend/build/test-results/test \
+                        --copy html=backend/build/reports/tests/test \
+                        --copy coverage=backend/build/reports/jacoco/test \
+                        --metadata 'workflow=Jenkins'
+                    python3 scripts/testing/collect_test_results.py \
+                        --suite backend/integration \
+                        --status '${suiteStatus}' \
+                        --junit backend/build/test-results/integrationTest \
+                        --copy junit=backend/build/test-results/integrationTest \
+                        --copy html=backend/build/reports/tests/integrationTest \
+                        --copy coverage=backend/build/reports/jacoco/integrationTest \
+                        --metadata 'workflow=Jenkins'
+                    python3 scripts/testing/collect_test_results.py \
+                        --suite backend/api \
+                        --status '${suiteStatus}' \
+                        --junit backend/build/test-results/apiTest \
+                        --copy junit=backend/build/test-results/apiTest \
+                        --copy html=backend/build/reports/tests/apiTest \
+                        --metadata 'workflow=Jenkins'
+                    python3 scripts/testing/collect_test_results.py \
+                        --suite frontend/unit \
+                        --status unknown \
+                        --copy coverage=frontend/coverage \
+                        --metadata 'workflow=Jenkins' \
+                        --metadata 'execution=not-run-by-this-pipeline'
+                    python3 scripts/testing/collect_test_results.py \
+                        --suite e2e/playwright \
+                        --status '${suiteStatus}' \
+                        --junit test-results/e2e/playwright/evidence/junit \
+                        --metadata 'workflow=Jenkins'
+                """
+            }
+
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/build/libs/*.jar,frontend/dist/**,frontend-audit.json,test-results/backend/**,test-results/frontend/**'
+
+            script {
+                if (fileExists('test-results/e2e/playwright/summary.json')) {
                     int artifactSafetyStatus = sh(
                         script: '''#!/usr/bin/env bash
                             set -euo pipefail
-                            ./scripts/security/verify-artifacts.sh \
-                                tests/e2e/playwright-results.xml \
-                                tests/e2e/ux-evidence
+                            ./scripts/security/verify-artifacts.sh test-results/e2e/playwright
                         ''',
                         returnStatus: true
                     )
                     if (artifactSafetyStatus == 0) {
                         archiveArtifacts(
                             allowEmptyArchive: false,
-                            artifacts: 'tests/e2e/playwright-results.xml,tests/e2e/ux-evidence/**'
+                            artifacts: 'test-results/e2e/playwright/**'
                         )
                     } else {
                         echo 'Playwright evidence was withheld because artifact safety did not pass.'

@@ -1,0 +1,25 @@
+{
+  "evidence": [
+    {
+      "available": true,
+      "filesCopied": 24,
+      "name": "junit",
+      "source": "backend/build/test-results/test"
+    }
+  ],
+  "generatedAt": "2026-07-28T00:00:00+00:00",
+  "junit": {
+    "durationSeconds": 12.5,
+    "errors": 0,
+    "failures": 0,
+    "files": 24,
+    "skipped": 0,
+    "tests": 86
+  },
+  "metadata": {
+    "workflow": "Backend CI"
+  },
+  "schemaVersion": 1,
+  "status": "passed",
+  "suite": "backend/unit"
+}

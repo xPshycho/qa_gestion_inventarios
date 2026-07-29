@@ -49,7 +49,7 @@ export function loadEnvironment() {
       'PRODUCTS_PATH',
     ),
     reportsPath: normalizePath(env('REPORTS_PATH', '/reports/dashboard'), 'REPORTS_PATH'),
-    resultsDir: env('K6_RESULTS_DIR', 'tests/performance/results').replace(/\/+$/, ''),
+    resultsDir: env('K6_RESULTS_DIR', 'test-results/performance/k6').replace(/\/+$/, ''),
     sleepSeconds: numberEnv('K6_SLEEP_SECONDS', 1, 0),
     thresholds: {
       errorRate: numberEnv('K6_ERROR_RATE', 0.01, 0),

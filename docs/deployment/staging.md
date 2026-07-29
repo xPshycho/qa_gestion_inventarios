@@ -7,7 +7,7 @@ la evidencia y luego se destruye el stack con sus volúmenes.
 
 No existe una URL pública o persistente. La referencia verificable de cada
 despliegue es el run de `Staging Preview`, su SHA desplegado y el artifact
-`staging-evidence-<DEPLOYED_SHA>-<run_attempt>`, si el gate de seguridad permite
+`test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`, si el gate de seguridad permite
 publicarlo. En una ejecución local, el stack permanece disponible en el host
 hasta ejecutar `destroy.sh`. Esta guía describe el contrato implementado; no
 constituye por sí sola evidencia de que exista un run remoto.
@@ -182,23 +182,27 @@ Usar `--volumes` solamente para un ambiente descartable:
 
 ## Pipeline de GitHub Actions
 
-`Staging Preview` se ejecuta en:
+`Quality Pipeline` se ejecuta en cada PR y llama `Staging Preview` cuando las
+rutas modificadas afectan el sistema desplegable, E2E, seguridad, performance,
+observabilidad, Docker, Compose o CI/CD. Las rutas de staging son:
 
-- pull requests cuyo destino es `develop`;
+- pull requests aplicables cuyo destino es `develop` o `staging`;
 - pull requests cuyo destino es `main`, con un gate que exige que la rama
   origen sea exactamente `staging`;
-- pushes a `staging`;
-- `workflow_dispatch`, con un `deploy_ref` opcional, cuando el workflow ya
-  exista en la rama por defecto.
+- todos los pushes a `staging`.
 
 Un PR hacia `main` desde cualquier rama distinta de `staging` o desde un fork
 falla el job de despliegue y no es una ruta de promoción válida.
 
 El checkout, las imágenes y `deployment.json` usan el commit exacto que se
-despliega. El pipeline primero ejecuta los quality gates:
+despliega. Antes de llamar staging, `CI Required` exige que todos los quality
+gates seleccionados para ese PR hayan terminado correctamente:
 
-- backend unitario, API MockMvc, integración Testcontainers y JaCoCo;
-- frontend build, unit tests y cobertura.
+- backend unitario, API MockMvc, integración Testcontainers, JaCoCo y
+  SonarCloud cuando cambia backend;
+- frontend build, unit tests y cobertura cuando cambia frontend;
+- Playwright y seguridad cuando cambia runtime, E2E, seguridad o
+  infraestructura.
 
 Después crea un proyecto Compose único por run, con:
 
@@ -258,7 +262,7 @@ Una ejecución cuya revisión final de seguridad pasa intenta publicar por 30
 días:
 
 ```text
-staging-evidence-<DEPLOYED_SHA>-<run_attempt>
+test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>
 ├── deployment.json
 ├── deployment-summary.md
 ├── compose-ps.txt
@@ -289,7 +293,7 @@ La evidencia de cierre del issue debe incluir:
 
 - enlace al run exitoso;
 - SHA de `deployment.json`;
-- nombre exacto `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`;
+- nombre exacto `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`;
 - `ephemeral` y `runner-private`;
 - resultado de las siete fases, incluida `evidence-safety`;
 - al menos una captura o reporte del flujo principal;
@@ -319,15 +323,9 @@ Si el workflow referencia un environment inexistente, GitHub puede crearlo sin
 reglas de protección. Por eso no se debe usar ese mecanismo como sustituto de la
 configuración anterior.
 
-Cuando exista por primera vez el check
-`Deploy and validate runner-private staging`, el propietario también debe
-agregarlo como status check requerido a las reglas de las ramas de promoción
-correspondientes.
-
-`workflow_dispatch` solo queda disponible desde la interfaz cuando el archivo
-del workflow existe en la rama por defecto. Mientras `main` no lo contenga, la
-forma reproducible de validación es el PR a `develop` o el push resultante de un
-PR aprobado a `staging`.
+El check estable que debe configurarse como obligatorio en los rulesets es
+`CI Required`. Staging depende de ese check dentro del mismo DAG y no admite
+una ejecución directa que evite los quality gates.
 
 ## Promoción
 

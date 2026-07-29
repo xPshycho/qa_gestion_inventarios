@@ -420,28 +420,30 @@ servicio remoto.
 ## Flujo automático de producción
 
 El workflow no tiene `workflow_dispatch`, no responde a pull requests ni se
-activa desde `develop` o `staging`. Su secuencia es:
+activa desde `develop` o `staging`. Se activa mediante `workflow_run` únicamente
+cuando `Quality Pipeline` termina exitosamente para un push a `main`, usando
+exactamente `workflow_run.head_sha`. Su secuencia es:
 
-1. Backend: unit, API, integración y cobertura.
-2. Frontend: instalación reproducible, build, unit tests y cobertura.
-3. Aprobación del GitHub Environment `production`.
-4. WIF oficial de Google y conexión a la VM mediante IAP/OS Login.
-5. Creación de un Git bundle completo desde el checkout exacto, con credenciales
+1. Verificación previa completa en `Quality Pipeline`: pipelines aplicables,
+   `CI Required` y mismo SHA que será promovido.
+2. Aprobación del GitHub Environment `production`.
+3. WIF oficial de Google y conexión a la VM mediante IAP/OS Login.
+4. Creación de un Git bundle completo desde el checkout exacto, con credenciales
    persistentes del checkout deshabilitadas; checksum, clonación estándar y
    verificación remota.
-6. Bootstrap idempotente cuando falten Git, Docker/Compose o Certbot `>=5.4`.
+5. Bootstrap idempotente cuando falten Git, Docker/Compose o Certbot `>=5.4`.
    El release queda en `releases/<SHA>` y se comprueba que
    `git rev-parse HEAD` coincide con el SHA del evento.
-7. Verificación cerrada del certificado IP emitido durante el provisioning.
-8. Backup y despliegue remoto con `scripts/gcp/deploy.sh`.
-9. Checks remotos de health y rutas públicas.
-10. `pnpm test:smoke` desde el runner contra la IP: frontend, backend health,
+6. Verificación cerrada del certificado IP emitido durante el provisioning.
+7. Backup y despliegue remoto con `scripts/gcp/deploy.sh`.
+8. Checks remotos de health y rutas públicas.
+9. `pnpm test:smoke` desde el runner contra la IP: frontend, backend health,
    OIDC, login viewer, dashboard, API y catálogo, sin mutaciones.
-11. OWASP ZAP baseline desde el runner contra la misma URL.
-12. Recolección, revisión de seguridad, rollback cuando corresponde, segunda
+10. OWASP ZAP baseline desde el runner contra la misma URL.
+11. Recolección, revisión de seguridad, rollback cuando corresponde, segunda
     recolección y revisión final.
-13. Descarga y publicación solo si la revisión final de evidencia da `PASS`.
-14. Retención remota: se conservan únicamente los releases actual y anterior,
+12. Descarga y publicación solo si la revisión final de evidencia da `PASS`.
+13. Retención remota: se conservan únicamente los releases actual y anterior,
     el último backup pre-deploy y la evidencia de esos dos SHA. También se
     eliminan imágenes etiquetadas de releases descartados, caché de build y
     paquetes temporales del workflow.

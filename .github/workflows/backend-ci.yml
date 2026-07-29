@@ -1,16 +1,8 @@
 name: Backend CI
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - staging
-  pull_request:
-    branches:
-      - main
-      - develop
-      - staging
+  workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate GCP retention policy
         working-directory: .
@@ -39,7 +31,7 @@ jobs:
           ./tests/gcp/cleanup-retention.sh
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: 21
           distribution: temurin
@@ -50,7 +42,7 @@ jobs:
 
       - name: Upload backend build outputs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: backend-build-${{ github.run_number }}
           path: |
@@ -66,10 +58,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: 21
           distribution: temurin
@@ -78,19 +70,31 @@ jobs:
       - name: Run unit tests and coverage gate
         run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification --no-daemon
 
-      - name: Upload unit test and coverage reports
+      - name: Collect centralized unit test results
         if: always()
-        uses: actions/upload-artifact@v4
+        working-directory: .
+        run: |
+          status=failed
+          if [ "${{ job.status }}" = success ]; then status=passed; fi
+          if [ "${{ job.status }}" = cancelled ]; then status=cancelled; fi
+          python3 scripts/testing/collect_test_results.py \
+            --suite backend/unit \
+            --status "$status" \
+            --junit backend/build/test-results/test \
+            --copy junit=backend/build/test-results/test \
+            --copy html=backend/build/reports/tests/test \
+            --copy coverage=backend/build/reports/jacoco/test \
+            --metadata "workflow=Backend CI" \
+            --metadata "run=${{ github.run_id }}" \
+            --metadata "sha=${{ github.sha }}"
+
+      - name: Upload centralized unit test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: backend-unit-test-reports-${{ github.run_number }}
-          path: |
-            backend/build/reports/tests/**
-            backend/build/reports/jacoco/**
-            backend/build/reports/tests/test/**
-            backend/build/test-results/test/**
-            backend/build/reports/jacoco/test/**
-            backend/build/jacoco/test.exec
-          if-no-files-found: warn
+          name: test-results-backend-unit-${{ github.run_number }}
+          path: test-results/backend/unit/**
+          if-no-files-found: error
           retention-days: 14
 
   api-tests:
@@ -100,10 +104,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: 21
           distribution: temurin
@@ -112,16 +116,31 @@ jobs:
       - name: Run API contract tests
         run: ./gradlew apiTest --no-daemon
 
-      - name: Upload API test reports
+      - name: Collect centralized API test results
         if: always()
-        uses: actions/upload-artifact@v4
+        working-directory: .
+        run: |
+          status=failed
+          if [ "${{ job.status }}" = success ]; then status=passed; fi
+          if [ "${{ job.status }}" = cancelled ]; then status=cancelled; fi
+          python3 scripts/testing/collect_test_results.py \
+            --suite backend/api \
+            --status "$status" \
+            --junit backend/build/test-results/apiTest \
+            --copy junit=backend/build/test-results/apiTest \
+            --copy html=backend/build/reports/tests/apiTest \
+            --copy diagnostics=backend/build/reports/problems \
+            --metadata "workflow=Backend CI" \
+            --metadata "run=${{ github.run_id }}" \
+            --metadata "sha=${{ github.sha }}"
+
+      - name: Upload centralized API test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: backend-api-test-reports-${{ github.run_number }}
-          path: |
-            backend/build/reports/tests/apiTest/**
-            backend/build/test-results/apiTest/**
-            backend/build/reports/problems/**
-          if-no-files-found: warn
+          name: test-results-backend-api-${{ github.run_number }}
+          path: test-results/backend/api/**
+          if-no-files-found: error
           retention-days: 14
 
   integration-tests:
@@ -131,10 +150,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: 21
           distribution: temurin
@@ -143,20 +162,32 @@ jobs:
       - name: Run integration tests with JaCoCo
         run: ./gradlew integrationTest --no-daemon
 
-      - name: Upload integration test and coverage reports
+      - name: Collect centralized integration test results
         if: always()
-        uses: actions/upload-artifact@v4
+        working-directory: .
+        run: |
+          status=failed
+          if [ "${{ job.status }}" = success ]; then status=passed; fi
+          if [ "${{ job.status }}" = cancelled ]; then status=cancelled; fi
+          python3 scripts/testing/collect_test_results.py \
+            --suite backend/integration \
+            --status "$status" \
+            --junit backend/build/test-results/integrationTest \
+            --copy junit=backend/build/test-results/integrationTest \
+            --copy html=backend/build/reports/tests/integrationTest \
+            --copy coverage=backend/build/reports/jacoco/integrationTest \
+            --copy diagnostics=backend/build/reports/problems \
+            --metadata "workflow=Backend CI" \
+            --metadata "run=${{ github.run_id }}" \
+            --metadata "sha=${{ github.sha }}"
+
+      - name: Upload centralized integration test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: backend-integration-test-reports-${{ github.run_number }}
-          path: |
-            backend/build/reports/tests/**
-            backend/build/reports/jacoco/**
-            backend/build/reports/tests/integrationTest/**
-            backend/build/test-results/integrationTest/**
-            backend/build/reports/jacoco/integrationTest/**
-            backend/build/jacoco/integrationTest.exec
-            backend/build/reports/problems/**
-          if-no-files-found: warn
+          name: test-results-backend-integration-${{ github.run_number }}
+          path: test-results/backend/integration/**
+          if-no-files-found: error
           retention-days: 14
 
       - name: Summarize integration evidence
@@ -166,7 +197,8 @@ jobs:
             echo "## Integration evidence"
             echo ""
             echo "- Command: \`./gradlew integrationTest --no-daemon\`"
-            echo "- Test report: \`backend/build/reports/tests/integrationTest/index.html\`"
-            echo "- Coverage report: \`backend/build/reports/jacoco/integrationTest/html/index.html\`"
+            echo "- Central path: \`test-results/backend/integration/\`"
+            echo "- Exportable summary: \`summary.json\` and \`metrics.prom\`"
+            echo "- Artifact: \`test-results-backend-integration-${{ github.run_number }}\`"
             echo "- Testcontainers diagnostics are available in the uploaded reports when environment-dependent failures occur"
           } >> "$GITHUB_STEP_SUMMARY"
