@@ -60,12 +60,28 @@ jobs:
       - name: Run unit tests
         run: pnpm exec ng test --watch=false --browsers=ChromeHeadlessNoSandbox --code-coverage
 
-      - name: Upload frontend coverage
+      - name: Collect centralized frontend test results
+        if: always()
+        working-directory: .
+        run: |
+          status=failed
+          if [ "${{ job.status }}" = success ]; then status=passed; fi
+          if [ "${{ job.status }}" = cancelled ]; then status=cancelled; fi
+          python3 scripts/testing/collect_test_results.py \
+            --suite frontend/unit \
+            --status "$status" \
+            --copy coverage=frontend/coverage \
+            --metadata "workflow=Frontend CI" \
+            --metadata "run=${{ github.run_id }}" \
+            --metadata "sha=${{ github.sha }}" \
+            --metadata "junit=not-generated-by-karma"
+
+      - name: Upload centralized frontend test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-coverage-${{ github.run_number }}
-          path: frontend/coverage/**
+          name: test-results-frontend-unit-${{ github.run_number }}
+          path: test-results/frontend/unit/**
           if-no-files-found: error
           retention-days: 14
 
@@ -76,8 +92,10 @@ jobs:
             echo "## Frontend evidence"
             echo ""
             echo "- Command: \`pnpm exec ng test --watch=false --browsers=ChromeHeadlessNoSandbox --code-coverage\`"
-            echo "- Coverage report: \`frontend/coverage/qa-gestion-inventarios-frontend/index.html\`"
-            echo "- Artifact: \`frontend-coverage-${{ github.run_number }}\`"
+            echo "- Central path: \`test-results/frontend/unit/\`"
+            echo "- Coverage report: \`evidence/coverage/qa-gestion-inventarios-frontend/index.html\`"
+            echo "- Exportable summary: \`summary.json\` and \`metrics.prom\`"
+            echo "- Artifact: \`test-results-frontend-unit-${{ github.run_number }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload frontend diagnostics

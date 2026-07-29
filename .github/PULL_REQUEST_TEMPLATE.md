@@ -30,7 +30,7 @@ push staging o workflow_dispatch.
 - Run de GitHub Actions:
 - Trigger y ramas/ref:
 - `DEPLOYED_SHA` según `deployment.json`:
-- Artifact `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`:
+- Artifact `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`:
 - Ciclo de vida y visibilidad:
 - Resultado de las siete fases, incluida `evidence-safety`:
 - Confirmación de safety `PASS` posterior a la última recolección:

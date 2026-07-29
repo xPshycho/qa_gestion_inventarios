@@ -9,7 +9,7 @@
   "scripts": {
     "start": "ng serve --host 0.0.0.0 --port 5173",
     "build": "ng build",
-    "test": "ng test --watch=false --browsers=ChromeHeadless"
+    "test": "bash scripts/test-local.sh"
   },
   "dependencies": {
     "@angular/animations": "^20.3.26",

@@ -87,10 +87,10 @@ controlados y genera:
 El reporte HTML y JUnit permanecen en:
 
 - `playwright-report/index.html`;
-- `test-results/playwright-results.xml`.
+- `test-results/e2e/playwright/evidence/junit/playwright-results.xml`.
 
 GitHub Actions publica todo dentro del artifact
-`playwright-e2e-<run_number>`. Jenkins archiva los mismos directorios. Staging
+`test-results-e2e-playwright-<run_number>`. Jenkins archiva la misma estructura. Staging
 usa el reporter seguro, desactiva trazas y video sensibles, y guarda la
 evidencia del issue bajo `post-deploy/e2e/`.
 
