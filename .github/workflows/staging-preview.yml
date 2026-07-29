@@ -1,20 +1,13 @@
 name: Staging Preview
 
 on:
-  pull_request:
-    branches:
-      - develop
-      - staging
-      - main
-  push:
-    branches:
-      - staging
-  workflow_dispatch:
+  workflow_call:
     inputs:
       deploy_ref:
         description: Commit, tag or branch to deploy
         required: false
         type: string
+        default: ''
 
 permissions:
   contents: read
@@ -24,86 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend-quality:
-    name: Backend quality gates
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout deployment revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ inputs.deploy_ref || github.sha }}
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
-        with:
-          java-version: 21
-          distribution: temurin
-          cache: gradle
-
-      - name: Run unit, API, integration and coverage gates
-        working-directory: backend
-        run: >-
-          ./gradlew
-          test
-          apiTest
-          integrationTest
-          jacocoTestReport
-          jacocoTestCoverageVerification
-          --no-daemon
-
-  frontend-quality:
-    name: Frontend quality gates
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout deployment revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ inputs.deploy_ref || github.sha }}
-
-      - name: Set up Node.js 20
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 20
-
-      - name: Enable pnpm 10.12.1
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.12.1 --activate
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Build frontend
-        working-directory: frontend
-        run: pnpm build
-
-      - name: Resolve Chromium
-        run: |
-          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
-          if [ -z "$CHROME_PATH" ]; then
-            echo "No Chrome or Chromium binary was found." >&2
-            exit 1
-          fi
-          echo "CHROME_BIN=$CHROME_PATH" >> "$GITHUB_ENV"
-
-      - name: Run frontend unit tests
-        working-directory: frontend
-        run: >-
-          pnpm exec ng test
-          --watch=false
-          --browsers=ChromeHeadlessNoSandbox
-          --code-coverage
-
   deploy-and-validate:
     name: Deploy and validate runner-private staging
-    needs:
-      - backend-quality
-      - frontend-quality
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: staging
@@ -218,6 +133,38 @@ jobs:
         continue-on-error: true
         run: ./scripts/staging/verify-evidence-safety.sh
 
+      - name: Collect centralized staging results
+        id: centralized_results
+        if: always() && steps.deploy.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          status=failed
+          if [ "${{ steps.deploy.outcome }}" = success ] \
+            && [ "${{ steps.post_deploy.outcome }}" = success ] \
+            && [ "${{ steps.final_collection.outcome }}" = success ] \
+            && [ "${{ steps.evidence_safety.outcome }}" = success ]; then
+            status=passed
+          fi
+          evidence_arguments=()
+          if [ "${{ steps.evidence_safety.outcome }}" = success ]; then
+            evidence_arguments+=(--copy evidence=.staging/evidence)
+          fi
+          python3 scripts/testing/collect_test_results.py \
+            --suite staging/post-deploy \
+            --status "$status" \
+            "${evidence_arguments[@]}" \
+            --metadata "workflow=Staging Preview" \
+            --metadata "run=${{ github.run_id }}" \
+            --metadata "sha=${DEPLOYED_SHA:-${GITHUB_SHA}}"
+
+      - name: Verify centralized staging results
+        id: centralized_safety
+        if: always() && steps.centralized_results.outcome == 'success'
+        continue-on-error: true
+        env:
+          INVENTORY_SECRET_ENV_FILE: ${{ github.workspace }}/.staging/staging.env
+        run: ./scripts/security/verify-artifacts.sh test-results/staging/post-deploy
+
       - name: Publish job summary
         if: always()
         run: |
@@ -228,9 +175,11 @@ jobs:
             echo "- Lifecycle: ephemeral"
             echo "- Visibility: runner-private; URLs use loopback and are not public"
             echo "- Compose project: \`${COMPOSE_PROJECT_NAME}\`"
-            echo "- Artifact: \`staging-evidence-${DEPLOYED_SHA:-unknown}-${GITHUB_RUN_ATTEMPT}\`"
+            echo "- Artifact: \`test-results-staging-post-deploy-${DEPLOYED_SHA:-unknown}-${GITHUB_RUN_ATTEMPT}\`"
             echo "- Evidence safety: \`${{ steps.evidence_safety.outcome }}\`"
             echo "- Final evidence collection: \`${{ steps.final_collection.outcome }}\`"
+            echo "- Central path: \`test-results/staging/post-deploy/\`"
+            echo "- Exportable summary: \`summary.json\` and \`metrics.prom\`"
             echo ""
             if [ "${{ steps.evidence_safety.outcome }}" = success ] && \
               [ -f .staging/evidence/post-deploy/summary.md ]; then
@@ -241,12 +190,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload staging evidence
-        if: always() && steps.evidence_safety.outcome == 'success'
+        if: always() && steps.evidence_safety.outcome == 'success' && steps.centralized_safety.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: staging-evidence-${{ env.DEPLOYED_SHA }}-${{ github.run_attempt }}
-          path: .staging/evidence/**
-          include-hidden-files: true
+          name: test-results-staging-post-deploy-${{ env.DEPLOYED_SHA }}-${{ github.run_attempt }}
+          path: test-results/staging/post-deploy/**
           if-no-files-found: error
           retention-days: 30
 
@@ -262,8 +210,12 @@ jobs:
           POST_DEPLOY_OUTCOME: ${{ steps.post_deploy.outcome }}
           EVIDENCE_SAFETY_OUTCOME: ${{ steps.evidence_safety.outcome }}
           FINAL_COLLECTION_OUTCOME: ${{ steps.final_collection.outcome }}
+          CENTRALIZED_RESULTS_OUTCOME: ${{ steps.centralized_results.outcome }}
+          CENTRALIZED_SAFETY_OUTCOME: ${{ steps.centralized_safety.outcome }}
         run: |
           test "$DEPLOY_OUTCOME" = success
           test "$POST_DEPLOY_OUTCOME" = success
           test "$FINAL_COLLECTION_OUTCOME" = success
           test "$EVIDENCE_SAFETY_OUTCOME" = success
+          test "$CENTRALIZED_RESULTS_OUTCOME" = success
+          test "$CENTRALIZED_SAFETY_OUTCOME" = success

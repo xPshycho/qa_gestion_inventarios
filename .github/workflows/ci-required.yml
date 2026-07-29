@@ -1,0 +1,227 @@
+name: Quality Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: quality-pipeline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  changes:
+    name: Select applicable pipelines
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      sonarcloud: ${{ steps.filter.outputs.sonarcloud }}
+      playwright: ${{ steps.filter.outputs.playwright }}
+      security: ${{ steps.filter.outputs.security }}
+      staging: ${{ steps.filter.outputs.staging }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Classify changed paths
+        id: filter
+        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'scripts/gcp/**'
+              - 'tests/gcp/**'
+              - '.github/workflows/**'
+              - 'Jenkinsfile'
+              - 'Makefile'
+              - 'scripts/testing/**'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/**'
+              - 'Jenkinsfile'
+              - 'Makefile'
+              - 'scripts/testing/**'
+            sonarcloud:
+              - 'backend/**'
+              - '.github/workflows/**'
+              - 'Jenkinsfile'
+            playwright:
+              - 'backend/src/main/**'
+              - 'frontend/src/**'
+              - 'frontend/angular.json'
+              - 'frontend/package.json'
+              - 'frontend/pnpm-lock.yaml'
+              - 'tests/e2e/**'
+              - 'infra/keycloak/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+              - 'Jenkinsfile'
+              - 'scripts/testing/**'
+            security:
+              - 'backend/src/main/**'
+              - 'frontend/src/**'
+              - 'tests/security/**'
+              - 'scripts/security/**'
+              - 'infra/keycloak/**'
+              - '**/Dockerfile*'
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+              - 'Jenkinsfile'
+              - 'scripts/testing/**'
+            staging:
+              - 'backend/src/main/**'
+              - 'frontend/src/**'
+              - 'tests/e2e/**'
+              - 'tests/security/**'
+              - 'tests/performance/**'
+              - 'tests/staging/**'
+              - 'scripts/staging/**'
+              - 'scripts/security/**'
+              - 'infra/**'
+              - '**/Dockerfile*'
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+              - 'Jenkinsfile'
+              - 'scripts/testing/**'
+
+  conventional-commits:
+    name: Conventional commits
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/conventional-commits.yml
+
+  secret-scanning:
+    name: Secret scanning
+    uses: ./.github/workflows/secret-scanning.yml
+    secrets: inherit
+
+  backend:
+    name: Backend
+    needs:
+      - changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/backend-ci.yml
+
+  frontend:
+    name: Frontend
+    needs:
+      - changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/frontend-ci.yml
+
+  sonarcloud:
+    name: SonarCloud
+    needs:
+      - changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sonarcloud == 'true'
+    uses: ./.github/workflows/sonarcloud.yml
+    secrets: inherit
+
+  playwright:
+    name: Playwright
+    needs:
+      - changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.playwright == 'true'
+    uses: ./.github/workflows/playwright-e2e.yml
+
+  security:
+    name: Security
+    needs:
+      - changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.security == 'true'
+    uses: ./.github/workflows/security-testing.yml
+
+  ci-required:
+    name: CI Required
+    if: always()
+    needs:
+      - changes
+      - conventional-commits
+      - secret-scanning
+      - backend
+      - frontend
+      - sonarcloud
+      - playwright
+      - security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce required quality results
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BACKEND_SELECTED: ${{ needs.changes.outputs.backend }}
+          FRONTEND_SELECTED: ${{ needs.changes.outputs.frontend }}
+          SONAR_SELECTED: ${{ needs.changes.outputs.sonarcloud }}
+          PLAYWRIGHT_SELECTED: ${{ needs.changes.outputs.playwright }}
+          SECURITY_SELECTED: ${{ needs.changes.outputs.security }}
+          CONVENTIONAL_RESULT: ${{ needs.conventional-commits.result }}
+          SECRET_RESULT: ${{ needs.secret-scanning.result }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          SONAR_RESULT: ${{ needs.sonarcloud.result }}
+          PLAYWRIGHT_RESULT: ${{ needs.playwright.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+        run: |
+          require_applicable_result() {
+            local label="$1"
+            local selected="$2"
+            local result="$3"
+
+            if [ "$EVENT_NAME" = workflow_dispatch ] || [ "$selected" = true ]; then
+              if [ "$result" != success ]; then
+                echo "::error::$label was selected but finished with result '$result'."
+                return 1
+              fi
+            elif [ "$result" != skipped ]; then
+              echo "::error::$label was not selected but finished with result '$result'."
+              return 1
+            fi
+          }
+
+          if [ "$EVENT_NAME" = pull_request ]; then
+            test "$CONVENTIONAL_RESULT" = success
+          else
+            test "$CONVENTIONAL_RESULT" = skipped
+          fi
+
+          test "$SECRET_RESULT" = success
+          require_applicable_result backend "$BACKEND_SELECTED" "$BACKEND_RESULT"
+          require_applicable_result frontend "$FRONTEND_SELECTED" "$FRONTEND_RESULT"
+          require_applicable_result sonarcloud "$SONAR_SELECTED" "$SONAR_RESULT"
+          require_applicable_result playwright "$PLAYWRIGHT_SELECTED" "$PLAYWRIGHT_RESULT"
+          require_applicable_result security "$SECURITY_SELECTED" "$SECURITY_RESULT"
+
+  staging:
+    name: Staging after CI
+    if: >-
+      needs.ci-required.result == 'success'
+      && (
+        (
+          github.event_name == 'pull_request'
+          && needs.changes.outputs.staging == 'true'
+        )
+        || github.ref == 'refs/heads/staging'
+      )
+    needs:
+      - changes
+      - ci-required
+    uses: ./.github/workflows/staging-preview.yml
+    secrets: inherit

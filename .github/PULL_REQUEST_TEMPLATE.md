@@ -19,18 +19,33 @@ Closes #
 | Pre-deploy |  |  |  |
 | Post-deploy |  |  |  |
 
+### Pipelines aplicables
+
+<!--
+Marca las áreas afectadas según el issue y los archivos modificados. Quality
+Pipeline verificará automáticamente la selección.
+-->
+
+- [ ] Backend / unitarias / API / integración / coverage
+- [ ] Frontend / build / unitarias
+- [ ] E2E Playwright
+- [ ] Seguridad / Trivy / ZAP
+- [ ] Performance k6 en staging
+- [ ] Observabilidad o infraestructura
+- [ ] Sólo documentación
+
 ## Evidencia de staging
 
 <!--
-Completar solo cuando aplique staging. No pegar secretos.
-Rutas admitidas por el workflow: PR -> develop, PR staging -> main,
-push staging o workflow_dispatch.
+Completar solo cuando `Quality Pipeline` seleccione staging. No pegar secretos.
+Rutas admitidas: PR aplicable -> develop/staging, PR staging -> main o push
+staging.
 -->
 
 - Run de GitHub Actions:
 - Trigger y ramas/ref:
 - `DEPLOYED_SHA` según `deployment.json`:
-- Artifact `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`:
+- Artifact `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`:
 - Ciclo de vida y visibilidad:
 - Resultado de las siete fases, incluida `evidence-safety`:
 - Confirmación de safety `PASS` posterior a la última recolección:

@@ -75,6 +75,8 @@ docker compose ps
 
 Los puertos pueden cambiarse en `.env` usando `FRONTEND_PORT`, `BACKEND_PORT`, `KEYCLOAK_PORT`
 y `POSTGRES_PORT`, `PROMETHEUS_PORT` y `GRAFANA_PORT`.
+La matriz canónica de puertos internos, development, staging, producción y
+Jenkins está en [`puertos.md`](puertos.md).
 El puerto local por defecto de PostgreSQL es `55432` para evitar conflictos con instalaciones
 locales que ya usan `5432`. Si se necesita usar otro puerto, definir `POSTGRES_PORT`.
 La interfaz Angular consume la API del backend mediante la ruta `/api`.
@@ -186,10 +188,12 @@ Los secretos, el realm renderizado y la evidencia local viven bajo `.staging/`, 
 por Git. `post-deploy.sh` es un gate: valida integracion real, API, login, flujo principal,
 Playwright, headers, ZAP, k6, observabilidad y seguridad de evidencia antes de devolver exito.
 
-El workflow `Staging Preview` se activa en PR hacia `develop`, PR hacia `main`, push a
-`staging` y manualmente con un `deploy_ref` opcional. Un PR hacia `main` solo es valido si
-proviene exactamente de `staging`. El preview usa un proyecto Compose exclusivo, valida que
-todos los puertos y URLs permanezcan en `127.0.0.1` y se destruye al terminar.
+El workflow `Quality Pipeline` clasifica cada PR por los archivos cambiados y llama
+`Staging Preview` solamente cuando el cambio afecta runtime, E2E, seguridad,
+performance, observabilidad, Compose o CI/CD. Un push a `staging` siempre ejecuta
+el preview completo. Un PR hacia `main` solo es valido si proviene exactamente
+de `staging`. El preview usa un proyecto Compose exclusivo, valida que todos los
+puertos y URLs permanezcan en `127.0.0.1` y se destruye al terminar.
 
 ## Permisos del sistema
 
@@ -244,6 +248,43 @@ Ejemplo: `feat(products): add product search by SKU`
 
 ## Ejecutar pruebas
 
+Desde la raíz del repositorio, el comando recomendado para preparar el entorno,
+ejecutar todas las suites automatizadas y centralizar sus resultados es:
+
+```bash
+make test
+```
+
+No requiere Chromium instalado en `/usr/bin`: las pruebas frontend y E2E usan
+la imagen Playwright fijada en Docker. La guía de ejecución individual y
+diagnóstico está en `docs/testing/ci-reporting.md`.
+
+Comandos habituales:
+
+```bash
+make help
+make env
+make build
+make build-backend
+make build-frontend
+make check-config
+make test
+make test-backend
+make test-api
+make test-integration
+make test-frontend
+make test-e2e
+make test-performance
+make test-security
+make results
+```
+
+`make check-config` valida scripts, pruebas del recolector y la combinación
+local `docker-compose.yml` + `docker-compose.override.yml` sin levantar el
+stack. Los targets E2E, performance y seguridad usan esa misma combinación,
+publican únicamente los puertos definidos en `.env`, esperan las URLs desde el
+host y limpian sus contenedores y artifacts al terminar.
+
 ```bash
 # Build backend
 cd backend && ./gradlew clean assemble
@@ -263,33 +304,22 @@ cd backend && ./gradlew apiTest
 # Verificacion backend completa
 cd backend && ./gradlew check
 
-# Frontend unit tests + coverage
-cd frontend && CHROME_BIN=/usr/bin/chromium pnpm exec ng test --watch=false --browsers=ChromeHeadless --code-coverage
+# Frontend unit tests + coverage sin depender del navegador del host
+make test-frontend
 
 # Build frontend
 cd frontend && pnpm build
 
-# E2E con Playwright, Keycloak y base de datos real
-cd tests/e2e
-npx --yes pnpm@10.12.1 install
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx --yes pnpm@10.12.1 test
+# E2E con Playwright, Keycloak y base de datos real, desde la raíz
+pnpm --dir tests/e2e test
 
-# E2E usando un stack Docker Compose ya levantado
-cd "$(git rev-parse --show-toplevel)"
-docker compose up --build --wait --wait-timeout 240 -d
-cd tests/e2e
-E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 run stack:ready
-E2E_MANAGE_STACK=false npx --yes pnpm@10.12.1 exec playwright test
-
-# Performance tests
-K6_PROFILE=smoke K6_PASSWORD="<password-local>" k6 run tests/performance/performance.js
+# Performance tests con stack y credenciales locales aisladas
+./tests/performance/run-local.sh
 
 # Guia completa: tests/performance/README.md
 
-# Security scan
-ZAP_TARGET_URL=http://127.0.0.1:15173 \
-ZAP_DOCKER_NETWORK=host \
-./tests/security/run-zap-baseline.sh
+# Security headers + OWASP ZAP con stack local aislado
+./tests/security/run-local.sh
 
 # Staging completo contra una instancia ya desplegada
 ./scripts/staging/init-env.sh
@@ -303,10 +333,19 @@ XML quedan disponibles para diagnostico.
 
 ## Evidencias de pruebas y cobertura
 
-El workflow automatico `Backend CI` ejecuta build, unit tests, API tests, quality gate de cobertura e
-integration tests en GitHub Actions para `main`, `develop`, `staging`, ramas `test/**`, ramas
-`ci/**` y Pull Requests hacia `main`, `develop` o `staging`. Los reportes se publican como
-artifacts aun cuando un job de pruebas falle, para conservar logs y HTML de diagnostico.
+El workflow automático `Quality Pipeline` se ejecuta en cada Pull Request hacia
+`main`, `develop` o `staging`. Primero clasifica las rutas modificadas según las
+áreas del proyecto y llama los pipelines aplicables. Un cambio backend ejecuta
+build, unitarias, API, integración, cobertura y SonarCloud; un cambio frontend
+ejecuta build y unitarias; las rutas E2E, security, performance, observability y
+CI/CD activan sus gates especializados y staging cuando corresponde. Los PR
+exclusivamente documentales conservan Conventional Commits y Gitleaks, sin
+levantar infraestructura innecesaria.
+
+El job agregado `CI Required` comprueba que cada pipeline seleccionado termine
+exitosamente y que los no aplicables hayan sido omitidos. Los reportes se
+publican como artifacts aun cuando una suite falle, para conservar evidencia de
+diagnóstico.
 
 El quality gate de backend exige cobertura de lineas >= 60% mediante JaCoCo. Los reportes de
 SonarCloud consumen los XML de JaCoCo generados por Gradle.
@@ -333,14 +372,14 @@ limpieza está en `docs/ci/jenkins.md`.
 | Evidencia | Comando local | Reporte local | Artifact CI |
 |-----------|---------------|---------------|-------------|
 | Build backend | `cd backend && ./gradlew clean assemble` | `backend/build/libs/*.jar` | `backend-build-*` |
-| Unit tests | `cd backend && ./gradlew test` | `backend/build/reports/tests/test/index.html` | `backend-unit-test-reports-*` |
-| Cobertura unit tests | `cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification` | `backend/build/reports/jacoco/test/html/index.html` | `backend-unit-test-reports-*` |
-| Integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/tests/integrationTest/index.html` | `backend-integration-test-reports-*` |
-| Cobertura integration tests | `cd backend && ./gradlew integrationTest` | `backend/build/reports/jacoco/integrationTest/html/index.html` | `backend-integration-test-reports-*` |
-| API tests | `cd backend && ./gradlew apiTest` | `backend/build/reports/tests/apiTest/index.html` | `backend-api-test-reports-*` |
-| Frontend unit + coverage | `cd frontend && pnpm exec ng test --watch=false --browsers=ChromeHeadless --code-coverage` | `frontend/coverage/qa-gestion-inventarios-frontend/index.html` | `frontend-coverage-*` |
-| E2E Playwright | `cd tests/e2e && npx --yes pnpm@10.12.1 test` | HTML y JUnit locales; CI conserva JUnit y evidencia UX controlada después del safety | `playwright-e2e-*`, Jenkins Pipeline |
-| Staging post-deploy | `./scripts/staging/post-deploy.sh` | `.staging/evidence/post-deploy/summary.md` | `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`, solo con safety `PASS` |
+| Unit tests | `cd backend && ./gradlew test` | `test-results/backend/unit/` después del recolector | `test-results-backend-unit-*` |
+| Cobertura unit tests | `cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification` | `test-results/backend/unit/evidence/coverage/` | `test-results-backend-unit-*` |
+| Integration tests | `cd backend && ./gradlew integrationTest` | `test-results/backend/integration/` después del recolector | `test-results-backend-integration-*` |
+| Cobertura integration tests | `cd backend && ./gradlew integrationTest` | `test-results/backend/integration/evidence/coverage/` | `test-results-backend-integration-*` |
+| API tests | `cd backend && ./gradlew apiTest` | `test-results/backend/api/` después del recolector | `test-results-backend-api-*` |
+| Frontend unit + coverage | `cd frontend && pnpm test` | `test-results/frontend/unit/` | `test-results-frontend-unit-*` |
+| E2E Playwright | `cd tests/e2e && pnpm test` | `test-results/e2e/playwright/` | `test-results-e2e-playwright-*`, Jenkins Pipeline |
+| Staging post-deploy | `./scripts/staging/post-deploy.sh` | `test-results/staging/post-deploy/` después del recolector | `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`, solo con safety `PASS` |
 
 Estado de automatizacion de testing:
 
@@ -349,11 +388,13 @@ Estado de automatizacion de testing:
 | Unit | Automatizada en CI | JUnit/Mockito ejecutado por `./gradlew test` y publicado con JaCoCo. |
 | Integration | Automatizada | Testcontainers ejecutado por `./gradlew integrationTest`; los reportes se publican para diagnosticar fallos de entorno. |
 | API | Automatizada en CI | RestAssured valida contratos REST, status codes, errores y permisos en `backend/src/apiTest`. |
-| Frontend | Automatizada en CI | Angular/Karma ejecuta unit tests con cobertura y publica artifact `frontend-coverage-*`. |
+| Frontend | Automatizada en CI | Angular/Karma ejecuta unit tests con cobertura y publica artifact `test-results-frontend-unit-*`. |
 | E2E | Automatizada en GitHub Actions y Jenkins | Playwright cubre login, CRUD de productos, roles, accesibilidad, responsive y navegadores; CI desactiva HTML, screenshots automáticos, traces y videos, y publica JUnit y evidencia UX controlada solo después del safety. |
 | Post-deploy staging | Automatizada en GitHub Actions | Despliega `DEPLOYED_SHA`, ejecuta siete fases y solo publica evidencia tras el safety final. Playwright staging usa `list` + JUnit y capturas controladas, sin HTML, traces ni videos. |
 
-La guia consolidada de comandos, reportes y artifacts esta en `docs/testing/ci-reporting.md`.
+La ruta única de resultados locales y artifacts es `test-results/`. La guía
+consolidada de comandos, estructura, resúmenes JSON y métricas Prometheus está
+en `docs/testing/ci-reporting.md`.
 
 ## Observabilidad
 
