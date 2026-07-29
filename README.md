@@ -188,10 +188,12 @@ Los secretos, el realm renderizado y la evidencia local viven bajo `.staging/`, 
 por Git. `post-deploy.sh` es un gate: valida integracion real, API, login, flujo principal,
 Playwright, headers, ZAP, k6, observabilidad y seguridad de evidencia antes de devolver exito.
 
-El workflow `Staging Preview` se activa en PR hacia `develop`, PR hacia `main`, push a
-`staging` y manualmente con un `deploy_ref` opcional. Un PR hacia `main` solo es valido si
-proviene exactamente de `staging`. El preview usa un proyecto Compose exclusivo, valida que
-todos los puertos y URLs permanezcan en `127.0.0.1` y se destruye al terminar.
+El workflow `Quality Pipeline` clasifica cada PR por los archivos cambiados y llama
+`Staging Preview` solamente cuando el cambio afecta runtime, E2E, seguridad,
+performance, observabilidad, Compose o CI/CD. Un push a `staging` siempre ejecuta
+el preview completo. Un PR hacia `main` solo es valido si proviene exactamente
+de `staging`. El preview usa un proyecto Compose exclusivo, valida que todos los
+puertos y URLs permanezcan en `127.0.0.1` y se destruye al terminar.
 
 ## Permisos del sistema
 
@@ -319,10 +321,19 @@ XML quedan disponibles para diagnostico.
 
 ## Evidencias de pruebas y cobertura
 
-El workflow automatico `Backend CI` ejecuta build, unit tests, API tests, quality gate de cobertura e
-integration tests en GitHub Actions para `main`, `develop`, `staging`, ramas `test/**`, ramas
-`ci/**` y Pull Requests hacia `main`, `develop` o `staging`. Los reportes se publican como
-artifacts aun cuando un job de pruebas falle, para conservar logs y HTML de diagnostico.
+El workflow automático `Quality Pipeline` se ejecuta en cada Pull Request hacia
+`main`, `develop` o `staging`. Primero clasifica las rutas modificadas según las
+áreas del proyecto y llama los pipelines aplicables. Un cambio backend ejecuta
+build, unitarias, API, integración, cobertura y SonarCloud; un cambio frontend
+ejecuta build y unitarias; las rutas E2E, security, performance, observability y
+CI/CD activan sus gates especializados y staging cuando corresponde. Los PR
+exclusivamente documentales conservan Conventional Commits y Gitleaks, sin
+levantar infraestructura innecesaria.
+
+El job agregado `CI Required` comprueba que cada pipeline seleccionado termine
+exitosamente y que los no aplicables hayan sido omitidos. Los reportes se
+publican como artifacts aun cuando una suite falle, para conservar evidencia de
+diagnóstico.
 
 El quality gate de backend exige cobertura de lineas >= 60% mediante JaCoCo. Los reportes de
 SonarCloud consumen los XML de JaCoCo generados por Gradle.

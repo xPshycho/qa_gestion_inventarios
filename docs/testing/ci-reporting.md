@@ -105,6 +105,7 @@ sin imprimirlos y limpia el proyecto Compose `inventory-e2e-local`.
 
 | Workflow | Jobs principales | Artifacts |
 |---|---|---|
+| `Quality Pipeline` | clasificación de rutas, pipelines aplicables, gate agregado `CI Required` y promoción | No genera evidencia propia; agrega los resultados de los workflows llamados |
 | `Backend CI` | build, unit tests, API tests, integration tests | `test-results-backend-unit-*`, `test-results-backend-api-*`, `test-results-backend-integration-*` |
 | `Frontend CI` | build Angular, unit tests con coverage | `test-results-frontend-unit-*`, `frontend-diagnostics-*` si falla |
 | `Playwright E2E` | stack Docker Compose, matriz Playwright y safety | `test-results-e2e-playwright-*`, solo después de `verify-artifacts.sh` |
@@ -112,7 +113,26 @@ sin imprimirlos y limpia el proyecto Compose `inventory-e2e-local`.
 | `Secret Scanning` | Gitleaks sobre PR y push | No publica artifacts ni comentarios con detecciones |
 | `SonarCloud` | análisis de calidad y cobertura JaCoCo | Quality Gate en el PR |
 | `Conventional Commits` | validación de commits del PR | Check de formato |
-| `Staging Preview` | gates backend/frontend, deploy Compose aislado y siete fases post-deploy | `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`, solo con evidence safety `PASS` |
+| `Staging Preview` | deploy Compose aislado y siete fases post-deploy después de `CI Required` | `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`, solo con evidence safety `PASS` |
+
+`Quality Pipeline` se ejecuta en cada PR y selecciona las suites por rutas,
+siguiendo las áreas y ramas definidas en el anexo del proyecto:
+
+| Cambio del PR | Pipelines requeridos |
+|---|---|
+| Sólo `docs/**` o Markdown | Conventional Commits y Gitleaks |
+| `backend/**` | Backend CI y SonarCloud; si cambia runtime también Playwright, seguridad y staging |
+| `frontend/**` | Frontend CI; si cambia runtime también Playwright, seguridad y staging |
+| `tests/e2e/**` | Playwright y staging post-deploy |
+| `tests/security/**` o `scripts/security/**` | Security Testing y staging post-deploy |
+| `tests/performance/**` | Staging post-deploy, que ejecuta k6 smoke |
+| `infra/**`, Docker o Compose | Playwright, seguridad y staging |
+| Workflows, Jenkins o scripts de reporting | Pipeline completo para validar el cambio de CI/CD |
+
+El job `CI Required` falla si una suite seleccionada falla o se omite, y también
+si se ejecuta inesperadamente un pipeline que debía quedar fuera. De esta forma
+cada PR conserva un único check obligatorio estable sin obligar a que un PR
+documental levante el stack completo.
 
 Cada artifact `test-results-*` conserva la misma ruta interna que se ve
 localmente. El resumen JSON sigue
@@ -132,15 +152,15 @@ JWT, ZIP y gzip.
 
 ### Evidencia oficial de staging
 
-`Staging Preview` es la evidencia de despliegue oficial para el issue #86. Se
-activa en PR hacia `develop`, PR hacia `main`, push a `staging` y ejecución
-manual cuando el workflow exista en la rama por defecto. Para un PR hacia
-`main`, el job exige que la rama origen sea exactamente `staging`; cualquier
-otro origen falla el gate de promoción. La ejecución manual admite un
-`deploy_ref` opcional.
+`Staging Preview` es la evidencia de despliegue oficial para el issue #86. Lo
+llama `Quality Pipeline` después de `CI Required` cuando un PR afecta el sistema
+desplegable, las suites post-deploy o CI/CD. Un push a `staging` siempre lo
+ejecuta. Para un PR hacia `main`, el job exige que la rama origen sea
+exactamente `staging`; cualquier otro origen falla el gate de promoción.
 
-El pipeline ejecuta antes del deploy las suites unitarias, API MockMvc,
-Testcontainers, JaCoCo y frontend. Después valida la instancia desplegada con:
+Los workflows reutilizables ejecutan antes del deploy las suites aplicables de
+backend, frontend, SonarCloud, Playwright y seguridad. Después, staging valida
+la instancia desplegada con:
 
 1. integración y estado de las bases;
 2. API, autenticación, Swagger, flujos principales y observabilidad;
