@@ -4,7 +4,7 @@ SHELL := /bin/bash
 
 .PHONY: help env build build-backend build-frontend test test-backend \
 	test-api test-integration test-frontend test-e2e test-performance \
-	test-security results check-config
+	test-security test-infra results check-config
 
 help: ## Muestra los comandos disponibles
 	@awk 'BEGIN {FS = ":.*## "; printf "Uso: make <objetivo>\n\n"} \
@@ -50,6 +50,9 @@ test-performance: ## Ejecuta smoke k6 contra un stack Compose aislado
 test-security: ## Ejecuta headers, OWASP ZAP y Trivy contra Compose
 	./tests/security/run-local.sh
 
+test-infra: ## Valida formato, módulos y planes simulados OpenTofu
+	./scripts/opentofu/validate.sh
+
 results: ## Centraliza resultados disponibles bajo test-results/
 	./scripts/testing/collect_local_test_results.sh
 
@@ -60,6 +63,8 @@ check-config: env ## Valida scripts, recolector y modelo Docker Compose
 		scripts/testing/local_compose.sh \
 		scripts/testing/run_with_java_21.sh \
 		scripts/testing/run_all_local_tests.sh \
+		scripts/opentofu/plan.sh \
+		scripts/opentofu/validate.sh \
 		tests/e2e/scripts/run-local.sh \
 		tests/performance/run-local.sh \
 		tests/security/run-local.sh \
