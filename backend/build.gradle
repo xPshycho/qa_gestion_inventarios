@@ -25,6 +25,14 @@ configurations {
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
+tasks.register('resolveBuildDependencies') {
+    doLast {
+        configurations.annotationProcessor.resolve()
+        configurations.compileClasspath.resolve()
+        configurations.runtimeClasspath.resolve()
+    }
+}
+
 sourceSets {
     apiTest {
         java.srcDir 'src/apiTest/java'
@@ -151,7 +159,7 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
-                minimum = 0.60
+                minimum = 0.90
             }
         }
     }
@@ -176,9 +184,26 @@ tasks.register('jacocoIntegrationTestReport', JacocoReport) {
     }
 }
 
+tasks.register('jacocoIntegrationTestCoverageVerification', JacocoCoverageVerification) {
+    dependsOn tasks.named('integrationTest')
+    executionData layout.buildDirectory.file('jacoco/integrationTest.exec')
+    sourceSets sourceSets.main
+
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+        }
+    }
+}
+
 tasks.named('check') {
     dependsOn tasks.named('apiTest')
     dependsOn tasks.named('integrationTest')
+    dependsOn tasks.named('jacocoIntegrationTestCoverageVerification')
     dependsOn tasks.named('jacocoTestCoverageVerification')
 }
 

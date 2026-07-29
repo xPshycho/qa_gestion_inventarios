@@ -45,5 +45,6 @@ make test
 ```
 
 El ejecutor genera `.env` con secretos aleatorios mediante el contrato seguro
-del proyecto, usa el navegador Playwright fijado en Docker y elimina su stack
-aislado al terminar.
+del proyecto, usa imágenes fijadas para Playwright, k6, ZAP y Trivy, y elimina
+cada stack aislado al terminar. Los gates de líneas son 90% para backend
+unitario, 60% para integración y 80% para frontend.

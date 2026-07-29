@@ -1,4 +1,4 @@
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { ProductService } from '../product.service';
@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 describe('authInterceptor', () => {
   let httpTesting: HttpTestingController;
   let productService: ProductService;
+  let httpClient: HttpClient;
   let authService: jasmine.SpyObj<AuthService>;
 
   beforeEach(() => {
@@ -28,6 +29,7 @@ describe('authInterceptor', () => {
     });
 
     productService = TestBed.inject(ProductService);
+    httpClient = TestBed.inject(HttpClient);
     httpTesting = TestBed.inject(HttpTestingController);
   });
 
@@ -84,5 +86,60 @@ describe('authInterceptor', () => {
       totalElements: 0,
       totalPages: 0
     });
+  }));
+
+  it('no modifica solicitudes que no pertenecen a la API', fakeAsync(() => {
+    httpClient.get('/health').subscribe();
+    flushMicrotasks();
+
+    const request = httpTesting.expectOne('/health');
+    expect(request.request.headers.has('Authorization')).toBeFalse();
+    expect(authService.getValidAccessToken).not.toHaveBeenCalled();
+    request.flush({ status: 'UP' });
+  }));
+
+  it('envia solicitudes API anonimas cuando no existe token', fakeAsync(() => {
+    authService.getValidAccessToken.and.resolveTo(null);
+    httpClient.get('/api').subscribe();
+    flushMicrotasks();
+
+    const request = httpTesting.expectOne('/api');
+    expect(request.request.headers.has('Authorization')).toBeFalse();
+    request.flush({});
+  }));
+
+  it('propaga errores distintos de 401 sin forzar refresh', fakeAsync(() => {
+    let responseStatus = 0;
+    httpClient.get('/api/products').subscribe({
+      error: (error) => responseStatus = error.status
+    });
+    flushMicrotasks();
+
+    httpTesting.expectOne('/api/products').flush(null, {
+      status: 500,
+      statusText: 'Server Error'
+    });
+    flushMicrotasks();
+
+    expect(responseStatus).toBe(500);
+    expect(authService.forceRefreshAccessToken).not.toHaveBeenCalled();
+  }));
+
+  it('propaga el 401 cuando el refresh no entrega token', fakeAsync(() => {
+    let responseStatus = 0;
+    authService.forceRefreshAccessToken.and.resolveTo(null);
+    httpClient.get('/api/products').subscribe({
+      error: (error) => responseStatus = error.status
+    });
+    flushMicrotasks();
+
+    httpTesting.expectOne('/api/products').flush(null, {
+      status: 401,
+      statusText: 'Unauthorized'
+    });
+    flushMicrotasks();
+
+    expect(responseStatus).toBe(401);
+    expect(authService.forceRefreshAccessToken).toHaveBeenCalled();
   }));
 });

@@ -34,6 +34,26 @@ class CollectTestResultsTest(unittest.TestCase):
             )
             report = root / "native" / "report.txt"
             report.write_text("safe report", encoding="utf-8")
+            coverage = root / "native" / "coverage-summary.json"
+            coverage.write_text(
+                json.dumps(
+                    {
+                        "total": {
+                            "lines": {
+                                "total": 10,
+                                "covered": 8,
+                                "pct": 80,
+                            },
+                            "branches": {
+                                "total": 4,
+                                "covered": 3,
+                                "pct": 75,
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
             output = root / "test-results"
 
             exit_code = MODULE.main(
@@ -48,6 +68,8 @@ class CollectTestResultsTest(unittest.TestCase):
                     str(junit.parent),
                     "--copy",
                     f"reports={report}",
+                    "--coverage",
+                    str(coverage),
                     "--metadata",
                     "workflow=local",
                 ]
@@ -61,6 +83,8 @@ class CollectTestResultsTest(unittest.TestCase):
             self.assertEqual(3, summary["junit"]["tests"])
             self.assertEqual(1, summary["junit"]["failures"])
             self.assertEqual("local", summary["metadata"]["workflow"])
+            self.assertEqual(80, summary["coverage"]["lines"]["percentage"])
+            self.assertEqual(3, summary["coverage"]["branches"]["covered"])
             self.assertTrue(
                 (output / "backend/unit/evidence/reports").is_file()
             )
@@ -70,6 +94,28 @@ class CollectTestResultsTest(unittest.TestCase):
             self.assertIn(
                 'inventory_test_suite_passed{suite="backend/unit"} 0', metrics
             )
+            self.assertIn(
+                'inventory_test_coverage_percentage'
+                '{suite="backend/unit",metric="lines"} 80.0',
+                metrics,
+            )
+
+    def test_reads_jacoco_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            coverage = root / "jacoco.xml"
+            coverage.write_text(
+                """<report name="inventory">
+                <counter type="LINE" missed="10" covered="90"/>
+                <counter type="BRANCH" missed="3" covered="7"/>
+                </report>""",
+                encoding="utf-8",
+            )
+
+            parsed = MODULE.parse_coverage([coverage])
+
+            self.assertEqual(90.0, parsed["lines"]["percentage"])
+            self.assertEqual(70.0, parsed["branches"]["percentage"])
 
     def test_missing_optional_evidence_is_recorded(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

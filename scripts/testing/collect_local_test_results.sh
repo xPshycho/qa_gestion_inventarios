@@ -10,20 +10,35 @@ cd "$repository_root"
 
 command -v jq >/dev/null
 
+existing_suite_status() {
+  local suite="$1"
+  local summary="test-results/$suite/summary.json"
+  if [[ -f "$summary" ]]; then
+    jq -r '.status // "unknown"' "$summary"
+  else
+    printf 'unknown\n'
+  fi
+}
+
 collect_junit_suite() {
   local suite="$1"
   local junit_path="$2"
   shift 2
   local centralized_junit_path="test-results/$suite/evidence/junit"
   local effective_junit_path="$junit_path"
-  local status=unknown
+  local status
+  status="$(existing_suite_status "$suite")"
+  case "$status" in
+    failed|cancelled) ;;
+    *) status=unknown ;;
+  esac
   if [[ -d "$junit_path" ]] \
     && [[ -n "$(find "$junit_path" -type f -name '*.xml' -print -quit)" ]]; then
-    status=passed
+    [[ "$status" == unknown ]] && status=passed
   elif [[ -d "$centralized_junit_path" ]] \
     && [[ -n "$(find "$centralized_junit_path" -type f -name '*.xml' -print -quit)" ]]; then
     effective_junit_path="$centralized_junit_path"
-    status=passed
+    [[ "$status" == unknown ]] && status=passed
   fi
   python3 "$collector" \
     --suite "$suite" \
@@ -36,6 +51,7 @@ collect_junit_suite() {
 collect_junit_suite \
   backend/unit \
   backend/build/test-results/test \
+  --coverage backend/build/reports/jacoco/test/jacocoTestReport.xml \
   --copy junit=backend/build/test-results/test \
   --copy html=backend/build/reports/tests/test \
   --copy coverage=backend/build/reports/jacoco/test
@@ -49,6 +65,7 @@ collect_junit_suite \
 collect_junit_suite \
   backend/integration \
   backend/build/test-results/integrationTest \
+  --coverage backend/build/reports/jacoco/integrationTest/jacocoIntegrationTestReport.xml \
   --copy junit=backend/build/test-results/integrationTest \
   --copy html=backend/build/reports/tests/integrationTest \
   --copy coverage=backend/build/reports/jacoco/integrationTest
@@ -59,6 +76,7 @@ python3 "$collector" \
   --suite frontend/unit \
   --status "$frontend_status" \
   --copy coverage=frontend/coverage \
+  --coverage frontend/coverage/qa-gestion-inventarios-frontend/coverage-summary.json \
   --metadata workflow=local \
   --metadata junit=not-generated-by-karma
 
@@ -73,6 +91,11 @@ if [[ -f test-results/performance/k6/k6-summary.json ]]; then
   else
     k6_status=failed
   fi
+else
+  existing_k6_status="$(existing_suite_status performance/k6)"
+  case "$existing_k6_status" in
+    failed|cancelled) k6_status="$existing_k6_status" ;;
+  esac
 fi
 python3 "$collector" \
   --suite performance/k6 \
