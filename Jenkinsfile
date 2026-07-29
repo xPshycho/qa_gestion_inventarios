@@ -260,6 +260,7 @@ pipeline {
                         --suite backend/unit \
                         --status '${suiteStatus}' \
                         --junit backend/build/test-results/test \
+                        --coverage backend/build/reports/jacoco/test/jacocoTestReport.xml \
                         --copy junit=backend/build/test-results/test \
                         --copy html=backend/build/reports/tests/test \
                         --copy coverage=backend/build/reports/jacoco/test \
@@ -268,6 +269,7 @@ pipeline {
                         --suite backend/integration \
                         --status '${suiteStatus}' \
                         --junit backend/build/test-results/integrationTest \
+                        --coverage backend/build/reports/jacoco/integrationTest/jacocoIntegrationTestReport.xml \
                         --copy junit=backend/build/test-results/integrationTest \
                         --copy html=backend/build/reports/tests/integrationTest \
                         --copy coverage=backend/build/reports/jacoco/integrationTest \

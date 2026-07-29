@@ -48,7 +48,7 @@ test('mantiene operables las vistas críticas en el motor del navegador', async 
     contentType: 'application/json',
   });
   await testInfo.attach(`browser-${browserName}-seguridad`, {
-    body: await page.screenshot({ fullPage: true }),
+    body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png',
   });
 });

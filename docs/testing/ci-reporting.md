@@ -45,14 +45,17 @@ errores por ejecutar `cd backend` o `cd tests/e2e` dos veces, es:
 make test
 ```
 
+Los targets de backend seleccionan explícitamente un JDK 21 instalado bajo
+`/usr/lib/jvm`, aunque la shell tenga otro Java activo mediante SDKMAN.
+
 Este comando:
 
 1. inicializa `.env` con secretos aleatorios y permisos `0600`;
 2. ejecuta build, unit, API e integración del backend;
 3. ejecuta build y unit tests del frontend usando Chromium de Playwright en Docker;
 4. levanta un stack Compose aislado y ejecuta Playwright en su imagen fijada;
-5. ejecuta smoke de k6, headers y OWASP ZAP contra el stack desplegado;
-6. centraliza todos los resultados y elimina el stack aislado.
+5. ejecuta smoke de k6, headers, OWASP ZAP y Trivy;
+6. centraliza todos los resultados y elimina cada stack aislado.
 
 No configure `CHROME_BIN=/usr/bin/chromium` salvo que ese archivo exista. El
 ejecutor oficial no necesita un navegador instalado en el host.
@@ -75,7 +78,7 @@ Los runners leen las URLs desde los puertos del `.env`; la fuente de verdad es
 | `make test-frontend` | Karma en Chromium Playwright/Docker. |
 | `make test-e2e` | Stack Compose y Playwright. |
 | `make test-performance` | k6 smoke. |
-| `make test-security` | Headers y ZAP. |
+| `make test-security` | Headers, ZAP y Trivy sobre repositorio e imágenes. |
 | `make results` | Recolecta resultados ya disponibles. |
 | `make test` | Ejecuta todas las fases anteriores. |
 
@@ -83,21 +86,29 @@ Los runners de `make test-e2e`, `make test-performance` y
 `make test-security` cargan explícitamente `docker-compose.yml` y
 `docker-compose.override.yml`. El segundo archivo publica en el host los
 puertos definidos en `.env`; omitirlo deja los servicios accesibles sólo
-dentro de la red Docker. Cada runner realiza readiness HTTP desde el host antes
-de iniciar Playwright, k6 o ZAP.
+dentro de la red Docker. Cada runner usa un proyecto Compose propio, reinicia
+su directorio de resultados y desmonta contenedores, redes y volúmenes aunque
+falle el setup. También realiza readiness HTTP desde el host antes de iniciar
+Playwright, k6 o ZAP.
+
+Las imágenes públicas se descargan primero con la configuración normal de
+Docker. Si el credential helper de Docker Desktop/WSL falla, el runner reintenta
+la descarga con una configuración temporal sin helpers. Trivy conserva sus
+bases en `/tmp/qa-gestion-inventarios-trivy-<uid>` y usa los repositorios
+oficiales de GHCR para no depender de `mirror.gcr.io`.
 
 | Suite | Comando | Reporte local |
 |---|---|---|
 | Backend build | `cd backend && ./gradlew clean assemble --no-daemon` | `backend/build/libs/*.jar` |
 | Backend unit + JaCoCo | `cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification --no-daemon; cd .. && ./scripts/testing/collect_local_test_results.sh` | `test-results/backend/unit/` |
 | API RestAssured | `cd backend && ./gradlew apiTest --no-daemon; cd .. && ./scripts/testing/collect_local_test_results.sh` | `test-results/backend/api/` |
-| Integration Testcontainers | `cd backend && ./gradlew integrationTest --no-daemon; cd .. && ./scripts/testing/collect_local_test_results.sh` | `test-results/backend/integration/` |
+| Integration Testcontainers | `cd backend && ./gradlew integrationTest jacocoIntegrationTestCoverageVerification --no-daemon; cd .. && ./scripts/testing/collect_local_test_results.sh` | `test-results/backend/integration/` |
 | Frontend unit + coverage | `cd frontend && pnpm test` | `test-results/frontend/unit/` |
 | Frontend build | `cd frontend && pnpm build` | `frontend/dist/` |
 | E2E Playwright local | `cd tests/e2e && pnpm test` | `test-results/e2e/playwright/` |
 | E2E conservando el stack para diagnóstico | `E2E_KEEP_STACK=true pnpm --dir tests/e2e test` | `test-results/e2e/playwright/` |
 | Performance k6 | `./tests/performance/run-local.sh` | `test-results/performance/k6/` |
-| Headers + OWASP ZAP | `./tests/security/run-local.sh` | `test-results/security/headers/`, `test-results/security/zap/` |
+| Headers + OWASP ZAP + Trivy | `./tests/security/run-local.sh` | `test-results/security/headers/`, `test-results/security/zap/`, `test-results/security/trivy/` |
 | Staging completo | `./scripts/staging/deploy.sh && ./scripts/staging/post-deploy.sh && ./scripts/testing/collect_local_test_results.sh` | `test-results/staging/post-deploy/` |
 | Recolectar evidencia de staging | `./scripts/staging/collect-evidence.sh` | `.staging/evidence/deployment.json`, resumen, servicios, imágenes y logs redactados |
 
@@ -152,8 +163,10 @@ localmente. El resumen JSON sigue
 por un textfile collector o transformado por un job futuro antes de enviarse a
 Prometheus/Grafana; este repositorio no hace push de métricas desde un PR.
 
-El quality gate de backend exige cobertura de líneas >= 60% mediante
-`jacocoTestCoverageVerification`.
+Los quality gates exigen cobertura de líneas >= 90% en backend unitario,
+>= 60% en integración y >= 80% en frontend; el frontend exige además
+statements/functions >= 80% y branches >= 70%. Los resúmenes JSON, Markdown y
+Prometheus incluyen los contadores y porcentajes de cobertura.
 
 Playwright utiliza `list` y JUnit en CI. Los screenshots automáticos, HTML,
 traces y videos se desactivan porque pueden conservar credenciales introducidas

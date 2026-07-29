@@ -81,6 +81,7 @@ jobs:
             --suite backend/unit \
             --status "$status" \
             --junit backend/build/test-results/test \
+            --coverage backend/build/reports/jacoco/test/jacocoTestReport.xml \
             --copy junit=backend/build/test-results/test \
             --copy html=backend/build/reports/tests/test \
             --copy coverage=backend/build/reports/jacoco/test \
@@ -160,7 +161,7 @@ jobs:
           cache: gradle
 
       - name: Run integration tests with JaCoCo
-        run: ./gradlew integrationTest --no-daemon
+        run: ./gradlew integrationTest jacocoIntegrationTestCoverageVerification --no-daemon
 
       - name: Collect centralized integration test results
         if: always()
@@ -173,6 +174,7 @@ jobs:
             --suite backend/integration \
             --status "$status" \
             --junit backend/build/test-results/integrationTest \
+            --coverage backend/build/reports/jacoco/integrationTest/jacocoIntegrationTestReport.xml \
             --copy junit=backend/build/test-results/integrationTest \
             --copy html=backend/build/reports/tests/integrationTest \
             --copy coverage=backend/build/reports/jacoco/integrationTest \
@@ -196,7 +198,7 @@ jobs:
           {
             echo "## Integration evidence"
             echo ""
-            echo "- Command: \`./gradlew integrationTest --no-daemon\`"
+            echo "- Command: \`./gradlew integrationTest jacocoIntegrationTestCoverageVerification --no-daemon\`"
             echo "- Central path: \`test-results/backend/integration/\`"
             echo "- Exportable summary: \`summary.json\` and \`metrics.prom\`"
             echo "- Artifact: \`test-results-backend-integration-${{ github.run_number }}\`"

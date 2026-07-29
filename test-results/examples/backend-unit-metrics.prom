@@ -5,3 +5,9 @@ inventory_test_failures{suite="backend/unit"} 0
 inventory_test_errors{suite="backend/unit"} 0
 inventory_test_skipped{suite="backend/unit"} 0
 inventory_test_duration_seconds{suite="backend/unit"} 12.5
+inventory_test_coverage_percentage{suite="backend/unit",metric="instructions"} 92.5
+inventory_test_coverage_covered{suite="backend/unit",metric="instructions"} 925
+inventory_test_coverage_total{suite="backend/unit",metric="instructions"} 1000
+inventory_test_coverage_percentage{suite="backend/unit",metric="lines"} 91
+inventory_test_coverage_covered{suite="backend/unit",metric="lines"} 91
+inventory_test_coverage_total{suite="backend/unit",metric="lines"} 100

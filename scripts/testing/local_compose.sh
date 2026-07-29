@@ -15,6 +15,28 @@ local_compose() {
     "$@"
 }
 
+docker_pull_public_image() {
+  local image="$1"
+  local isolated_docker_config
+
+  if docker pull "$image"; then
+    return 0
+  fi
+
+  printf 'Docker pull failed; retrying public image without credential helpers: %s\n' \
+    "$image" >&2
+  isolated_docker_config="$(mktemp -d)"
+  chmod 0700 "$isolated_docker_config"
+
+  set +e
+  DOCKER_CONFIG="$isolated_docker_config" docker pull "$image"
+  local pull_exit_code=$?
+  set -e
+
+  find "$isolated_docker_config" -depth -delete
+  return "$pull_exit_code"
+}
+
 wait_for_http_endpoint() {
   local label="$1"
   local url="$2"
@@ -35,6 +57,27 @@ wait_for_http_endpoint() {
   done
 
   printf '%s is reachable at %s\n' "$label" "$url"
+}
+
+capture_local_compose_diagnostics() {
+  local diagnostic_repository_root="$1"
+  local diagnostic_environment_file="$2"
+  local diagnostic_project_name="$3"
+  local diagnostic_output_directory="$4"
+
+  mkdir -p "$diagnostic_output_directory"
+  local_compose \
+    "$diagnostic_repository_root" \
+    "$diagnostic_environment_file" \
+    "$diagnostic_project_name" \
+    ps --all \
+    > "$diagnostic_output_directory/compose-ps.txt" 2>&1 || true
+  local_compose \
+    "$diagnostic_repository_root" \
+    "$diagnostic_environment_file" \
+    "$diagnostic_project_name" \
+    logs --no-color \
+    > "$diagnostic_output_directory/compose.log" 2>&1 || true
 }
 
 reset_test_result_directory() {

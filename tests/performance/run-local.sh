@@ -7,12 +7,35 @@ readonly repository_root="$(cd -- "$script_dir/../.." && pwd)"
 readonly environment_file="$repository_root/.env"
 readonly compose_project="${PERFORMANCE_COMPOSE_PROJECT_NAME:-inventory-performance-local}"
 readonly k6_image="${K6_IMAGE:-grafana/k6:0.57.0@sha256:70af91f86cd8e142e0544a4edaf79835a80033f71974b92edd5ac36fd4442a7b}"
+results_initialized=false
 
 source "$repository_root/scripts/testing/local_compose.sh"
 
 cleanup() {
+  local exit_code=$?
+  trap - EXIT
+  set +e
+
+  if [[ "$results_initialized" == true ]]; then
+    capture_local_compose_diagnostics \
+      "$repository_root" \
+      "$environment_file" \
+      "$compose_project" \
+      "$repository_root/test-results/performance/k6/evidence/docker"
+    if [[ ! -f "$repository_root/test-results/performance/k6/summary.json" ]]; then
+      python3 "$repository_root/scripts/testing/collect_test_results.py" \
+        --suite performance/k6 \
+        --status failed \
+        --output-root "$repository_root/test-results" \
+        --metadata workflow=local \
+        --metadata failureStage=setup \
+        --metadata nativeSummary=k6-summary.json
+    fi
+  fi
+
   local_compose "$repository_root" "$environment_file" "$compose_project" \
     down -v --remove-orphans
+  exit "$exit_code"
 }
 
 trap cleanup EXIT
@@ -45,6 +68,8 @@ test -n "$backend_port"
 test -n "$keycloak_port"
 
 reset_test_result_directory "$repository_root" test-results/performance/k6
+results_initialized=true
+docker_pull_public_image "$k6_image"
 
 local_compose "$repository_root" "$environment_file" "$compose_project" \
   up --build --wait --wait-timeout 240 -d

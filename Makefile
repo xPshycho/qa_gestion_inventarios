@@ -16,7 +16,7 @@ env: ## Crea o completa el .env local ignorado (modo 0600)
 build: build-backend build-frontend ## Construye backend y frontend
 
 build-backend: ## Construye el backend
-	cd backend && ./gradlew clean assemble --no-daemon
+	cd backend && ../scripts/testing/run_with_java_21.sh ./gradlew clean assemble --no-daemon
 
 build-frontend: ## Instala dependencias y construye el frontend
 	pnpm --dir frontend install --frozen-lockfile
@@ -26,15 +26,15 @@ test: ## Reproduce localmente las fases automatizadas del pipeline
 	./scripts/testing/run_all_local_tests.sh
 
 test-backend: ## Ejecuta unitarias backend y quality gate JaCoCo
-	cd backend && ./gradlew test jacocoTestReport jacocoTestCoverageVerification --no-daemon
+	cd backend && ../scripts/testing/run_with_java_21.sh ./gradlew test jacocoTestReport jacocoTestCoverageVerification --no-daemon
 	$(MAKE) results
 
 test-api: ## Ejecuta pruebas API/contrato RestAssured
-	cd backend && ./gradlew apiTest --no-daemon
+	cd backend && ../scripts/testing/run_with_java_21.sh ./gradlew apiTest --no-daemon
 	$(MAKE) results
 
 test-integration: ## Ejecuta integración con Testcontainers
-	cd backend && ./gradlew integrationTest --no-daemon
+	cd backend && ../scripts/testing/run_with_java_21.sh ./gradlew integrationTest jacocoIntegrationTestCoverageVerification --no-daemon
 	$(MAKE) results
 
 test-frontend: ## Ejecuta Karma con Chromium Playwright en Docker
@@ -47,7 +47,7 @@ test-e2e: ## Ejecuta Playwright contra un stack Compose aislado
 test-performance: ## Ejecuta smoke k6 contra un stack Compose aislado
 	./tests/performance/run-local.sh
 
-test-security: ## Ejecuta headers y OWASP ZAP contra Compose
+test-security: ## Ejecuta headers, OWASP ZAP y Trivy contra Compose
 	./tests/security/run-local.sh
 
 results: ## Centraliza resultados disponibles bajo test-results/
@@ -58,6 +58,7 @@ check-config: env ## Valida scripts, recolector y modelo Docker Compose
 		frontend/scripts/test-local.sh \
 		scripts/testing/collect_local_test_results.sh \
 		scripts/testing/local_compose.sh \
+		scripts/testing/run_with_java_21.sh \
 		scripts/testing/run_all_local_tests.sh \
 		tests/e2e/scripts/run-local.sh \
 		tests/performance/run-local.sh \

@@ -1,11 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import Keycloak from 'keycloak-js';
-import { KEYCLOAK_FACTORY, SESSION_NAVIGATOR, SessionNavigator } from './auth.config';
+import {
+  KEYCLOAK_FACTORY,
+  KeycloakFactory,
+  SESSION_NAVIGATOR,
+  SessionNavigator
+} from './auth.config';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;
   let keycloak: jasmine.SpyObj<Keycloak>;
+  let keycloakFactory: jasmine.Spy<KeycloakFactory>;
   let sessionNavigator: jasmine.SpyObj<SessionNavigator>;
 
   beforeEach(() => {
@@ -26,6 +32,7 @@ describe('AuthService', () => {
     keycloak.updateToken.and.resolveTo(false);
     keycloak.login.and.resolveTo();
     keycloak.logout.and.resolveTo();
+    keycloakFactory = jasmine.createSpy('keycloakFactory').and.returnValue(keycloak);
     sessionNavigator = jasmine.createSpyObj<SessionNavigator>(
       'SessionNavigator',
       ['assign', 'replace']
@@ -43,7 +50,7 @@ describe('AuthService', () => {
     TestBed.configureTestingModule({
       providers: [
         AuthService,
-        { provide: KEYCLOAK_FACTORY, useValue: () => keycloak },
+        { provide: KEYCLOAK_FACTORY, useValue: keycloakFactory },
         { provide: SESSION_NAVIGATOR, useValue: sessionNavigator }
       ]
     });
@@ -107,5 +114,100 @@ describe('AuthService', () => {
     expect(service.status()).toBe('expired');
     expect(service.user()).toBeNull();
     expect(sessionNavigator.replace).toHaveBeenCalledWith('/login?reason=expired');
+  });
+
+  it('no inicializa Keycloak mas de una vez', async () => {
+    await service.initialize();
+    await service.initialize();
+
+    expect(keycloak.init).toHaveBeenCalledTimes(1);
+    expect(keycloakFactory).toHaveBeenCalledTimes(1);
+  });
+
+  it('mantiene una sesion anonima cuando Keycloak no autentica', async () => {
+    keycloak.init.and.resolveTo(false);
+
+    await service.initialize();
+
+    expect(service.status()).toBe('anonymous');
+    expect(service.user()).toBeNull();
+    expect(service.permissions().size).toBe(0);
+  });
+
+  it('expone error cuando la configuracion runtime no puede cargarse', async () => {
+    (window.fetch as jasmine.Spy).and.resolveTo(new Response('', { status: 503 }));
+
+    await service.initialize();
+
+    expect(service.status()).toBe('error');
+    expect(keycloakFactory).not.toHaveBeenCalled();
+  });
+
+  it('rechaza login antes de inicializar y sanea retornos externos', async () => {
+    await expectAsync(service.login('/productos')).toBeRejectedWithError(
+      'El servicio de autenticación no está disponible.'
+    );
+    await service.initialize();
+
+    await service.login('//sitio-externo.example');
+
+    expect(keycloak.login).toHaveBeenCalledWith({
+      redirectUri: `${window.location.origin}/`
+    });
+  });
+
+  it('cierra una sesion no inicializada mediante navegacion local', async () => {
+    await service.logout();
+
+    expect(service.status()).toBe('anonymous');
+    expect(sessionNavigator.assign).toHaveBeenCalledWith('/login');
+    expect(keycloak.logout).not.toHaveBeenCalled();
+  });
+
+  it('recupera localmente cuando Keycloak falla durante logout', async () => {
+    await service.initialize();
+    keycloak.logout.and.rejectWith(new Error('logout failed'));
+
+    await service.logout();
+
+    expect(service.status()).toBe('anonymous');
+    expect(sessionNavigator.assign).toHaveBeenCalledWith('/login');
+  });
+
+  it('no intenta renovar sin sesion y fuerza refresh con validez negativa', async () => {
+    expect(await service.getValidAccessToken()).toBeNull();
+    await service.initialize();
+
+    expect(await service.forceRefreshAccessToken()).toBe('access-token');
+    expect(keycloak.updateToken).toHaveBeenCalledWith(-1);
+  });
+
+  it('procesa callbacks de Keycloak y evita expirar dos veces', async () => {
+    await service.initialize();
+
+    keycloak.onAuthRefreshError?.();
+    keycloak.onAuthLogout?.();
+
+    expect(service.status()).toBe('expired');
+    expect(keycloak.clearToken).toHaveBeenCalledTimes(1);
+    expect(sessionNavigator.replace).toHaveBeenCalledTimes(1);
+  });
+
+  it('construye el nombre desde claims parciales y combina scopes vacios', async () => {
+    keycloak.tokenParsed = {
+      sub: 'user-2',
+      given_name: 'Ana',
+      family_name: 'Pérez',
+      scope: '  product:view   stock:view  '
+    };
+
+    await service.initialize();
+
+    expect(service.user()).toEqual({
+      id: 'user-2',
+      username: 'user-2',
+      displayName: 'Ana Pérez'
+    });
+    expect(service.permissions()).toEqual(new Set(['product:view', 'stock:view']));
   });
 });
