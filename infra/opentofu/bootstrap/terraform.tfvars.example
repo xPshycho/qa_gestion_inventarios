@@ -1,0 +1,11 @@
+project_id        = "replace-with-gcp-project-id"
+region            = "us-central1"
+state_bucket_name = "replace-with-globally-unique-inventory-tofu-state"
+
+state_admin_members = [
+  "user:replace-with-operator@example.com",
+]
+
+labels = {
+  owner = "qa-team"
+}
