@@ -36,6 +36,7 @@ jobs:
       playwright: ${{ steps.filter.outputs.playwright }}
       security: ${{ steps.filter.outputs.security }}
       staging: ${{ steps.filter.outputs.staging }}
+      opentofu: ${{ steps.filter.outputs.opentofu }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -103,6 +104,12 @@ jobs:
               - '.github/workflows/**'
               - 'Jenkinsfile'
               - 'scripts/testing/**'
+            opentofu:
+              - 'infra/opentofu/**'
+              - 'scripts/opentofu/**'
+              - '.github/workflows/opentofu-ci.yml'
+              - '.github/workflows/ci-required.yml'
+              - 'Makefile'
 
   conventional-commits:
     name: Conventional commits
@@ -150,6 +157,13 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.security == 'true'
     uses: ./.github/workflows/security-testing.yml
 
+  opentofu:
+    name: OpenTofu
+    needs:
+      - changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.opentofu == 'true'
+    uses: ./.github/workflows/opentofu-ci.yml
+
   ci-required:
     name: CI Required
     if: always()
@@ -162,6 +176,7 @@ jobs:
       - sonarcloud
       - playwright
       - security
+      - opentofu
     runs-on: ubuntu-latest
     steps:
       - name: Enforce required quality results
@@ -179,6 +194,8 @@ jobs:
           SONAR_RESULT: ${{ needs.sonarcloud.result }}
           PLAYWRIGHT_RESULT: ${{ needs.playwright.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
+          OPENTOFU_SELECTED: ${{ needs.changes.outputs.opentofu }}
+          OPENTOFU_RESULT: ${{ needs.opentofu.result }}
         run: |
           require_applicable_result() {
             local label="$1"
@@ -208,6 +225,7 @@ jobs:
           require_applicable_result sonarcloud "$SONAR_SELECTED" "$SONAR_RESULT"
           require_applicable_result playwright "$PLAYWRIGHT_SELECTED" "$PLAYWRIGHT_RESULT"
           require_applicable_result security "$SECURITY_SELECTED" "$SECURITY_RESULT"
+          require_applicable_result opentofu "$OPENTOFU_SELECTED" "$OPENTOFU_RESULT"
 
   staging:
     name: Staging after CI
