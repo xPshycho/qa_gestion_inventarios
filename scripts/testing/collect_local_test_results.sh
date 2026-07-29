@@ -8,6 +8,8 @@ readonly collector="$script_dir/collect_test_results.py"
 
 cd "$repository_root"
 
+command -v jq >/dev/null
+
 collect_junit_suite() {
   local suite="$1"
   local junit_path="$2"
@@ -64,7 +66,14 @@ playwright_junit=test-results/e2e/playwright/evidence/junit
 collect_junit_suite e2e/playwright "$playwright_junit"
 
 k6_status=unknown
-[[ -f test-results/performance/k6/k6-summary.json ]] && k6_status=passed
+if [[ -f test-results/performance/k6/k6-summary.json ]]; then
+  if jq -e '.thresholdsPassed == true' \
+    test-results/performance/k6/k6-summary.json >/dev/null; then
+    k6_status=passed
+  else
+    k6_status=failed
+  fi
+fi
 python3 "$collector" \
   --suite performance/k6 \
   --status "$k6_status" \
@@ -73,7 +82,15 @@ python3 "$collector" \
 
 for scanner in headers zap trivy; do
   scanner_status=unknown
-  [[ -d "test-results/security/$scanner/evidence" ]] && scanner_status=passed
+  scanner_summary="test-results/security/$scanner/summary.json"
+  if [[ -f "$scanner_summary" ]]; then
+    existing_status="$(jq -r '.status // "unknown"' "$scanner_summary")"
+    case "$existing_status" in
+      passed|failed|cancelled|unknown)
+        scanner_status="$existing_status"
+        ;;
+    esac
+  fi
   python3 "$collector" \
     --suite "security/$scanner" \
     --status "$scanner_status" \

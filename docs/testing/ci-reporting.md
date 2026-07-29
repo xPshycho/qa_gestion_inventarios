@@ -63,7 +63,12 @@ Los runners leen las URLs desde los puertos del `.env`; la fuente de verdad es
 
 | Objetivo | Alcance |
 |---|---|
+| `make help` | Lista todos los targets y su propósito. |
 | `make env` | Crea o completa `.env` con permisos `0600`. |
+| `make build` | Construye backend y frontend. |
+| `make build-backend` | Ejecuta `clean assemble` con Java 21/Gradle. |
+| `make build-frontend` | Instala con lockfile y construye Angular. |
+| `make check-config` | Valida scripts, recolector y Compose base + overlay local sin levantar servicios. |
 | `make test-backend` | Unitarias y JaCoCo. |
 | `make test-api` | API/contrato RestAssured. |
 | `make test-integration` | Testcontainers. |
@@ -73,6 +78,13 @@ Los runners leen las URLs desde los puertos del `.env`; la fuente de verdad es
 | `make test-security` | Headers y ZAP. |
 | `make results` | Recolecta resultados ya disponibles. |
 | `make test` | Ejecuta todas las fases anteriores. |
+
+Los runners de `make test-e2e`, `make test-performance` y
+`make test-security` cargan explícitamente `docker-compose.yml` y
+`docker-compose.override.yml`. El segundo archivo publica en el host los
+puertos definidos en `.env`; omitirlo deja los servicios accesibles sólo
+dentro de la red Docker. Cada runner realiza readiness HTTP desde el host antes
+de iniciar Playwright, k6 o ZAP.
 
 | Suite | Comando | Reporte local |
 |---|---|---|

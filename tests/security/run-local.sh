@@ -8,12 +8,10 @@ readonly environment_file="$repository_root/.env"
 readonly compose_project="${SECURITY_COMPOSE_PROJECT_NAME:-inventory-security-local}"
 failed=0
 
+source "$repository_root/scripts/testing/local_compose.sh"
+
 cleanup() {
-  docker compose \
-    --env-file "$environment_file" \
-    --project-name "$compose_project" \
-    --project-directory "$repository_root" \
-    --file "$repository_root/docker-compose.yml" \
+  local_compose "$repository_root" "$environment_file" "$compose_project" \
     down -v --remove-orphans
 }
 
@@ -42,12 +40,17 @@ keycloak_port="$(read_environment_value KEYCLOAK_PORT)"
 test -n "$frontend_port"
 test -n "$keycloak_port"
 
-docker compose \
-  --env-file "$environment_file" \
-  --project-name "$compose_project" \
-  --project-directory "$repository_root" \
-  --file "$repository_root/docker-compose.yml" \
+reset_test_result_directory "$repository_root" test-results/security/headers
+reset_test_result_directory "$repository_root" test-results/security/zap
+
+local_compose "$repository_root" "$environment_file" "$compose_project" \
   up --build --wait --wait-timeout 240 -d
+
+wait_for_http_endpoint frontend "http://localhost:$frontend_port/" 120
+wait_for_http_endpoint \
+  keycloak \
+  "http://localhost:$keycloak_port/realms/inventory/.well-known/openid-configuration" \
+  120
 
 set +e
 FRONTEND_URL="http://localhost:$frontend_port" \

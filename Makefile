@@ -57,14 +57,18 @@ check-config: env ## Valida scripts, recolector y modelo Docker Compose
 	bash -n \
 		frontend/scripts/test-local.sh \
 		scripts/testing/collect_local_test_results.sh \
+		scripts/testing/local_compose.sh \
 		scripts/testing/run_all_local_tests.sh \
 		tests/e2e/scripts/run-local.sh \
 		tests/performance/run-local.sh \
-		tests/security/run-local.sh
+		tests/security/run-local.sh \
+		tests/testing/test_local_compose.sh
 	python3 -m unittest tests/testing/test_collect_test_results.py
+	./tests/testing/test_local_compose.sh
 	docker compose \
 		--env-file .env \
 		--project-name inventory-config-check \
 		--project-directory "$(CURDIR)" \
 		--file docker-compose.yml \
+		--file docker-compose.override.yml \
 		config --quiet

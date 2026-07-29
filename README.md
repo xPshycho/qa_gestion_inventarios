@@ -263,6 +263,12 @@ Comandos habituales:
 
 ```bash
 make help
+make env
+make build
+make build-backend
+make build-frontend
+make check-config
+make test
 make test-backend
 make test-api
 make test-integration
@@ -272,6 +278,12 @@ make test-performance
 make test-security
 make results
 ```
+
+`make check-config` valida scripts, pruebas del recolector y la combinación
+local `docker-compose.yml` + `docker-compose.override.yml` sin levantar el
+stack. Los targets E2E, performance y seguridad usan esa misma combinación,
+publican únicamente los puertos definidos en `.env`, esperan las URLs desde el
+host y limpian sus contenedores y artifacts al terminar.
 
 ```bash
 # Build backend
