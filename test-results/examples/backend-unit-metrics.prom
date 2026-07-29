@@ -1,0 +1,7 @@
+inventory_test_suite_passed{suite="backend/unit"} 1
+inventory_test_junit_files{suite="backend/unit"} 24
+inventory_test_cases{suite="backend/unit"} 86
+inventory_test_failures{suite="backend/unit"} 0
+inventory_test_errors{suite="backend/unit"} 0
+inventory_test_skipped{suite="backend/unit"} 0
+inventory_test_duration_seconds{suite="backend/unit"} 12.5

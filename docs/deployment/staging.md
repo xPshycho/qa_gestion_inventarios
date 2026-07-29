@@ -7,7 +7,7 @@ la evidencia y luego se destruye el stack con sus volúmenes.
 
 No existe una URL pública o persistente. La referencia verificable de cada
 despliegue es el run de `Staging Preview`, su SHA desplegado y el artifact
-`staging-evidence-<DEPLOYED_SHA>-<run_attempt>`, si el gate de seguridad permite
+`test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`, si el gate de seguridad permite
 publicarlo. En una ejecución local, el stack permanece disponible en el host
 hasta ejecutar `destroy.sh`. Esta guía describe el contrato implementado; no
 constituye por sí sola evidencia de que exista un run remoto.
@@ -258,7 +258,7 @@ Una ejecución cuya revisión final de seguridad pasa intenta publicar por 30
 días:
 
 ```text
-staging-evidence-<DEPLOYED_SHA>-<run_attempt>
+test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>
 ├── deployment.json
 ├── deployment-summary.md
 ├── compose-ps.txt
@@ -289,7 +289,7 @@ La evidencia de cierre del issue debe incluir:
 
 - enlace al run exitoso;
 - SHA de `deployment.json`;
-- nombre exacto `staging-evidence-<DEPLOYED_SHA>-<run_attempt>`;
+- nombre exacto `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`;
 - `ephemeral` y `runner-private`;
 - resultado de las siete fases, incluida `evidence-safety`;
 - al menos una captura o reporte del flujo principal;

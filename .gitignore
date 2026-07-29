@@ -40,6 +40,14 @@ tests/e2e/blob-report/
 tests/e2e/ux-evidence/
 tests/e2e/safe-screenshots/
 
+# Centralized generated test evidence (the index, schema and examples are tracked)
+test-results/**/summary.json
+test-results/**/summary.md
+test-results/**/metrics.prom
+test-results/**/evidence/
+!test-results/examples/*.json
+!test-results/examples/*.prom
+
 .env
 .env.*
 !.env.example

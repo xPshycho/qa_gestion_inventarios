@@ -48,7 +48,7 @@ un token ya emitido mediante `K6_ACCESS_TOKEN`.
 | `HEALTH_PATH` | No | `/actuator/health` | Endpoint de health. |
 | `PRODUCTS_PATH` | No | `/products?page=0&size=20&sort=name&direction=asc` | Consulta paginada de productos. |
 | `REPORTS_PATH` | No | `/reports/dashboard` | Endpoint principal de reportes. |
-| `K6_RESULTS_DIR` | No | `tests/performance/results` | Carpeta existente donde se escriben resumenes. |
+| `K6_RESULTS_DIR` | No | `test-results/performance/k6` | Carpeta central donde se escriben resumenes. |
 | `K6_SLEEP_SECONDS` | No | `1` | Pausa entre iteraciones por VU. |
 | `K6_ERROR_RATE` | No | `0.01` | Maximo error rate global permitido. |
 | `K6_CHECK_RATE` | No | `0.99` | Minimo de checks exitosos. |
@@ -59,6 +59,13 @@ un token ya emitido mediante `K6_ACCESS_TOKEN`.
 | `K6_REPORTS_P95_MS` | No | `1500` | Maximo p95 de reportes. |
 
 ## Ejecucion smoke
+
+La ejecución local equivalente al pipeline prepara un `.env` ignorado, levanta
+un proyecto Compose aislado y usa la imagen k6 fijada:
+
+```bash
+./tests/performance/run-local.sh
+```
 
 Usar `smoke` para comprobar script, autenticacion y endpoints:
 
@@ -140,8 +147,8 @@ carga concurrente sobre Keycloak.
 k6 muestra su resumen estandar y la suite genera:
 
 ```text
-tests/performance/results/k6-summary.json
-tests/performance/results/k6-summary.md
+test-results/performance/k6/k6-summary.json
+test-results/performance/k6/k6-summary.md
 ```
 
 Los archivos incluyen perfil, fecha, duracion, VUs, iteraciones, requests, requests/s, error rate,
