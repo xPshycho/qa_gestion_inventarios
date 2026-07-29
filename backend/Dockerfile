@@ -8,7 +8,7 @@ COPY gradlew build.gradle settings.gradle ./
 COPY gradle ./gradle
 RUN --mount=type=cache,target=/root/.gradle \
     chmod +x gradlew \
-    && ./gradlew dependencies --no-daemon
+    && ./gradlew resolveBuildDependencies --no-daemon
 
 COPY src ./src
 RUN --mount=type=cache,target=/root/.gradle \

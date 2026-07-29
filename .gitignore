@@ -45,6 +45,8 @@ test-results/**/summary.json
 test-results/**/summary.md
 test-results/**/metrics.prom
 test-results/**/evidence/
+test-results/performance/k6/k6-summary.json
+test-results/performance/k6/k6-summary.md
 !test-results/examples/*.json
 !test-results/examples/*.prom
 

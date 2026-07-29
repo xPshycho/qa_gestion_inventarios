@@ -16,6 +16,14 @@
     "skipped": 0,
     "tests": 86
   },
+  "coverage": {
+    "lines": {
+      "covered": 735,
+      "missed": 73,
+      "percentage": 90.97,
+      "total": 808
+    }
+  },
   "metadata": {
     "workflow": "Backend CI"
   },

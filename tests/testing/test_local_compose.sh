@@ -7,7 +7,17 @@ readonly repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && p
 source "$repository_root/scripts/testing/local_compose.sh"
 
 declare -a captured_arguments=()
+pull_attempts=0
+isolated_config=""
 docker() {
+  if [[ "${1:-}" == "pull" ]]; then
+    pull_attempts=$((pull_attempts + 1))
+    if [[ "$pull_attempts" -eq 1 ]]; then
+      return 1
+    fi
+    isolated_config="${DOCKER_CONFIG:-}"
+    return 0
+  fi
   captured_arguments=("$@")
 }
 
@@ -28,6 +38,11 @@ expected_arguments=(
 for index in "${!expected_arguments[@]}"; do
   [[ "${captured_arguments[$index]}" == "${expected_arguments[$index]}" ]]
 done
+
+docker_pull_public_image example.invalid/tool:1
+[[ "$pull_attempts" -eq 2 ]]
+[[ -n "$isolated_config" ]]
+[[ ! -e "$isolated_config" ]]
 
 temporary_root="$(mktemp -d)"
 trap 'find "$temporary_root" -depth -delete' EXIT

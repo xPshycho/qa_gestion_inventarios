@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 SUITE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+$")
 NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_.-]+$")
 VALID_STATUSES = ("passed", "failed", "cancelled", "unknown")
+COVERAGE_KEYS = ("statements", "branches", "functions", "lines")
 
 
 @dataclass
@@ -115,7 +116,82 @@ def parse_junit(paths: list[Path]) -> JUnitTotals:
     return totals
 
 
-def prometheus_summary(suite: str, status: str, totals: JUnitTotals) -> str:
+def coverage_percentage(covered: int, missed: int) -> float:
+    total = covered + missed
+    return round(covered * 100 / total, 2) if total else 100.0
+
+
+def parse_istanbul_coverage(path: Path) -> dict[str, dict[str, int | float]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    total = payload.get("total")
+    if not isinstance(total, dict):
+        raise ValueError(f"invalid Istanbul coverage summary: {path}")
+
+    coverage: dict[str, dict[str, int | float]] = {}
+    for key in COVERAGE_KEYS:
+        metric = total.get(key)
+        if not isinstance(metric, dict):
+            continue
+        metric_total = int(metric.get("total", 0))
+        covered = int(metric.get("covered", 0))
+        coverage[key] = {
+            "covered": covered,
+            "missed": metric_total - covered,
+            "total": metric_total,
+            "percentage": round(float(metric.get("pct", 0.0)), 2),
+        }
+    return coverage
+
+
+def parse_jacoco_coverage(path: Path) -> dict[str, dict[str, int | float]]:
+    try:
+        root = ET.parse(path).getroot()
+    except ET.ParseError as error:
+        raise ValueError(f"invalid JaCoCo XML {path}: {error}") from error
+    if root.tag != "report":
+        raise ValueError(f"invalid JaCoCo coverage report: {path}")
+
+    coverage: dict[str, dict[str, int | float]] = {}
+    jacoco_keys = {
+        "INSTRUCTION": "instructions",
+        "BRANCH": "branches",
+        "LINE": "lines",
+        "METHOD": "functions",
+        "CLASS": "classes",
+    }
+    for counter in root.findall("./counter"):
+        key = jacoco_keys.get(counter.attrib.get("type", ""))
+        if not key:
+            continue
+        missed = int(counter.attrib.get("missed", 0))
+        covered = int(counter.attrib.get("covered", 0))
+        coverage[key] = {
+            "covered": covered,
+            "missed": missed,
+            "total": covered + missed,
+            "percentage": coverage_percentage(covered, missed),
+        }
+    return coverage
+
+
+def parse_coverage(paths: list[Path]) -> dict[str, dict[str, int | float]]:
+    for path in paths:
+        if not path.exists():
+            continue
+        if path.suffix == ".json":
+            return parse_istanbul_coverage(path)
+        if path.suffix == ".xml":
+            return parse_jacoco_coverage(path)
+        raise ValueError(f"unsupported coverage report: {path}")
+    return {}
+
+
+def prometheus_summary(
+    suite: str,
+    status: str,
+    totals: JUnitTotals,
+    coverage: dict[str, dict[str, int | float]],
+) -> str:
     escaped_suite = suite.replace("\\", "\\\\").replace('"', '\\"')
     status_value = 1 if status == "passed" else 0
     labels = f'suite="{escaped_suite}"'
@@ -128,7 +204,18 @@ def prometheus_summary(suite: str, status: str, totals: JUnitTotals) -> str:
         ("inventory_test_skipped", totals.skipped),
         ("inventory_test_duration_seconds", round(totals.duration_seconds, 6)),
     )
-    return "".join(f"{name}{{{labels}}} {value}\n" for name, value in metrics)
+    output = "".join(f"{name}{{{labels}}} {value}\n" for name, value in metrics)
+    for name, metric in sorted(coverage.items()):
+        coverage_labels = f'{labels},metric="{name}"'
+        output += (
+            f"inventory_test_coverage_percentage"
+            f"{{{coverage_labels}}} {metric['percentage']}\n"
+            f"inventory_test_coverage_covered"
+            f"{{{coverage_labels}}} {metric['covered']}\n"
+            f"inventory_test_coverage_total"
+            f"{{{coverage_labels}}} {metric['total']}\n"
+        )
+    return output
 
 
 def markdown_summary(summary: dict[str, object]) -> str:
@@ -140,6 +227,13 @@ def markdown_summary(summary: dict[str, object]) -> str:
         f"| `{item['name']}` | `{item['source']}` | {item['filesCopied']} |"
         for item in evidence
     )
+    coverage = summary["coverage"]
+    assert isinstance(coverage, dict)
+    coverage_rows = "\n".join(
+        f"| {name} | {metric['covered']}/{metric['total']} | "
+        f"{metric['percentage']}% |"
+        for name, metric in sorted(coverage.items())
+    )
     return f"""# Test result: {summary['suite']}
 
 - Status: **{summary['status']}**
@@ -150,6 +244,12 @@ def markdown_summary(summary: dict[str, object]) -> str:
 - Errors: {junit['errors']}
 - Skipped: {junit['skipped']}
 - Duration: {junit['durationSeconds']} seconds
+
+## Coverage
+
+| Metric | Covered | Percentage |
+|---|---:|---:|
+{coverage_rows or '| n/a | n/a | n/a |'}
 
 ## Evidence
 
@@ -179,6 +279,14 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="PATH",
         help="read a JUnit XML file or directory (repeatable)",
+    )
+    parser.add_argument(
+        "--coverage",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help="read an Istanbul summary JSON or JaCoCo XML (repeatable fallback)",
     )
     parser.add_argument(
         "--metadata",
@@ -212,6 +320,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     totals = parse_junit(arguments.junit)
+    coverage = parse_coverage(arguments.coverage)
     status = arguments.status
     if totals.failures or totals.errors:
         status = "failed"
@@ -229,6 +338,7 @@ def main(argv: list[str] | None = None) -> int:
             "skipped": totals.skipped,
             "durationSeconds": round(totals.duration_seconds, 6),
         },
+        "coverage": coverage,
         "evidence": evidence,
         "metadata": dict(arguments.metadata),
     }
@@ -240,7 +350,8 @@ def main(argv: list[str] | None = None) -> int:
         markdown_summary(summary), encoding="utf-8"
     )
     (suite_directory / "metrics.prom").write_text(
-        prometheus_summary(arguments.suite, status, totals), encoding="utf-8"
+        prometheus_summary(arguments.suite, status, totals, coverage),
+        encoding="utf-8",
     )
     print(suite_directory)
     return 0
