@@ -9,6 +9,7 @@
     "status",
     "generatedAt",
     "junit",
+    "coverage",
     "evidence",
     "metadata"
   ],
@@ -29,6 +30,13 @@
         "skipped",
         "durationSeconds"
       ]
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["covered", "missed", "total", "percentage"]
+      }
     },
     "evidence": { "type": "array" },
     "metadata": { "type": "object" }

@@ -9,6 +9,7 @@ readonly environment_file="$repository_root/.env"
 readonly playwright_image="${PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright:v1.60.0-noble}"
 readonly compose_project="${E2E_COMPOSE_PROJECT_NAME:-inventory-e2e-local}"
 readonly keep_stack="${E2E_KEEP_STACK:-false}"
+results_initialized=false
 
 source "$repository_root/scripts/testing/local_compose.sh"
 
@@ -24,12 +25,35 @@ read_environment_value() {
 }
 
 cleanup() {
+  local exit_code=$?
+  trap - EXIT
+  set +e
+
+  if [[ "$results_initialized" == true ]]; then
+    capture_local_compose_diagnostics \
+      "$repository_root" \
+      "$environment_file" \
+      "$compose_project" \
+      "$repository_root/test-results/e2e/playwright/evidence/docker"
+    if [[ ! -f "$repository_root/test-results/e2e/playwright/summary.json" ]]; then
+      python3 "$repository_root/scripts/testing/collect_test_results.py" \
+        --suite e2e/playwright \
+        --status failed \
+        --output-root "$repository_root/test-results" \
+        --metadata workflow=local \
+        --metadata failureStage=setup \
+        --metadata browser=playwright-docker
+    fi
+  fi
+
   if [[ "$keep_stack" == true ]]; then
     printf 'E2E stack preserved as project %s.\n' "$compose_project"
-    return
+  else
+    local_compose "$repository_root" "$environment_file" "$compose_project" \
+      down -v --remove-orphans
   fi
-  local_compose "$repository_root" "$environment_file" "$compose_project" \
-    down -v --remove-orphans
+
+  exit "$exit_code"
 }
 
 trap cleanup EXIT
@@ -42,8 +66,9 @@ docker compose version >/dev/null
 
 "$repository_root/scripts/security/init-secret-env.sh" local
 pnpm --dir "$e2e_directory" install --frozen-lockfile
-docker pull "$playwright_image"
 reset_test_result_directory "$repository_root" test-results/e2e/playwright
+results_initialized=true
+docker_pull_public_image "$playwright_image"
 
 readonly frontend_port="$(read_environment_value FRONTEND_PORT)"
 readonly backend_port="$(read_environment_value BACKEND_PORT)"
@@ -85,12 +110,6 @@ docker run --rm --init --ipc=host --network=host \
   /work/tests/e2e/node_modules/.bin/playwright test "$@"
 test_exit_code=$?
 set -e
-
-mkdir -p "$repository_root/test-results/e2e/playwright/evidence/docker"
-local_compose "$repository_root" "$environment_file" "$compose_project" \
-  ps > "$repository_root/test-results/e2e/playwright/evidence/docker/compose-ps.txt" || true
-local_compose "$repository_root" "$environment_file" "$compose_project" \
-  logs --no-color > "$repository_root/test-results/e2e/playwright/evidence/docker/compose.log" || true
 
 status=failed
 [[ "$test_exit_code" -eq 0 ]] && status=passed

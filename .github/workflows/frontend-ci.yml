@@ -62,6 +62,7 @@ jobs:
           python3 scripts/testing/collect_test_results.py \
             --suite frontend/unit \
             --status "$status" \
+            --coverage frontend/coverage/qa-gestion-inventarios-frontend/coverage-summary.json \
             --copy coverage=frontend/coverage \
             --metadata "workflow=Frontend CI" \
             --metadata "run=${{ github.run_id }}" \
