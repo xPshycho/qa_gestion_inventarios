@@ -11,6 +11,8 @@ readonly compose_project="${LOCAL_TEST_COMPOSE_PROJECT_NAME:-inventory-e2e-local
 declare -a phase_results=()
 failed_phases=0
 
+source "$repository_root/scripts/testing/local_compose.sh"
+
 record_phase() {
   local name="$1"
   local exit_code="$2"
@@ -60,6 +62,9 @@ run_performance_tests() {
   test -n "$viewer_password"
   test -n "$backend_port"
   test -n "$keycloak_port"
+  reset_test_result_directory "$repository_root" test-results/performance/k6
+
+  local test_exit_code=0
   docker run --rm --network host \
     --user "$(id -u):$(id -g)" \
     --volume "$repository_root:/work" \
@@ -73,7 +78,18 @@ run_performance_tests() {
     --env K6_PROFILE=smoke \
     --env K6_RESULTS_DIR=/work/test-results/performance/k6 \
     "$k6_image" \
-    run tests/performance/performance.js
+    run tests/performance/performance.js || test_exit_code=$?
+
+  local status=failed
+  [[ "$test_exit_code" -eq 0 ]] && status=passed
+  python3 "$repository_root/scripts/testing/collect_test_results.py" \
+    --suite performance/k6 \
+    --status "$status" \
+    --output-root "$repository_root/test-results" \
+    --metadata workflow=local \
+    --metadata nativeSummary=k6-summary.json
+
+  return "$test_exit_code"
 }
 
 run_security_tests() {
@@ -83,22 +99,43 @@ run_security_tests() {
   keycloak_port="$(read_environment_value KEYCLOAK_PORT)"
   test -n "$frontend_port"
   test -n "$keycloak_port"
+  reset_test_result_directory "$repository_root" test-results/security/headers
+  reset_test_result_directory "$repository_root" test-results/security/zap
+
+  local headers_exit_code=0
   FRONTEND_URL="http://localhost:$frontend_port" \
   KEYCLOAK_PUBLIC_URL="http://localhost:$keycloak_port" \
   SECURITY_HEADERS_REPORT_FILE=test-results/security/headers/evidence/headers.txt \
-    "$repository_root/tests/security/verify-headers.sh"
+    "$repository_root/tests/security/verify-headers.sh" || headers_exit_code=$?
+
+  local zap_exit_code=0
   ZAP_TARGET_URL="http://localhost:$frontend_port" \
   ZAP_DOCKER_NETWORK=host \
   ZAP_REPORT_DIR=test-results/security/zap/evidence/reports \
-    "$repository_root/tests/security/run-zap-baseline.sh"
+    "$repository_root/tests/security/run-zap-baseline.sh" || zap_exit_code=$?
+
+  local headers_status=failed
+  [[ "$headers_exit_code" -eq 0 ]] && headers_status=passed
+  python3 "$repository_root/scripts/testing/collect_test_results.py" \
+    --suite security/headers \
+    --status "$headers_status" \
+    --output-root "$repository_root/test-results" \
+    --metadata workflow=local
+
+  local zap_status=failed
+  [[ "$zap_exit_code" -eq 0 ]] && zap_status=passed
+  python3 "$repository_root/scripts/testing/collect_test_results.py" \
+    --suite security/zap \
+    --status "$zap_status" \
+    --output-root "$repository_root/test-results" \
+    --metadata workflow=local \
+    --metadata format=zap-json-markdown
+
+  [[ "$headers_exit_code" -eq 0 && "$zap_exit_code" -eq 0 ]]
 }
 
 cleanup() {
-  docker compose \
-    --env-file "$environment_file" \
-    --project-name "$compose_project" \
-    --project-directory "$repository_root" \
-    --file "$repository_root/docker-compose.yml" \
+  local_compose "$repository_root" "$environment_file" "$compose_project" \
     down -v --remove-orphans >/dev/null 2>&1 || true
 }
 

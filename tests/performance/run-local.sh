@@ -8,18 +8,17 @@ readonly environment_file="$repository_root/.env"
 readonly compose_project="${PERFORMANCE_COMPOSE_PROJECT_NAME:-inventory-performance-local}"
 readonly k6_image="${K6_IMAGE:-grafana/k6:0.57.0@sha256:70af91f86cd8e142e0544a4edaf79835a80033f71974b92edd5ac36fd4442a7b}"
 
+source "$repository_root/scripts/testing/local_compose.sh"
+
 cleanup() {
-  docker compose \
-    --env-file "$environment_file" \
-    --project-name "$compose_project" \
-    --project-directory "$repository_root" \
-    --file "$repository_root/docker-compose.yml" \
+  local_compose "$repository_root" "$environment_file" "$compose_project" \
     down -v --remove-orphans
 }
 
 trap cleanup EXIT
 
 command -v awk >/dev/null
+command -v curl >/dev/null
 command -v docker >/dev/null
 docker version >/dev/null
 docker compose version >/dev/null
@@ -45,12 +44,16 @@ test -n "$viewer_password"
 test -n "$backend_port"
 test -n "$keycloak_port"
 
-docker compose \
-  --env-file "$environment_file" \
-  --project-name "$compose_project" \
-  --project-directory "$repository_root" \
-  --file "$repository_root/docker-compose.yml" \
+reset_test_result_directory "$repository_root" test-results/performance/k6
+
+local_compose "$repository_root" "$environment_file" "$compose_project" \
   up --build --wait --wait-timeout 240 -d
+
+wait_for_http_endpoint backend "http://localhost:$backend_port/actuator/health" 120
+wait_for_http_endpoint \
+  keycloak \
+  "http://localhost:$keycloak_port/realms/inventory/.well-known/openid-configuration" \
+  120
 
 set +e
 docker run --rm --network host \

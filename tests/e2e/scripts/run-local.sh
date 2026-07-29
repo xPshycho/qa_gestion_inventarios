@@ -10,6 +10,8 @@ readonly playwright_image="${PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright:v1.6
 readonly compose_project="${E2E_COMPOSE_PROJECT_NAME:-inventory-e2e-local}"
 readonly keep_stack="${E2E_KEEP_STACK:-false}"
 
+source "$repository_root/scripts/testing/local_compose.sh"
+
 read_environment_value() {
   local key="$1"
   awk -F= -v key="$key" '
@@ -26,11 +28,7 @@ cleanup() {
     printf 'E2E stack preserved as project %s.\n' "$compose_project"
     return
   fi
-  docker compose \
-    --env-file "$environment_file" \
-    --project-name "$compose_project" \
-    --project-directory "$repository_root" \
-    --file "$repository_root/docker-compose.yml" \
+  local_compose "$repository_root" "$environment_file" "$compose_project" \
     down -v --remove-orphans
 }
 
@@ -38,12 +36,14 @@ trap cleanup EXIT
 
 command -v docker >/dev/null
 command -v pnpm >/dev/null
+command -v curl >/dev/null
 docker version >/dev/null
 docker compose version >/dev/null
 
 "$repository_root/scripts/security/init-secret-env.sh" local
 pnpm --dir "$e2e_directory" install --frozen-lockfile
 docker pull "$playwright_image"
+reset_test_result_directory "$repository_root" test-results/e2e/playwright
 
 readonly frontend_port="$(read_environment_value FRONTEND_PORT)"
 readonly backend_port="$(read_environment_value BACKEND_PORT)"
@@ -52,12 +52,15 @@ test -n "$frontend_port"
 test -n "$backend_port"
 test -n "$keycloak_port"
 
-docker compose \
-  --env-file "$environment_file" \
-  --project-name "$compose_project" \
-  --project-directory "$repository_root" \
-  --file "$repository_root/docker-compose.yml" \
+local_compose "$repository_root" "$environment_file" "$compose_project" \
   up --build --wait --wait-timeout 240 -d
+
+wait_for_http_endpoint frontend "http://localhost:$frontend_port/" 120
+wait_for_http_endpoint backend "http://localhost:$backend_port/actuator/health" 120
+wait_for_http_endpoint \
+  keycloak \
+  "http://localhost:$keycloak_port/realms/inventory/.well-known/openid-configuration" \
+  120
 
 set +e
 docker run --rm --init --ipc=host --network=host \
@@ -84,17 +87,9 @@ test_exit_code=$?
 set -e
 
 mkdir -p "$repository_root/test-results/e2e/playwright/evidence/docker"
-docker compose \
-  --env-file "$environment_file" \
-  --project-name "$compose_project" \
-  --project-directory "$repository_root" \
-  --file "$repository_root/docker-compose.yml" \
+local_compose "$repository_root" "$environment_file" "$compose_project" \
   ps > "$repository_root/test-results/e2e/playwright/evidence/docker/compose-ps.txt" || true
-docker compose \
-  --env-file "$environment_file" \
-  --project-name "$compose_project" \
-  --project-directory "$repository_root" \
-  --file "$repository_root/docker-compose.yml" \
+local_compose "$repository_root" "$environment_file" "$compose_project" \
   logs --no-color > "$repository_root/test-results/e2e/playwright/evidence/docker/compose.log" || true
 
 status=failed
