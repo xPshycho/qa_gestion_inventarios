@@ -1,16 +1,13 @@
 name: Security Testing
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - staging
-  pull_request:
-    branches:
-      - main
-      - develop
-      - staging
+  workflow_call:
+    inputs:
+      target_url:
+        description: 'Optional HTTPS staging URL for the ZAP baseline scan'
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       target_url:

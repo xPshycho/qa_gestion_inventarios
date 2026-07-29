@@ -1,7 +1,11 @@
 name: GCP Production Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - Quality Pipeline
+    types:
+      - completed
     branches:
       - main
 
@@ -14,88 +18,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  backend-quality:
-    name: Backend production gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-
-    steps:
-      - name: Checkout exact deployment revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
-        with:
-          java-version: 21
-          distribution: temurin
-          cache: gradle
-
-      - name: Run backend quality gates
-        working-directory: backend
-        run: >-
-          ./gradlew
-          test
-          apiTest
-          integrationTest
-          jacocoTestReport
-          jacocoTestCoverageVerification
-          --no-daemon
-
-  frontend-quality:
-    name: Frontend production gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    steps:
-      - name: Checkout exact deployment revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-
-      - name: Set up Node.js 20
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 20
-
-      - name: Enable pnpm 10.12.1
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.12.1 --activate
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Build frontend
-        working-directory: frontend
-        run: pnpm build
-
-      - name: Resolve Chromium
-        run: |
-          CHROME_PATH="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
-          if [ -z "$CHROME_PATH" ]; then
-            echo "No Chrome or Chromium binary was found." >&2
-            exit 1
-          fi
-          echo "CHROME_BIN=$CHROME_PATH" >> "$GITHUB_ENV"
-
-      - name: Run frontend unit tests
-        working-directory: frontend
-        run: >-
-          pnpm exec ng test
-          --watch=false
-          --browsers=ChromeHeadlessNoSandbox
-          --code-coverage
-
   deploy-and-validate:
     name: Deploy and validate production
-    needs:
-      - backend-quality
-      - frontend-quality
+    if: >-
+      github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment:
@@ -111,12 +39,12 @@ jobs:
       GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
       PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
       E2E_VIEWER_USERNAME: ${{ vars.E2E_VIEWER_USERNAME }}
-      DEPLOYED_SHA: ${{ github.sha }}
+      DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
       PRODUCTION_STATE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/shared
       PRODUCTION_ENV_FILE: ${{ vars.GCP_DEPLOY_PATH }}/shared/production.env
-      PRODUCTION_EVIDENCE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/shared/evidence/${{ github.sha }}
-      RELEASE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/releases/${{ github.sha }}
-      EVIDENCE_ARTIFACT_NAME: production-evidence-${{ github.sha }}-${{ github.run_attempt }}
+      PRODUCTION_EVIDENCE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/shared/evidence/${{ github.event.workflow_run.head_sha }}
+      RELEASE_DIR: ${{ vars.GCP_DEPLOY_PATH }}/releases/${{ github.event.workflow_run.head_sha }}
+      EVIDENCE_ARTIFACT_NAME: production-evidence-${{ github.event.workflow_run.head_sha }}-${{ github.run_attempt }}
 
     steps:
       - name: Validate production configuration
@@ -163,7 +91,7 @@ jobs:
       - name: Checkout exact deployment revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           persist-credentials: false
 
