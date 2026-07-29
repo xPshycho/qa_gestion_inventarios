@@ -40,12 +40,16 @@ function requiredSecret(name: string): string {
 
 export const adminUser: E2EUser = {
   username: process.env.E2E_ADMIN_USERNAME ?? 'carlos',
-  password: requiredSecret('E2E_ADMIN_PASSWORD'),
+  get password() {
+    return requiredSecret('E2E_ADMIN_PASSWORD');
+  },
 };
 
 export const viewerUser: E2EUser = {
   username: process.env.E2E_VIEWER_USERNAME ?? 'viewer',
-  password: requiredSecret('E2E_VIEWER_PASSWORD'),
+  get password() {
+    return requiredSecret('E2E_VIEWER_PASSWORD');
+  },
 };
 
 export async function loginAs(page: Page, user: E2EUser): Promise<void> {

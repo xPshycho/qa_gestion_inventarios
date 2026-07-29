@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: ''
+      run_zap:
+        description: Run the ZAP baseline inside the staging preview
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -27,11 +32,12 @@ jobs:
       STAGING_DEPLOYMENT_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
       STAGING_LIFECYCLE: ephemeral
       STAGING_VISIBILITY: runner-private
+      STAGING_RUN_ZAP: ${{ inputs.run_zap }}
 
     steps:
       - name: Checkout deployment revision
         id: checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.deploy_ref || github.sha }}
 
@@ -51,10 +57,10 @@ jobs:
             exit 1
           fi
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Enable pnpm 10.12.1
         run: |
@@ -74,14 +80,36 @@ jobs:
           else
             pnpm exec playwright install chromium
           fi
-          pnpm exec playwright install ffmpeg
 
       - name: Record the exact deployed revision
+        id: revision
         run: |
           test -z "$(git status --porcelain --untracked-files=all)"
           DEPLOYED_SHA="$(git rev-parse HEAD)"
           echo "APP_VERSION=$DEPLOYED_SHA" >> "$GITHUB_ENV"
           echo "DEPLOYED_SHA=$DEPLOYED_SHA" >> "$GITHUB_ENV"
+          echo "sha=$DEPLOYED_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Build cached application images in parallel
+        uses: docker/bake-action@d3418bd7d0e9324001bca92fa8ba175ea7e6dc9b # v7.3.0
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          source: .
+          files: docker-compose.yml
+          targets: backend,frontend
+          load: true
+          provenance: false
+          set: |
+            backend.tags=inventory-backend:${{ steps.revision.outputs.sha }}
+            backend.cache-from=type=gha,scope=inventory-staging-backend
+            backend.cache-to=type=gha,mode=max,scope=inventory-staging-backend,ignore-error=true
+            frontend.tags=inventory-frontend:${{ steps.revision.outputs.sha }}
+            frontend.cache-from=type=gha,scope=inventory-staging-frontend
+            frontend.cache-to=type=gha,mode=max,scope=inventory-staging-frontend,ignore-error=true
 
       - name: Generate ephemeral staging secrets
         run: |
@@ -113,7 +141,7 @@ jobs:
       - name: Deploy staging preview
         id: deploy
         continue-on-error: true
-        run: ./scripts/staging/deploy.sh
+        run: ./scripts/staging/deploy.sh --no-build
 
       - name: Run mandatory post-deploy gate
         id: post_deploy
@@ -175,6 +203,7 @@ jobs:
             echo "- Lifecycle: ephemeral"
             echo "- Visibility: runner-private; URLs use loopback and are not public"
             echo "- Compose project: \`${COMPOSE_PROJECT_NAME}\`"
+            echo "- ZAP baseline in preview: \`${STAGING_RUN_ZAP}\`"
             echo "- Artifact: \`test-results-staging-post-deploy-${DEPLOYED_SHA:-unknown}-${GITHUB_RUN_ATTEMPT}\`"
             echo "- Evidence safety: \`${{ steps.evidence_safety.outcome }}\`"
             echo "- Final evidence collection: \`${{ steps.final_collection.outcome }}\`"
@@ -191,7 +220,7 @@ jobs:
 
       - name: Upload staging evidence
         if: always() && steps.evidence_safety.outcome == 'success' && steps.centralized_safety.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-staging-post-deploy-${{ env.DEPLOYED_SHA }}-${{ github.run_attempt }}
           path: test-results/staging/post-deploy/**

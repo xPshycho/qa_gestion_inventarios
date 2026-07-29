@@ -13,7 +13,7 @@
     "test:keyboard": "bash scripts/run-local.sh keyboard.spec.ts --project=chromium",
     "test:responsive": "bash scripts/run-local.sh responsive.spec.ts",
     "test:browsers": "bash scripts/run-local.sh browser-compatibility.spec.ts",
-    "test:smoke": "playwright test --grep @deployed-smoke --project=chromium",
+    "test:smoke": "playwright test deployed-smoke.spec.ts --grep @deployed-smoke --project=chromium",
     "test:list": "playwright test --list",
     "report": "playwright show-report"
   },
