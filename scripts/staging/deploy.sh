@@ -60,7 +60,6 @@ up_arguments=(
   --wait
   --wait-timeout "$wait_timeout"
   --no-build
-  --force-recreate
 )
 staging_compose up "${up_arguments[@]}"
 

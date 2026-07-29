@@ -7,6 +7,9 @@ services:
     labels:
       com.inventory.environment: staging
       com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+    healthcheck:
+      interval: 5s
+      retries: 10
     stop_grace_period: 30s
 
   keycloak-postgres:
@@ -22,9 +25,9 @@ services:
       test:
         - CMD-SHELL
         - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
     labels:
       com.inventory.environment: staging
@@ -70,6 +73,9 @@ services:
     labels:
       com.inventory.environment: staging
       com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
+    healthcheck:
+      interval: 5s
+      retries: 60
     stop_grace_period: 30s
 
   backend:
@@ -96,6 +102,9 @@ services:
       com.inventory.environment: staging
       com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
       com.inventory.deployment-id: ${STAGING_DEPLOYMENT_ID:?STAGING_DEPLOYMENT_ID is required}
+    healthcheck:
+      interval: 5s
+      retries: 24
     stop_grace_period: 30s
 
   frontend:
@@ -112,6 +121,9 @@ services:
       com.inventory.environment: staging
       com.inventory.version: ${APP_VERSION:?APP_VERSION is required}
       com.inventory.deployment-id: ${STAGING_DEPLOYMENT_ID:?STAGING_DEPLOYMENT_ID is required}
+    healthcheck:
+      interval: 5s
+      retries: 10
 
   prometheus:
     ports:
