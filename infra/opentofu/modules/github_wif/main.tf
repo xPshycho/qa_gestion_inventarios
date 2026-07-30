@@ -181,6 +181,17 @@ resource "google_storage_bucket_iam_member" "deploy_state" {
   }
 }
 
+# GCS evaluates storage.objects.list against the bucket, so an object-prefix
+# condition cannot grant it. This bucket-level legacy role adds only bucket
+# metadata/list access; object reads and writes remain prefix-restricted above.
+resource "google_storage_bucket_iam_member" "deploy_state_bucket_reader" {
+  for_each = local.deployments
+
+  bucket = var.state_bucket_name
+  role   = "roles/storage.legacyBucketReader"
+  member = google_service_account.deploy[each.key].member
+}
+
 resource "google_storage_bucket_iam_member" "plan_state" {
   bucket = var.state_bucket_name
   role   = "roles/storage.objectViewer"
@@ -191,6 +202,12 @@ resource "google_storage_bucket_iam_member" "plan_state" {
     description = "Allows internal pull requests to read environment states."
     expression  = "resource.name.startsWith('projects/_/buckets/${var.state_bucket_name}/objects/inventory/environments/')"
   }
+}
+
+resource "google_storage_bucket_iam_member" "plan_state_bucket_reader" {
+  bucket = var.state_bucket_name
+  role   = "roles/storage.legacyBucketReader"
+  member = google_service_account.plan.member
 }
 
 resource "google_storage_bucket_iam_member" "plan_platform_state" {
