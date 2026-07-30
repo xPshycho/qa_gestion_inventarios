@@ -36,7 +36,7 @@ describe('DashboardComponent', () => {
         updatedAt: '2026-06-07T12:00:00Z'
       }
     ],
-    mostMovedProducts: [],
+    bestSellingProducts: [],
     recentMovements: []
   };
 
@@ -98,7 +98,7 @@ describe('DashboardComponent', () => {
 
   it('expone identificadores estables para las listas', () => {
     expect(component.trackByCriticalProductId(0, dashboard.criticalProducts[0])).toBe(1);
-    expect(component.trackByTopMovedProductId(0, {
+    expect(component.trackByBestSellingProductId(0, {
       productId: 2
     } as never)).toBe(2);
     expect(component.trackByMovementId(0, {

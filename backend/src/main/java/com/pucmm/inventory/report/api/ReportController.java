@@ -4,7 +4,7 @@ import com.pucmm.inventory.report.api.dto.CriticalProductResponse;
 import com.pucmm.inventory.report.api.dto.DashboardMetricsResponse;
 import com.pucmm.inventory.report.api.dto.DashboardResponse;
 import com.pucmm.inventory.report.api.dto.RecentStockMovementResponse;
-import com.pucmm.inventory.report.api.dto.TopMovedProductResponse;
+import com.pucmm.inventory.report.api.dto.BestSellingProductResponse;
 import com.pucmm.inventory.report.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,12 +42,12 @@ public class ReportController {
         return reportService.getCriticalProducts(limit);
     }
 
-    @GetMapping("/most-moved-products")
-    @Operation(summary = "Listar productos con mas movimientos de inventario")
-    public List<TopMovedProductResponse> getMostMovedProducts(
+    @GetMapping("/best-selling-products")
+    @Operation(summary = "Listar productos con mas unidades vendidas, calculadas desde salidas de stock")
+    public List<BestSellingProductResponse> getBestSellingProducts(
             @RequestParam(defaultValue = "5") @Min(1) @Max(50) int limit
     ) {
-        return reportService.getMostMovedProducts(limit);
+        return reportService.getBestSellingProducts(limit);
     }
 
     @GetMapping("/recent-movements")

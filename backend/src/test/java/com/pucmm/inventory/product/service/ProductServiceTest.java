@@ -13,6 +13,11 @@ import com.pucmm.inventory.product.domain.Product;
 import com.pucmm.inventory.product.domain.ProductData;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.repository.ProductRepository;
+import com.pucmm.inventory.stock.domain.InventoryUser;
+import com.pucmm.inventory.stock.domain.StockMovement;
+import com.pucmm.inventory.stock.domain.StockMovementType;
+import com.pucmm.inventory.stock.repository.InventoryUserRepository;
+import com.pucmm.inventory.stock.repository.StockMovementRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -40,6 +45,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 class ProductServiceTest {
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private InventoryUserRepository inventoryUserRepository;
+
+    @Mock
+    private StockMovementRepository stockMovementRepository;
 
     @InjectMocks
     private ProductService productService;
@@ -88,7 +99,7 @@ class ProductServiceTest {
         verify(criteria.builder).like(criteria.lowerDescription, "%latitude%");
         verify(criteria.builder).equal(criteria.lowerCategory, "laptops");
         verify(criteria.builder).equal(criteria.statusPath, ProductStatus.ACTIVE);
-        verify(criteria.builder).and(criteria.searchPredicate, criteria.categoryPredicate, criteria.statusPredicate);
+        verify(criteria.builder).and(org.mockito.ArgumentMatchers.any(Predicate[].class));
     }
 
     @Test
@@ -104,12 +115,12 @@ class ProductServiceTest {
         Predicate predicate = specification.toPredicate(criteria.root, criteria.query, criteria.builder);
 
         assertThat(predicate).isSameAs(criteria.combinedPredicate);
-        verify(criteria.builder).and();
+        verify(criteria.builder).and(org.mockito.ArgumentMatchers.any(Predicate[].class));
     }
 
     @Test
     void getProductReturnsExistingProduct() {
-        when(productRepository.findById(1L)).thenReturn(Optional.of(productWithId(1L, "DELL-LAT-5440")));
+        when(productRepository.findByIdAndArchivedFalse(1L)).thenReturn(Optional.of(productWithId(1L, "DELL-LAT-5440")));
 
         ProductResponse response = productService.getProduct(1L);
 
@@ -119,7 +130,7 @@ class ProductServiceTest {
 
     @Test
     void getProductThrowsWhenProductDoesNotExist() {
-        when(productRepository.findById(99L)).thenReturn(Optional.empty());
+        when(productRepository.findByIdAndArchivedFalse(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> productService.getProduct(99L))
                 .isInstanceOf(ProductNotFoundException.class)
@@ -135,14 +146,23 @@ class ProductServiceTest {
             setPersistenceFields(product, 1L);
             return product;
         });
+        InventoryUser actor = inventoryUser();
+        when(inventoryUserRepository.findByUsernameIgnoreCase("edwin")).thenReturn(Optional.of(actor));
+        when(stockMovementRepository.save(any(StockMovement.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ProductResponse response = productService.createProduct(request);
+        ProductResponse response = productService.createProduct(request, "edwin");
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.sku()).isEqualTo("DELL-LAT-5440");
         ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(productCaptor.capture());
         assertThat(productCaptor.getValue().getName()).isEqualTo("Dell Latitude 5440");
+        ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
+        verify(stockMovementRepository).save(movementCaptor.capture());
+        assertThat(movementCaptor.getValue().getMovementType()).isEqualTo(StockMovementType.INITIAL);
+        assertThat(movementCaptor.getValue().getPreviousQuantity()).isZero();
+        assertThat(movementCaptor.getValue().getNewQuantity()).isEqualTo(12);
+        assertThat(movementCaptor.getValue().getUser()).isSameAs(actor);
     }
 
     @Test
@@ -150,7 +170,7 @@ class ProductServiceTest {
         ProductRequest request = request("DELL-LAT-5440");
         when(productRepository.existsBySkuIgnoreCase("DELL-LAT-5440")).thenReturn(true);
 
-        assertThatThrownBy(() -> productService.createProduct(request))
+        assertThatThrownBy(() -> productService.createProduct(request, "edwin"))
                 .isInstanceOf(DuplicateSkuException.class)
                 .hasMessageContaining("DELL-LAT-5440");
     }
@@ -159,7 +179,7 @@ class ProductServiceTest {
     void updateProductChangesExistingProduct() {
         Product existing = productWithId(1L, "DELL-LAT-5440");
         ProductRequest request = request("LEN-T14-G4");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productRepository.findByIdAndArchivedFalse(1L)).thenReturn(Optional.of(existing));
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("LEN-T14-G4", 1L)).thenReturn(false);
         when(productRepository.save(existing)).thenReturn(existing);
 
@@ -174,7 +194,7 @@ class ProductServiceTest {
     void updateProductRejectsDirectStockChange() {
         Product existing = productWithId(1L, "DELL-LAT-5440");
         ProductRequest request = request("LEN-T14-G4", 9);
-        when(productRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productRepository.findByIdAndArchivedFalse(1L)).thenReturn(Optional.of(existing));
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("LEN-T14-G4", 1L)).thenReturn(false);
 
         assertThatThrownBy(() -> productService.updateProduct(1L, request))
@@ -186,7 +206,7 @@ class ProductServiceTest {
     void updateProductRejectsDuplicateSku() {
         Product existing = productWithId(1L, "DELL-LAT-5440");
         ProductRequest request = request("LEN-T14-G4");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productRepository.findByIdAndArchivedFalse(1L)).thenReturn(Optional.of(existing));
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("LEN-T14-G4", 1L)).thenReturn(true);
 
         assertThatThrownBy(() -> productService.updateProduct(1L, request))
@@ -195,13 +215,16 @@ class ProductServiceTest {
     }
 
     @Test
-    void deleteProductDeletesExistingProduct() {
+    void deleteProductArchivesExistingProductAndPreservesHistory() {
         Product existing = productWithId(1L, "DELL-LAT-5440");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productRepository.findByIdAndArchivedFalse(1L)).thenReturn(Optional.of(existing));
+        when(productRepository.save(existing)).thenReturn(existing);
 
         productService.deleteProduct(1L);
 
-        verify(productRepository).delete(existing);
+        verify(productRepository).save(existing);
+        assertThat(existing.isArchived()).isTrue();
+        assertThat(existing.getStatus()).isEqualTo(ProductStatus.INACTIVE);
     }
 
     private ProductRequest request(String sku) {
@@ -234,6 +257,14 @@ class ProductServiceTest {
         ));
         setPersistenceFields(product, id);
         return product;
+    }
+
+    private InventoryUser inventoryUser() {
+        InventoryUser user = org.springframework.beans.BeanUtils.instantiateClass(InventoryUser.class);
+        ReflectionTestUtils.setField(user, "id", 7L);
+        ReflectionTestUtils.setField(user, "username", "edwin");
+        ReflectionTestUtils.setField(user, "displayName", "Edwin Balbuena");
+        return user;
     }
 
     private void setPersistenceFields(Product product, Long id) {

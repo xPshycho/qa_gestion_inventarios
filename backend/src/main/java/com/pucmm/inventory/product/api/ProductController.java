@@ -74,8 +74,14 @@ public class ProductController {
 
     @PostMapping
     @Operation(summary = "Crear producto")
-    public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductRequest request) {
-        ProductResponse response = productService.createProduct(request);
+    public ResponseEntity<ProductResponse> createProduct(
+            @Valid @RequestBody ProductRequest request,
+            Authentication authentication
+    ) {
+        ProductResponse response = productService.createProduct(
+                request,
+                authenticatedInventoryUserResolver.resolveUsername(authentication)
+        );
         return ResponseEntity
                 .created(URI.create("/products/" + response.id()))
                 .body(response);

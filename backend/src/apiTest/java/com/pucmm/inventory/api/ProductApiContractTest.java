@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -121,7 +122,9 @@ class ProductApiContractTest {
     @Test
     void createProductReturnsCreatedStatusAndLocation() throws Exception {
         ProductRequest request = request("DELL-LAT-5440");
-        when(productService.createProduct(request)).thenReturn(response(1L, "DELL-LAT-5440"));
+        when(authenticatedInventoryUserResolver.resolveUsername(
+                org.mockito.ArgumentMatchers.any(Authentication.class))).thenReturn("edwin");
+        when(productService.createProduct(request, "edwin")).thenReturn(response(1L, "DELL-LAT-5440"));
 
         given()
                 .auth().with(jwtWith(PRODUCT_MANAGE))
@@ -193,7 +196,9 @@ class ProductApiContractTest {
     @Test
     void duplicateSkuReturnsConflictError() throws Exception {
         ProductRequest request = request("DELL-LAT-5440");
-        when(productService.createProduct(request)).thenThrow(new DuplicateSkuException("DELL-LAT-5440"));
+        when(authenticatedInventoryUserResolver.resolveUsername(
+                org.mockito.ArgumentMatchers.any(Authentication.class))).thenReturn("edwin");
+        when(productService.createProduct(request, "edwin")).thenThrow(new DuplicateSkuException("DELL-LAT-5440"));
 
         given()
                 .auth().with(jwtWith(PRODUCT_MANAGE))

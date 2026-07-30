@@ -90,23 +90,23 @@
 
       <mat-card class="insight-panel">
         <div class="insight-title">
-          <strong>Productos más movidos</strong>
-          <span>por unidades</span>
+          <strong>Productos más vendidos</strong>
+          <span>por unidades de salida</span>
         </div>
 
-        <ol class="moved-list" *ngIf="dashboardData.mostMovedProducts.length > 0; else emptyMoved">
-          <li *ngFor="let product of dashboardData.mostMovedProducts; let index = index; trackBy: trackByTopMovedProductId">
+        <ol class="moved-list" *ngIf="dashboardData.bestSellingProducts.length > 0; else emptyMoved">
+          <li *ngFor="let product of dashboardData.bestSellingProducts; let index = index; trackBy: trackByBestSellingProductId">
             <span class="rank">{{ index + 1 }}</span>
             <div>
               <strong>{{ product.productName }}</strong>
-              <span>{{ product.productSku }} - {{ product.movementCount }} movimientos</span>
+              <span>{{ product.productSku }} - {{ product.exitMovementCount }} salidas</span>
             </div>
-            <strong class="moved-units">{{ product.totalMovedUnits }}</strong>
+            <strong class="moved-units">{{ product.totalSoldUnits }}</strong>
           </li>
         </ol>
 
         <ng-template #emptyMoved>
-          <p class="empty-inline">No hay movimientos registrados.</p>
+          <p class="empty-inline">No hay salidas de stock registradas.</p>
         </ng-template>
       </mat-card>
 
