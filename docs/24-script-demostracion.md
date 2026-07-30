@@ -66,9 +66,13 @@
 - [auth.config.ts](../frontend/src/app/auth/auth.config.ts): conecta Angular con Keycloak.
 - [auth.service.ts](../frontend/src/app/auth/auth.service.ts): controla login, logout y renovación.
 - [auth.guards.ts](../frontend/src/app/auth/auth.guards.ts): restringe rutas por permiso.
+- [SecurityAdminService.java](../backend/src/main/java/com/pucmm/inventory/security/service/SecurityAdminService.java): crea usuarios y asigna roles mediante la API administrativa de Keycloak.
+- [SecurityCatalogRepository.java](../backend/src/main/java/com/pucmm/inventory/security/repository/SecurityCatalogRepository.java): mantiene la copia local usada por catálogo, validación y auditoría.
 - [roles.spec.ts](../tests/e2e/specs/roles.spec.ts): demuestra acceso permitido y denegado.
 
 **Acción:** entrar como `viewer`, comprobar lectura sin mutaciones; entrar como `carlos`, comprobar administración completa.
+
+**Distribución de responsabilidad:** Keycloak es la fuente de identidad y asignación de roles. Sus roles compuestos agrupan permisos y el mapper `inventory permissions` los coloca en el claim `permissions` del JWT. Spring Security valida ese claim con `hasAuthority` en cada endpoint. PostgreSQL conserva un catálogo sincronizado para mostrar roles/permisos, validar los roles funcionales permitidos y asociar usuarios con movimientos y auditoría; no autentica ni sustituye a Keycloak.
 
 **Resultado:** `product:view`, `product:manage`, `stock:view`, `stock:manage`, `report:view`, `user:manage` y `audit:view` se aplican por operación.
 
