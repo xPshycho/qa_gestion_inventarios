@@ -230,8 +230,11 @@ jobs:
 
   staging:
     name: Staging after CI
+    # always() prevents an intentionally skipped upstream job (for example,
+    # conventional commits on push) from skipping this post-CI gate.
     if: >-
-      needs.ci-required.result == 'success'
+      always()
+      && needs.ci-required.result == 'success'
       && (
         (
           github.event_name == 'pull_request'
@@ -249,7 +252,11 @@ jobs:
 
   gcp-development:
     name: GCP managed development after CI
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: >-
+      always()
+      && needs.ci-required.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/develop'
     needs:
       - ci-required
     uses: ./.github/workflows/gcp-managed-deploy.yml
@@ -263,7 +270,12 @@ jobs:
 
   gcp-staging:
     name: GCP managed staging after CI
-    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    if: >-
+      always()
+      && needs.ci-required.result == 'success'
+      && needs.staging.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/staging'
     needs:
       - ci-required
       - staging

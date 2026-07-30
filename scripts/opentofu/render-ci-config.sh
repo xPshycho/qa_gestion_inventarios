@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+#
+# render-ci-config.sh
+# Genera backend.hcl y terraform.tfvars efímeros para CI con permisos 0600.
+# Consulte scripts/opentofu/README.md para el contrato completo de variables.
+#
+# Uso:
+#   scripts/opentofu/render-ci-config.sh <stack> <output-directory>
+#
+# Seguridad:
+#   Solo renderiza identificadores y referencias de imágenes; nunca secretos.
+#   Con DEPLOY_SERVICES=true exige imágenes inmutables con digest SHA-256.
 
 set -Eeuo pipefail
 

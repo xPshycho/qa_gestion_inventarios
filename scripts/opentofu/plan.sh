@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+#
+# plan.sh
+# Inicializa un root remoto, guarda un plan reproducible y lo muestra sin color.
+# No ejecuta apply. Consulte infra/opentofu/README.md para el orden operativo.
+#
+# Uso:
+#   scripts/opentofu/plan.sh <stack> <backend.hcl> <terraform.tfvars> [plan.tfplan]
+#
+# Entradas:
+#   TF_PLAN_LOCK  true por defecto; false únicamente para planes read-only de PR.
+# Salida:
+#   Un archivo .tfplan y su representación legible en stdout.
 
 set -Eeuo pipefail
 

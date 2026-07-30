@@ -16,6 +16,11 @@ archivo `.tf`.
 servicio, contenedores de secretos e IAM existen, pero no afirma que la
 aplicación responda en Cloud Run.
 
+Los jobs posteriores a CI usan `always()` para que un gate no se omita por una
+dependencia anterior marcada legítimamente como `skipped`. Esto no permite
+desplegar tras un fallo: development y staging exigen explícitamente
+`needs.ci-required.result == 'success'`, y staging administrado exige además el
+preview exitoso.
 El plan GCP de solo lectura del PR #145 pasó en el run
 [30508694249](https://github.com/xPshycho/qa_gestion_inventarios/actions/runs/30508694249).
 En el primer push posterior a `develop`, run
@@ -32,11 +37,25 @@ pull request
 merge a develop
   └─ CI Required ── apply plataforma ── apply development
 
-merge develop → staging
-  └─ CI Required ── staging privado ── apply staging
+## Flujo de promoción
 
-merge staging → main
-  └─ CI Required ── Environment production ── VM productiva
+```mermaid
+flowchart TD
+    PR["Pull request"] --> CHECKS["fmt + validate + tests"]
+    CHECKS --> PLAN["Plan GCP read-only"]
+    PLAN --> DEV["Merge a develop"]
+    DEV --> CIDEV["CI Required"]
+    CIDEV --> PLATFORM["Apply platform"]
+    PLATFORM --> APPLYDEV["Apply development"]
+    APPLYDEV --> STG["Promoción develop → staging"]
+    STG --> CISTG["CI Required"]
+    CISTG --> PREVIEW["Staging runner-private"]
+    PREVIEW --> APPLYSTG["Apply staging"]
+    APPLYSTG --> MAIN["Promoción staging → main"]
+    MAIN --> CIPROD["CI Required"]
+    CIPROD --> APPROVAL{"Environment production"}
+    APPROVAL -- "aprobado" --> VM["VM productiva"]
+    APPROVAL -- "pendiente/rechazado" --> BLOCKED["Deployment bloqueado"]
 ```
 
 Un PR obtiene una credencial OIDC efímera mediante Workload Identity
@@ -88,6 +107,23 @@ Cada valor debe tener al menos 16 caracteres. No imprimirlos, pasarlos como
 outputs, copiarlos a artifacts ni guardarlos en `.tfvars`.
 
 ## Preparar y comprobar un ambiente
+
+```mermaid
+stateDiagram-v2
+    [*] --> Configurado
+    Configurado --> Validado: fmt, validate y tests
+    Validado --> Planificado: plan guardado
+    Planificado --> Aprobado: revisión del cambio
+    Aprobado --> Aplicado: apply del mismo archivo
+    Aplicado --> Verificado: health, OIDC y QA
+    Planificado --> Fallido: cambio inesperado
+    Aplicado --> Fallido: error de runtime
+    Fallido --> Revertido: revert por PR
+    Revertido --> Planificado
+```
+
+El estado `Aplicado` prueba infraestructura; `Verificado` requiere comprobar
+el runtime y las suites correspondientes.
 
 Validación offline:
 

@@ -101,23 +101,27 @@ variable "service_deletion_protection" {
 }
 
 variable "web_min_instances" {
-  type    = number
-  default = 0
+  description = "Mínimo de instancias Cloud Run para el servicio web."
+  type        = number
+  default     = 0
 }
 
 variable "web_max_instances" {
-  type    = number
-  default = 2
+  description = "Máximo de instancias Cloud Run para el servicio web."
+  type        = number
+  default     = 2
 }
 
 variable "identity_min_instances" {
-  type    = number
-  default = 0
+  description = "Mínimo de instancias Cloud Run para el servicio de identidad."
+  type        = number
+  default     = 0
 }
 
 variable "identity_max_instances" {
-  type    = number
-  default = 1
+  description = "Máximo de instancias Cloud Run para el servicio de identidad."
+  type        = number
+  default     = 1
 }
 
 variable "labels" {
