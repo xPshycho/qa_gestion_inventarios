@@ -6,7 +6,7 @@ import com.pucmm.inventory.report.api.dto.CriticalProductResponse;
 import com.pucmm.inventory.report.api.dto.DashboardMetricsResponse;
 import com.pucmm.inventory.report.api.dto.DashboardResponse;
 import com.pucmm.inventory.report.api.dto.RecentStockMovementResponse;
-import com.pucmm.inventory.report.api.dto.TopMovedProductResponse;
+import com.pucmm.inventory.report.api.dto.BestSellingProductResponse;
 import com.pucmm.inventory.stock.domain.StockMovementType;
 import com.pucmm.inventory.stock.repository.StockMovementRepository;
 import java.math.BigDecimal;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ReportService {
     private static final int CRITICAL_PRODUCTS_LIMIT = 5;
-    private static final int MOST_MOVED_PRODUCTS_LIMIT = 5;
+    private static final int BEST_SELLING_PRODUCTS_LIMIT = 5;
     private static final int RECENT_MOVEMENTS_LIMIT = 8;
 
     private final ProductRepository productRepository;
@@ -34,7 +34,7 @@ public class ReportService {
         return new DashboardResponse(
                 getMetrics(),
                 getCriticalProducts(CRITICAL_PRODUCTS_LIMIT),
-                getMostMovedProducts(MOST_MOVED_PRODUCTS_LIMIT),
+                getBestSellingProducts(BEST_SELLING_PRODUCTS_LIMIT),
                 getRecentMovements(RECENT_MOVEMENTS_LIMIT)
         );
     }
@@ -45,9 +45,9 @@ public class ReportService {
                 .toList();
     }
 
-    public List<TopMovedProductResponse> getMostMovedProducts(int limit) {
-        return stockMovementRepository.findTopMovedProducts(PageRequest.of(0, limit)).stream()
-                .map(TopMovedProductResponse::from)
+    public List<BestSellingProductResponse> getBestSellingProducts(int limit) {
+        return stockMovementRepository.findBestSellingProducts(PageRequest.of(0, limit)).stream()
+                .map(BestSellingProductResponse::from)
                 .toList();
     }
 
@@ -59,9 +59,9 @@ public class ReportService {
 
     public DashboardMetricsResponse getMetrics() {
         return new DashboardMetricsResponse(
-                productRepository.count(),
-                productRepository.countByStatus(ProductStatus.ACTIVE),
-                productRepository.countByStatus(ProductStatus.INACTIVE),
+                productRepository.countByArchivedFalse(),
+                productRepository.countByStatusAndArchivedFalse(ProductStatus.ACTIVE),
+                productRepository.countByStatusAndArchivedFalse(ProductStatus.INACTIVE),
                 productRepository.countCriticalActiveProducts(),
                 zeroIfNull(productRepository.sumCurrentStock()),
                 zeroIfNull(productRepository.calculateInventoryValue()),

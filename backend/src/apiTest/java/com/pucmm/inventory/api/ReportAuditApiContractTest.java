@@ -20,7 +20,7 @@ import com.pucmm.inventory.report.api.dto.CriticalProductResponse;
 import com.pucmm.inventory.report.api.dto.DashboardMetricsResponse;
 import com.pucmm.inventory.report.api.dto.DashboardResponse;
 import com.pucmm.inventory.report.api.dto.RecentStockMovementResponse;
-import com.pucmm.inventory.report.api.dto.TopMovedProductResponse;
+import com.pucmm.inventory.report.api.dto.BestSellingProductResponse;
 import com.pucmm.inventory.report.service.ReportService;
 import com.pucmm.inventory.stock.domain.StockMovementType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -76,7 +76,7 @@ class ReportAuditApiContractTest {
                 .body("metrics.inventoryValue", org.hamcrest.Matchers.equalTo(1728000.0F))
                 .body("criticalProducts[0].sku", org.hamcrest.Matchers.equalTo("DELL-LAT-5440"))
                 .body("criticalProducts[0].shortage", org.hamcrest.Matchers.equalTo(3))
-                .body("mostMovedProducts[0].movementCount", org.hamcrest.Matchers.equalTo(3))
+                .body("bestSellingProducts[0].exitMovementCount", org.hamcrest.Matchers.equalTo(3))
                 .body("recentMovements[0].movementType", org.hamcrest.Matchers.equalTo("EXIT"))
                 .body("recentMovements[0].stockAlert", org.hamcrest.Matchers.equalTo(true));
     }
@@ -163,25 +163,25 @@ class ReportAuditApiContractTest {
 
     @Test
     void reportLimitIsForwardedToService() {
-        when(reportService.getMostMovedProducts(3)).thenReturn(List.of(topMovedProduct()));
+        when(reportService.getBestSellingProducts(3)).thenReturn(List.of(bestSellingProduct()));
 
         given()
                 .auth().with(jwtWith(REPORT_VIEW))
                 .queryParam("limit", 3)
         .when()
-                .get("/reports/most-moved-products")
+                .get("/reports/best-selling-products")
         .then()
                 .statusCode(200)
                 .body("[0].productSku", org.hamcrest.Matchers.equalTo("DELL-LAT-5440"));
 
-        verify(reportService).getMostMovedProducts(3);
+        verify(reportService).getBestSellingProducts(3);
     }
 
     private DashboardResponse dashboard() {
         return new DashboardResponse(
                 metrics(),
                 List.of(criticalProduct()),
-                List.of(topMovedProduct()),
+                List.of(bestSellingProduct()),
                 List.of(recentMovement())
         );
     }
@@ -216,8 +216,8 @@ class ReportAuditApiContractTest {
         );
     }
 
-    private TopMovedProductResponse topMovedProduct() {
-        return new TopMovedProductResponse(
+    private BestSellingProductResponse bestSellingProduct() {
+        return new BestSellingProductResponse(
                 1L,
                 "DELL-LAT-5440",
                 "Dell Latitude 5440",

@@ -31,3 +31,15 @@ groups:
         labels: { severity: warning, service: inventory-backend }
         annotations:
           summary: Pool de conexiones de base de datos saturado
+      - alert: InventoryAuthenticationFailures
+        expr: sum(rate(http_server_requests_seconds_count{job="inventory-backend",status=~"401|403"}[5m])) > 0.1
+        for: 2m
+        labels: { severity: warning, service: inventory-backend, area: security }
+        annotations:
+          summary: Fallos de autenticación o autorización sostenidos
+      - alert: InventoryHighJvmMemory
+        expr: sum(jvm_memory_used_bytes{job="inventory-backend",area="heap"}) / clamp_min(sum(jvm_memory_max_bytes{job="inventory-backend",area="heap"}), 1) > 0.85
+        for: 5m
+        labels: { severity: warning, service: inventory-backend }
+        annotations:
+          summary: Uso de memoria heap de JVM superior al 85 por ciento

@@ -47,7 +47,7 @@ Inventarios Empresarial. La auditoría se realizó el 29 de julio de 2026
 | 21 | [Troubleshooting](21-troubleshooting.md) | ¿Cómo diagnosticar fallos? |
 | 22 | [Evidencias](22-evidencias.md) | ¿Dónde consultar cada resultado? |
 | 23 | [Presentación](23-presentacion.md) | ¿Cómo exponer el proyecto? |
-| 24 | [Script de demostración](24-script-demostracion.md) | ¿Cómo hacer una demo reproducible? |
+| 24 | [Recorrido verificable](24-script-demostracion.md) | ¿Cómo comprobar el sistema de principio a fin? |
 | 25 | [Trazabilidad](25-trazabilidad-entregables.md) | ¿Dónde se cubre cada entregable? |
 | 26 | [Estado documental del issue #91](26-cierre-issue-91.md) | ¿Qué está completo o pendiente sin tocar GitHub? |
 | 27 | [Guía operativa GCP/OpenTofu](27-guia-operativa-gcp-opentofu.md) | ¿Cómo operar ambientes, approvals, state, secretos e incidentes sin confundir lo vigente con lo declarado? |

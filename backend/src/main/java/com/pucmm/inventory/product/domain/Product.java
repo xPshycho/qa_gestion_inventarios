@@ -54,6 +54,9 @@ public class Product {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(nullable = false)
+    private boolean archived;
+
     protected Product() {
     }
 
@@ -87,6 +90,11 @@ public class Product {
 
     public void adjustStock(int newQuantity) {
         currentStock = newQuantity;
+    }
+
+    public void archive() {
+        archived = true;
+        status = ProductStatus.INACTIVE;
     }
 
     public boolean hasMinimumStockAlert() {
@@ -146,5 +154,9 @@ public class Product {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isArchived() {
+        return archived;
     }
 }

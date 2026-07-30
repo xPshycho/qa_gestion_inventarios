@@ -2,13 +2,11 @@
 
 ## Fuentes auditadas
 
-La fuente normativa principal es
-`proyecto_final_division_edwin_carlos_2.pdf`; avances, divisiones, preguntas y
-reportes históricos fueron consultados durante la auditoría. Esos archivos no
-forman parte de este commit por la exclusión expresa de reportes
-preexistentes y la ruta `docs/referencias/proyecto-final/` no existe en el
-checkout actual. Su disponibilidad después de clonar es **Pendiente de
-verificación**.
+La fuente normativa principal recibida es
+`proyecto_final_division_edwin_carlos.pdf`; avances, divisiones, preguntas y
+reportes históricos también fueron consultados. El PDF se encuentra en el
+workspace de preparación, no forma parte del árbol versionado y debe
+entregarse por el canal académico autorizado.
 
 ## Inventario e integridad de fuentes
 
@@ -35,20 +33,16 @@ con `sha256sum <ARCHIVO>` cuando reciba el paquete externo.
 
 ## Procedencia del PDF citado por el issue
 
-Durante la auditoría previa se inspeccionó un PDF en:
-`docs/referencias/proyecto-final/proyecto_final_division_edwin_carlos_2.pdf`,
-11 páginas, SHA-256
-`054db933d9aea60274741164798d30d45e139c76b1580983135e444d16366cec`.
-El checkout actual no contiene archivos PDF y el archivo llamado exactamente
-`document_pdf (1).pdf` tampoco está presente.
+El archivo `proyecto_final_division_edwin_carlos.pdf` tiene 11 páginas y
+SHA-256
+`054db933d9aea60274741164798d30d45e139c76b1580983135e444d16366cec`,
+idéntico al hash preservado previamente para
+`proyecto_final_division_edwin_carlos_2.pdf`. La equivalencia queda
+**verificada por contenido**.
 
-El PDF preservado contiene los capítulos de alcance funcional, permisos,
+El PDF contiene los capítulos de alcance funcional, permisos,
 seguridad, arquitectura, full stack testing, ambientes, observabilidad,
-calidad, CI/CD, documentación y presentación que esta matriz cubre. La
-equivalencia de procedencia entre ambos nombres es **Pendiente de
-verificación**: debe compararse el hash del archivo original
-`document_pdf (1).pdf` con el hash anterior. No se renombró ni recreó un PDF
-sin esa evidencia.
+calidad, CI/CD, documentación y entregables que esta matriz cubre.
 
 Estados: `Completo`, `Parcial`, `No encontrado`, `Pendiente de validación`,
 `No aplica`.
@@ -60,12 +54,12 @@ Estados: `Completo`, `Parcial`, `No encontrado`, `Pendiente de validación`,
 | Matriz requisito → implementación → prueba → evidencia | alcance del issue | esta tabla y matriz por capítulos | revisión de rutas y enlaces relativos | fuentes con SHA + índices `docs/evidence/` | 25 | Completo |
 | Instalación, local, staging y troubleshooting consolidados | issue + PDF: Entornos/Documentación | `docker-compose*.yml`, `scripts/staging/`, `.env*.example` | suites locales, scripts inspeccionados y GCP read-only | resultados centralizados + reporte histórico #86 | 04, 05, 19, 21 | Completo |
 | Arquitectura final backend/frontend/seguridad/datos/infra/CI/observabilidad | issue + PDF: Arquitectura/Observabilidad/CI | `backend/`, `frontend/`, `infra/`, workflows y `Jenkinsfile` | build/tests, inspección de configuración y snapshot GCP | ocho diagramas Mermaid + inventario GCP; límites declarados | 02, 03, 06, 08, 16, 17 | Completo |
-| Consolidar unit, integration, API, E2E, performance, security, data y exploratory | issue + PDF: Full Stack Testing | suites bajo `backend/src/{test,apiTest,integrationTest}`, `frontend/src`, `tests/` y charters | 125 unit backend, 22 API, 17 integration/data, 101 frontend, 20 E2E, k6/ZAP/Trivy; reporte exploratorio inspeccionado | índices coverage/data/E2E/exploratory/ZAP/k6; load/stress, ZAP activo y retest staging visibles | 11-15, 22 | Completo |
+| Consolidar unit, integration, API, E2E, performance, security, data y exploratory | issue + PDF: Full Stack Testing | suites bajo `backend/src/{test,apiTest,integrationTest}`, `frontend/src`, `tests/` y charters | 125 unit backend, 23 API, 17 integration/data, 101 frontend, 20 E2E, k6 stress a 100 VUs y ZAP API activo; reporte exploratorio inspeccionado | índices coverage/data/E2E/exploratory/ZAP/k6; retest staging visible como pendiente | 11-15, 22 | Completo |
 | Evidencias de pipeline, dashboards, Swagger, Keycloak, reportes y flujos | issue + PDF: API/Seguridad/Observabilidad/CI | workflows, dashboard JSON, `OpenApiConfig`, realm, diagramas | GitHub API pública, curls OpenAPI/OIDC, evidencia exploratoria versionada | runs 30499884455, 30498677524, 30500093137; capturas y JSON; Jenkins remoto/VM pendientes | 16, 17, 22 | Completo |
 | Corregir documentación desactualizada o contradictoria | criterio del issue | portal canónico 00-27; banner histórico; estado de producción de datos corregido | `rg` de contradicciones, enlaces, `git diff --check` y safety documental | esta matriz y checklist final | 00, 22, 25-27 | Completo |
 | Checklist de entrega y presentación funcional | issue + PDF: Documentación/Presentación | presentación de 23 diapositivas y guion reproducible | revisión de cobertura del guion contra resultados y rutas | presentación, script y checklist | 23, 24, 26 | Completo |
-| Cubrir capítulos relevantes del PDF | criterio de aceptación | docs 01-25 especializados | extracción/lectura del único PDF preservado y cruce por capítulo | hash, inventario y matriz siguiente; nombre `document_pdf (1).pdf` pendiente de procedencia | 00, 25 | Parcial |
-| No presentar componentes ausentes como entregados | criterio de aceptación | estados `Parcial`/`Pendiente` en documentos canónicos | búsqueda de afirmaciones contradictorias | brechas ZAP activo, load/stress, Jenkins remoto, restore, producción interna | 03, 14-22, 26 | Completo |
+| Cubrir capítulos relevantes del PDF | criterio de aceptación | docs 01-27 especializados | extracción/lectura del PDF de 11 páginas y cruce por capítulo | hash exacto, inventario y matriz siguiente | 00, 25 | Completo |
+| No presentar componentes ausentes como entregados | criterio de aceptación | estados `Parcial`/`Pendiente` en documentos canónicos | búsqueda de afirmaciones contradictorias | brechas reales: Jenkins remoto, restore, producción interna y retest staging | 03, 14-22, 26 | Completo |
 | Evidencias enlazadas o en rutas documentadas | criterio de aceptación | diez índices de evidencia y tabla central | validador de enlaces relativos | `docs/evidence/`, artifacts GitHub y evidencias exploratorias | 22 | Completo |
 | README y docs consistentes con estado real | criterio de aceptación | README enlaza índice, evidencia y matriz | comprobación de enlaces/estados finales | README + checklist | README, 00, 26 | Completo |
 
@@ -78,32 +72,32 @@ Estados: `Completo`, `Parcial`, `No encontrado`, `Pendiente de validación`,
 | Arquitectura moderna | PDF | módulos, Compose, GCP | 02 + diagramas | Completo |
 | CRUD productos | PDF | ProductController/E2E CRUD | 01/07 | Completo |
 | Stock/historial | PDF | StockService/E2E stock | 01/07 | Completo |
-| Auditoría Envers | PDF | V6-V7/AuditController/E2E | 01/06/07 | Completo |
+| Auditoría Envers | PDF | V6-V8/AuditController/E2E | 01/06/07 | Completo |
 | API OpenAPI/Swagger | PDF | OpenAPI producción 3.0.1, 18 rutas, `bearer-jwt`; `OpenApiConfig` | 07/22 | Completo |
 | UI/dashboard/usabilidad | PDF | Angular/E2E responsive/a11y | 13/23/24 | Completo |
 | Seguridad granular | PDF | 7 permisos/4 roles/SecurityConfig | 08/09 | Completo |
 | JWT/OAuth2/Keycloak | PDF/preguntas | realm + auth code | 08 | Completo |
 | Refresh/expiración | PDF | `AuthService.updateToken`, realm lifespan | 08 | Completo |
-| Scopes/policies | PDF | claims y reglas Spring; policies históricas | 08/09 | Parcial |
+| Scopes/policies | PDF | Keycloak Authorization Services: 7 scopes, 4 resources y 11 policies; enforcement Spring | 08/09 | Completo |
 | Unit backend | PDF/avance | 125/125, JaCoCo | 11/12/22 | Completo |
 | Unit frontend | PDF | 101/101, Karma coverage | 11/12/22 | Completo |
 | Integración Testcontainers | PDF | 17/17, PostgreSQL/Keycloak | 11/12 | Completo |
-| API/contract | PDF | 22/22 RestAssured/OpenAPI | 07/11 | Completo |
+| API/contract | PDF | 23/23 RestAssured/OpenAPI | 07/11 | Completo |
 | E2E Playwright | PDF | 20/20, browsers/responsive | 13 | Completo |
-| Security testing | PDF | headers/ZAP/Trivy | 14 | Parcial |
-| Performance | PDF | k6 smoke PASS | 15 | Parcial |
+| Security testing | PDF | headers/Trivy PASS; ZAP baseline 0 High y API activa autenticada 118 PASS, 0 fallos | 14 | Completo |
+| Performance | PDF | smoke/load/stress PASS; stress 100 VUs, 10,804 requests, 0 % error | 15 | Completo |
 | Data testing | PDF | 17/17 integración; Flyway, seeds, relaciones y constraints | 06/11/22 | Completo |
 | Exploratory manual | PDF | 6 charters, 6 sesiones y 32 artifacts del 25-07-2026 | testing + 11/22 | Parcial |
 | Development | PDF | Compose ejecutado | 04/05 | Completo |
 | Preview/staging | PDF/issue #86 | scripts y evidencia histórica 7 fases | 19 | Completo |
 | Producción | PDF | VM HTTPS/health GCP | 03/19 | Parcial |
-| CI/CD | PDF | Actions runs `main`/`staging` PASS; deploy producción PASS; Jenkinsfile | 16/22 | Parcial |
+| CI/CD | PDF | Actions/quality gates/Jenkinsfile presentes; validación del ajuste WIF staging pendiente de merge | 16/22/27 | Parcial |
 | Publicación de reportes | issue #91 | artifacts remotos Actions y rutas Jenkins versionadas | 16/22 | Parcial |
-| Observabilidad completa | PDF | stack versionado; findings dashboard | 17 | Parcial |
-| Logs/métricas/trazas | PDF | Alloy/Prom/Loki/Tempo | 17 | Parcial |
+| Observabilidad completa | PDF | stack sano en Compose, dashboard corregido y siete reglas de alerta | 17 | Completo local; producción interna pendiente |
+| Logs/métricas/trazas | PDF | Alloy/Prometheus/Loki/Tempo, consulta `compose_service="backend"` y correlación OTel | 17 | Completo local |
 | Backup/rollback | PDF | snapshots/scripts; restore no probado | 20 | Parcial |
 | Infra GCP | issue #91/solicitud | inventario live read-only | 03 | Completo |
-| Operación GCP/OpenTofu | issue #109 | plan PR aprobado, jobs deploy development/staging, roots, Environments y dependencias auditados | 27 | Parcial por apply `skipped`, aprobación staging y drills pendientes |
+| Operación GCP/OpenTofu | issue #109 | roots/Environments/WIF presentes; se añadió lector de bucket para permitir `storage.objects.list` y conservar acceso a objetos por prefijo | 27 | Parcial hasta validar el apply administrado tras merge |
 | Matriz permisos | PDF | realm/SQL/SecurityConfig/tests | 09 | Completo |
 | Usuarios/accesos | solicitud | realm/IAM/secret stores | 10 | Completo |
 | Troubleshooting | issue #91 | hallazgos y runbooks | 21 | Completo |
@@ -114,18 +108,14 @@ Estados: `Completo`, `Parcial`, `No encontrado`, `Pendiente de validación`,
 
 ## Justificación de parciales
 
-- Scopes/policies: los permisos viajan como claim/scope, pero Authorization
-  Services contiene rutas históricas y el enforcement real es Spring.
-- Security: ZAP no es activo/autenticado.
-- Performance: solo smoke auditado; load/stress/soak pendientes.
 - Producción: superficie pública/GCP verificada, interior VM sin OS Login y
   certificado próximo a vencimiento.
 - Exploratoria: ejecución local y 32 artefactos completos; retest final en
   staging pendiente.
 - CI/reportes: GitHub Actions y artifacts remotos fueron verificados; Jenkins
   remoto continúa pendiente.
-- Observabilidad: stack existe, pero hay queries inconsistentes y producción
-  interna pendiente.
+- Observabilidad: la implementación local fue validada; la inspección interna
+  de la VM de producción sigue pendiente.
 - Rollback: scripts/snapshot existen; no se ejecutó restore Cloud SQL ni
   rollback productivo por seguridad.
 

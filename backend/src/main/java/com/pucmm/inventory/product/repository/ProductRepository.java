@@ -18,12 +18,19 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsBySkuIgnoreCaseAndIdNot(String sku, Long id);
 
-    long countByStatus(ProductStatus status);
+    Optional<Product> findByIdAndArchivedFalse(Long id);
+
+    boolean existsByIdAndArchivedFalse(Long id);
+
+    long countByArchivedFalse();
+
+    long countByStatusAndArchivedFalse(ProductStatus status);
 
     @Query("""
             select p
             from Product p
             where p.status = com.pucmm.inventory.product.domain.ProductStatus.ACTIVE
+              and p.archived = false
               and p.currentStock <= p.minimumStock
             order by (p.minimumStock - p.currentStock) desc, p.currentStock asc, p.name asc
             """)
@@ -33,17 +40,18 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             select count(p)
             from Product p
             where p.status = com.pucmm.inventory.product.domain.ProductStatus.ACTIVE
+              and p.archived = false
               and p.currentStock <= p.minimumStock
             """)
     long countCriticalActiveProducts();
 
-    @Query("select sum(p.currentStock) from Product p")
+    @Query("select sum(p.currentStock) from Product p where p.archived = false")
     Long sumCurrentStock();
 
-    @Query("select sum(p.price * p.currentStock) from Product p")
+    @Query("select sum(p.price * p.currentStock) from Product p where p.archived = false")
     BigDecimal calculateInventoryValue();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select p from Product p where p.id = :id")
+    @Query("select p from Product p where p.id = :id and p.archived = false")
     Optional<Product> findByIdForUpdate(@Param("id") Long id);
 }

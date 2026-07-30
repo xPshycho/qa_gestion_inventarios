@@ -236,7 +236,7 @@ test(
     }
     expect(totalProducts).toBeGreaterThan(0);
     expect(Array.isArray(dashboard['criticalProducts'])).toBe(true);
-    expect(Array.isArray(dashboard['mostMovedProducts'])).toBe(true);
+    expect(Array.isArray(dashboard['bestSellingProducts'])).toBe(true);
     expect(Array.isArray(dashboard['recentMovements'])).toBe(true);
 
     await expect(

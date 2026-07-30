@@ -5,6 +5,14 @@ const LOAD_STAGES = [
   { duration: __ENV.K6_LOAD_RAMP_DOWN || '20s', target: 0 },
 ];
 
+const STRESS_STAGES = [
+  { duration: __ENV.K6_STRESS_RAMP_UP || '30s', target: Number(__ENV.K6_STRESS_INITIAL_VUS || 25) },
+  { duration: __ENV.K6_STRESS_STEADY || '1m', target: Number(__ENV.K6_STRESS_INITIAL_VUS || 25) },
+  { duration: __ENV.K6_STRESS_PEAK_RAMP || '30s', target: Number(__ENV.K6_STRESS_MAX_VUS || 100) },
+  { duration: __ENV.K6_STRESS_PEAK || '1m', target: Number(__ENV.K6_STRESS_MAX_VUS || 100) },
+  { duration: __ENV.K6_STRESS_RAMP_DOWN || '30s', target: 0 },
+];
+
 export const profiles = {
   smoke: {
     executor: 'constant-vus',
@@ -17,6 +25,12 @@ export const profiles = {
     stages: LOAD_STAGES,
     gracefulRampDown: '10s',
     gracefulStop: '10s',
+  },
+  stress: {
+    executor: 'ramping-vus',
+    stages: STRESS_STAGES,
+    gracefulRampDown: '15s',
+    gracefulStop: '15s',
   },
 };
 

@@ -173,6 +173,30 @@ jobs:
           ZAP_REPORT_DIR: test-results/security/zap/evidence/reports
         run: tests/security/run-zap-baseline.sh
 
+      - name: Run authenticated ZAP API active scan
+        if: inputs.target_url == ''
+        env:
+          ZAP_OPENAPI_URL: http://backend:8080/v3/api-docs
+          ZAP_DOCKER_NETWORK: inventory-security-${{ github.run_id }}_inventory-network
+          ZAP_REPORT_DIR: test-results/security/zap/evidence/reports
+        run: |
+          keycloak_port="$(awk -F= '$1 == "KEYCLOAK_PORT" { print $2; exit }' .env)"
+          viewer_username="$(awk -F= '$1 == "E2E_VIEWER_USERNAME" { print $2; exit }' .env)"
+          viewer_password="$(awk -F= '$1 == "E2E_VIEWER_PASSWORD" { print $2; exit }' .env)"
+          ZAP_ACCESS_TOKEN="$(
+            curl --silent --show-error --fail \
+              --request POST \
+              --data-urlencode "client_id=inventory-frontend" \
+              --data-urlencode "grant_type=password" \
+              --data-urlencode "username=$viewer_username" \
+              --data-urlencode "password=$viewer_password" \
+              "http://localhost:$keycloak_port/realms/inventory/protocol/openid-connect/token" |
+              jq -er '.access_token'
+          )"
+          echo "::add-mask::$ZAP_ACCESS_TOKEN"
+          export ZAP_ACCESS_TOKEN
+          tests/security/run-zap-api-scan.sh
+
       - name: Run ZAP baseline against staging
         if: inputs.target_url != ''
         env:

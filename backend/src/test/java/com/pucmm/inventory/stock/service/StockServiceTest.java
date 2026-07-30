@@ -153,7 +153,7 @@ class StockServiceTest {
 
     @Test
     void findMovementsRequiresExistingProduct() {
-        when(productRepository.existsById(99L)).thenReturn(false);
+        when(productRepository.existsByIdAndArchivedFalse(99L)).thenReturn(false);
 
         assertThatThrownBy(() -> stockService.findMovements(99L))
                 .isInstanceOf(ProductNotFoundException.class)
@@ -174,7 +174,7 @@ class StockServiceTest {
         );
         ReflectionTestUtils.setField(movement, "id", 10L);
         ReflectionTestUtils.setField(movement, "createdAt", TIMESTAMP);
-        when(productRepository.existsById(1L)).thenReturn(true);
+        when(productRepository.existsByIdAndArchivedFalse(1L)).thenReturn(true);
         when(stockMovementRepository.findByProductIdOrderByCreatedAtDescIdDesc(1L)).thenReturn(List.of(movement));
 
         List<StockMovementResponse> response = stockService.findMovements(1L);

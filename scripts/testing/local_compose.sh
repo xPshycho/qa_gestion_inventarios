@@ -34,6 +34,11 @@ docker_pull_public_image() {
   set -e
 
   find "$isolated_docker_config" -depth -delete
+  if [[ "$pull_exit_code" -ne 0 ]] && docker image inspect "$image" >/dev/null 2>&1; then
+    printf 'Docker registry is unavailable; using the locally cached pinned image: %s\n' \
+      "$image" >&2
+    return 0
+  fi
   return "$pull_exit_code"
 }
 

@@ -102,7 +102,7 @@ class FlywayMigrationIntegrationTest extends PostgreSqlIntegrationTest {
                 Integer.class
         );
 
-        assertThat(appliedMigrations).isEqualTo(7);
+        assertThat(appliedMigrations).isEqualTo(8);
         assertThat(seededBaseProducts).isEqualTo(4);
         assertThat(seededDemoProducts).isEqualTo(24);
         assertThat(demoMovements).isGreaterThanOrEqualTo(45);
