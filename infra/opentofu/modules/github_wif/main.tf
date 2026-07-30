@@ -49,6 +49,7 @@ locals {
     "roles/cloudsql.viewer",
     "roles/compute.networkViewer",
     "roles/iam.securityReviewer",
+    "roles/iam.workloadIdentityPoolViewer",
     "roles/run.viewer",
     "roles/secretmanager.viewer",
     "roles/serviceusage.serviceUsageConsumer",
