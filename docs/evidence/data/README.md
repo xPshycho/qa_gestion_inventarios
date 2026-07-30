@@ -11,7 +11,7 @@
 
 ## Qué se comprobó
 
-- siete migraciones Flyway aplicadas;
+- ocho migraciones Flyway aplicadas;
 - cuatro productos base, 24 productos demo y al menos 45 movimientos demo;
 - siete permisos, cuatro roles y cuatro usuarios seed con relaciones completas;
 - movimientos `INITIAL` coherentes con el stock;

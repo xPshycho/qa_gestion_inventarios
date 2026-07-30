@@ -408,7 +408,7 @@ si el volumen es descartable, recreando el volumen de Keycloak.
 
 ## Datos y límite frente a producción
 
-Staging ejecuta Flyway V1--V7 y sus datos semilla sintéticos. La producción
+Staging ejecuta Flyway V1--V8 y sus datos semilla sintéticos. La producción
 actual sí está provisionada en la VM `qa-inventario`, pero no se verificó su
 base interna por falta de OS Login y las migraciones todavía contienen seeds
 demo. Este preview demuestra despliegue, integración y recuperación de staging

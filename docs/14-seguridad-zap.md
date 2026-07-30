@@ -2,10 +2,11 @@
 
 ## Alcance real
 
-El repositorio ejecuta `zap-baseline.py`: spider tradicional de 2 minutos y
-passive scan contra el frontend. No usa contexto autenticado, Ajax Spider ni
-active scan. Por tanto, el resultado no cubre endpoints autenticados ni
-vulnerabilidades que requieren payload activo.
+La suite combina dos recorridos aislados:
+
+- `zap-baseline.py`: spider tradicional y análisis pasivo del frontend;
+- `zap-api-scan.py`: importación OpenAPI y análisis activo de la API con JWT
+  efímero de `viewer`, usuario sin permisos de mutación.
 
 Ruta: `tests/security/run-zap-baseline.sh`\
 Líneas aproximadas: 13-58\
@@ -13,12 +14,21 @@ Componente: gate ZAP\
 Responsabilidad: ejecuta ZAP 2.17.0 fijado por digest, produce JSON/Markdown y
 falla solo si el JSON contiene alertas con `riskcode >= 3` (High).
 
+Ruta: `tests/security/run-zap-api-scan.sh`\
+Componente: gate API autenticado\
+Responsabilidad: añade el bearer token sin persistirlo, importa
+`/v3/api-docs`, ejecuta active scan y aplica el mismo gate de cero High.
+
 ## Ejecución auditada
 
 Fecha UTC: 30 de julio de 2026.\
 Entorno: Compose local aislado, target `http://localhost:5173`.\
 Comando: `./tests/security/run-local.sh`.\
 Resultado del gate: PASS, cero alertas High.
+
+El baseline inspeccionó ocho URLs: 62 reglas PASS, cero fallos y cinco
+categorías Warning. El active scan importó 29 URLs del contrato OpenAPI con un
+JWT efímero de sólo lectura: 118 reglas PASS, cero fallos y cero Warning.
 
 ZAP reportó cinco categorías Warning:
 
@@ -38,6 +48,8 @@ compatibilidad antes de corregir.
 |---|---|
 | JSON | `test-results/security/zap/evidence/reports/zap-baseline-report.json` |
 | Markdown | `test-results/security/zap/evidence/reports/zap-baseline-report.md` |
+| API JSON | `test-results/security/zap/evidence/reports/zap-api-report.json` |
+| API Markdown | `test-results/security/zap/evidence/reports/zap-api-report.md` |
 | Config/reglas | `test-results/security/zap/evidence/reports/zap.yaml` |
 | Resumen | `test-results/security/zap/summary.{json,md}` |
 | Diagnóstico Compose | `test-results/security/zap/evidence/docker/` |
@@ -55,7 +67,7 @@ rechaza evidencia renderizable.
 
 Ejecución directa:
 
-`No verificado por separado · requiere stack y variables`
+`Integrada y verificada mediante run-local · requiere stack y variables`
 
 ```bash
 ZAP_TARGET_URL=http://localhost:5173 \
@@ -69,19 +81,10 @@ ZAP_REPORT_DIR="$PWD/test-results/security/zap/evidence/reports" \
 El criterio automatizado actual es “cero High”. Los Warning no hacen fallar.
 No confundir PASS del gate con ausencia de vulnerabilidades.
 
-Para cumplir una evaluación activa/autenticada:
-
-**Pendiente de verificación/implementación**
-
-- crear un contexto ZAP que autentique vía OIDC sin exponer tokens;
-- spider/Ajax Spider de rutas autorizadas;
-- active scan solo en un staging aislado con datos desechables;
-- excluir logout/acciones destructivas justificadamente;
-- triage por severidad, evidencia y falso positivo;
-- publicar JSON/Markdown tras safety scan.
-
-No se ejecutó active scan porque podría mutar datos y el usuario pidió solo
-documentación.
+El active scan usa `viewer`: puede alcanzar recursos autenticados de lectura,
+pero recibe `403` ante POST/PUT/DELETE. Así evita mutar datos y complementa las
+pruebas específicas de JWT, permisos, CORS y autenticación. No sustituye una
+prueba Ajax del flujo visual OIDC ni autoriza ejecutarlo sobre producción.
 
 ## Otras validaciones de la misma suite
 

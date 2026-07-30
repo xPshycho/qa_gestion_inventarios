@@ -1,189 +1,181 @@
-# Script de demostración
+# Recorrido integral verificable
 
-Duración objetivo: 18-22 minutos. Usar development o staging aislado. No hacer
-CRUD, ZAP activo, carga ni rollback destructivo en producción.
 
-## 1. Preparación — 2 min
+**Duración total:** 30–35 minutos.
 
-Qué mostrar: repo, índice y versión.\
-Qué decir: “La demo usa un stack reproducible y secretos locales generados”.\
-Comando (`Verificado`, raíz):
+**Objetivo:** comprobar funcionalidad, testing, seguridad, observabilidad, CI/CD y trazabilidad sin saltos entre evidencias.
 
-```bash
-./scripts/security/init-secret-env.sh local
-docker compose up --build -d --wait --wait-timeout 240
-docker compose ps
-```
+**Stack:** Docker Compose, Spring Boot, Angular, PostgreSQL, Keycloak, OpenTelemetry, Grafana y GitHub Actions.
 
-Resultado: servicios healthy/running.\
-Si falla: usar `docker compose logs --tail=100 <servicio>` y no mostrar `.env`.
+**Archivos:** `docker-compose.yml`, `README.md`, `docs/00-indice-general.md`.
 
-## 2. Health — 1 min
+**Resultado:** un entorno reproducible y una ruta única desde la operación funcional hasta la evidencia técnica.
 
-Qué mostrar: frontend/API/OIDC.\
-Qué decir: “Validamos presentación, negocio e identidad por separado”.\
-Comando:
+## 1. Preparar el entorno — 2 minutos
 
-```bash
-curl --fail http://localhost:5173/health
-curl --fail http://localhost:8080/actuator/health
-curl --fail \
-  http://localhost:8081/realms/inventory/.well-known/openid-configuration |
-  jq '{issuer,token_endpoint,jwks_uri}'
-```
 
-Esperado: `ok`, `UP` e issuer local.\
-Si falla: revisar ports/health y usar screenshots del último E2E.
+**Objetivo:** iniciar todos los servicios con configuración segura y datos reproducibles.
 
-## 3. Login y flujo funcional — 3 min
+**Stack:** Docker Compose, Flyway, PostgreSQL y Keycloak.
 
-Qué mostrar: login admin/operator, dashboard, catálogo, creación con stock 0,
-entrada/ajuste e historial.\
-Qué decir: “El stock cambia solo por movimientos auditables”.\
-Comando: interacción GUI en `http://localhost:5173`.\
-Esperado: dashboard actualizado y movimiento con usuario.\
-Si falla: no editar base manualmente; mostrar E2E screenshots.
+**Archivos:** `docker-compose.yml`, `.env.example`, `scripts/security/init-secret-env.sh`, `backend/src/main/resources/db/migration/`.
 
-## 4. API sin GUI — 2 min
+**Acción:** ejecutar `make env` y `docker compose up --build --wait -d`; confirmar con `docker compose ps`.
 
-Qué mostrar: Swagger/OpenAPI y GET autenticado.\
-Qué decir: “La SPA no es requisito para consumir la API”.\
-Comando: seguir [obtención de token](07-api.md#autenticación-sin-gui), luego:
+**Resultado:** frontend, backend, bases de datos, identidad y observabilidad quedan `healthy`, sin credenciales versionadas.
 
-```bash
-curl --fail --silent \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  'http://localhost:8080/products?page=0&size=5' | jq .
-```
+## 2. Ubicar la arquitectura — 2 minutos
 
-Esperado: página JSON.\
-Si falla: verificar issuer/token y no imprimir el token.
 
-## 5. Roles y permisos — 2 min
+**Objetivo:** relacionar cada componente con su responsabilidad y flujo de datos.
 
-Qué mostrar: viewer puede listar pero no crear; auditor ve auditoría.\
-Qué decir: “La API valida `hasAuthority`, no confía en el botón”.\
-Comando:
+**Stack:** Angular, Spring Boot, PostgreSQL, Keycloak, OpenTelemetry y LGTM.
 
-```bash
-curl --silent --output /dev/null --write-out '%{http_code}\n' \
-  -X POST http://localhost:8080/products \
-  -H "Authorization: Bearer <TOKEN_VIEWER>" \
-  -H 'Content-Type: application/json' -d '{}'
-```
+**Archivos:** `docs/02-arquitectura.md`, `docs/diagrams/architecture.md`, `docker-compose.yml`.
 
-Esperado: 403.\
-Si falla: inspeccionar el claim localmente sin compartir JWT y revisar realm.
+**Acción:** seguir el flujo navegador → Keycloak → API → PostgreSQL y API → Alloy → Prometheus/Loki/Tempo → Grafana.
 
-## 6. JWT — 1 min
+**Resultado:** se identifica dónde se ejecuta cada responsabilidad y cómo se propaga identidad y telemetría.
 
-Qué mostrar: `SecurityConfig:47-118` y `auth.service.ts:44-190`.\
-Qué decir: “Keycloak firma; Spring valida issuer/JWK; permisos viajan en
-`permissions`; Angular refresca 60 s antes”.\
-Comando: ninguno; no decodificar un token real en pantalla.\
-Si preguntan audience: reconocer que no hay validador explícito y es riesgo.
+## 3. Validar acceso granular — 3 minutos
 
-## 7. Prueba local — 1 min
 
-Qué mostrar: una suite rápida/listado.\
-Comando:
+**Objetivo:** comprobar que la autorización depende de permisos y no del nombre del rol.
 
-```bash
-cd tests/e2e
-pnpm exec playwright test --list
-```
+**Stack:** Keycloak, OAuth2 Authorization Code + PKCE, JWT y Spring Security.
 
-Esperado: inventario de tests/proyectos.\
-Si falla: usar `pnpm --dir tests/e2e test` desde raíz con Docker.
+**Archivos:** `infra/keycloak/inventory-realm.json`, `backend/src/main/java/com/pucmm/inventory/config/SecurityConfig.java`, `frontend/src/app/auth/`.
 
-## 8. Playwright visible — 2 min
+**Acción:** entrar como `viewer`, comprobar lectura sin mutaciones; entrar como `carlos`, comprobar administración completa.
 
-Qué mostrar: un flujo con navegador.
+**Resultado:** `product:view`, `product:manage`, `stock:view`, `stock:manage`, `report:view`, `user:manage` y `audit:view` se aplican por operación.
 
-```bash
-cd tests/e2e
-pnpm exec playwright test specs/products-crud.spec.ts \
-  --project=chromium --headed
-```
+## 4. Recorrer productos — 3 minutos
 
-Estado: `No verificado` por ser interactivo; compatible con configuración.\
-Esperado: navegador visible y test aprobado.\
-Si falla por display/browser: usar el run Docker 20/20 y capturas controladas.
 
-## 9. Coverage — 1 min
+**Objetivo:** comprobar CRUD, paginación, búsqueda, filtros, ordenamiento y validaciones.
 
-Qué mostrar: HTML JaCoCo/Karma generado.\
-Qué decir: unit backend 90.97 % líneas; frontend 83.63 %; citar fecha.
+**Stack:** Angular Material, Spring MVC, Bean Validation, Spring Data JPA y PostgreSQL.
 
-```bash
-python3 -m http.server 8765 \
-  --directory backend/build/reports/jacoco/test/html
-```
+**Archivos:** `frontend/src/app/products.component.ts`, `frontend/src/app/product-form.component.ts`, `backend/src/main/java/com/pucmm/inventory/product/`.
 
-Abrir `http://127.0.0.1:8765`; Ctrl-C al terminar.\
-Si falta reporte: ejecutar comandos del documento 12.
+**Acción:** crear un producto, buscarlo por nombre/SKU, filtrar, ordenar, editarlo y revisar una validación inválida.
 
-## 10. Pipeline/reportes — 1.5 min
+**Resultado:** el catálogo responde de forma paginada; SKU duplicado devuelve `409`; la cantidad inicial crea un movimiento `INITIAL` asociado al usuario.
 
-Qué mostrar: [run Quality `main` 30499884455](https://github.com/xPshycho/qa_gestion_inventarios/actions/runs/30499884455),
-sus artifacts, Jenkinsfile stages y tabla “Dónde consultar”.\
-Qué decir: “Actions principal aprobó suites y publicó artifacts; Jenkins es
-complementario y su run remoto está pendiente; safety se ejecuta antes de
-publicar E2E”.\
-Comando: ninguno.\
-Esperado: mostrar resultado `success`, SHA
-`0cfbd7ba37be6b5e1b87d9c45d6003ae98481251`, artifacts con expiración
-observada 12-08-2026 y explicar rutas/retención en menos de un minuto.\
-Si GitHub no está disponible: usar el
-[índice de pipeline](evidence/pipeline/README.md); no simular Jenkins.
+## 5. Recorrer stock y auditoría — 4 minutos
 
-## 11. Observabilidad — 2 min
 
-Qué mostrar: Prometheus targets, PromQL `up`, Grafana Explore.\
-Comando:
+**Objetivo:** comprobar entradas, salidas, ajustes, stock mínimo e historial inmutable.
 
-```bash
-curl --silent http://localhost:9090/api/v1/targets |
-  jq '.data.activeTargets[] | {scrapeUrl,health,lastError}'
-curl --get --silent \
-  --data-urlencode 'query=up{job="inventory-backend"}' \
-  http://localhost:9090/api/v1/query | jq .
-```
+**Stack:** Spring Boot, transacciones JPA, PostgreSQL, Hibernate Envers y JWT.
 
-Esperado: backend UP.\
-Si falla: usar diagnóstico del documento 17 y reconocer brecha.
+**Archivos:** `backend/src/main/java/com/pucmm/inventory/stock/`, `backend/src/main/java/com/pucmm/inventory/audit/`, `frontend/src/app/stock-movement-dialog.component.ts`.
 
-## 12. Producción y rollback — 2 min
+**Acción:** registrar entrada, salida y ajuste; consultar movimientos y auditoría; intentar una salida superior a la existencia.
 
-Qué mostrar: health HTTPS y diagrama, no ejecutar deploy.
+**Resultado:** quedan fecha, actor, tipo, cantidad anterior/nueva y observación; el stock negativo se rechaza; `DELETE` retira el producto del catálogo mediante baja lógica y conserva movimientos y revisiones.
 
-```bash
-curl --fail https://34.123.136.144/health
-curl --fail https://34.123.136.144/api/actuator/health
-```
+## 6. Leer indicadores del negocio — 3 minutos
 
-Qué decir: releases por SHA, backup previo, rollback script y smoke.\
-Esperado: `ok`/`UP`.\
-Si falla: declarar incidente; no reiniciar ni desplegar desde la demo.
 
-Simulación segura: recorrer los parámetros de
-`docs/20-backup-y-rollback.md` con placeholders, sin ejecutar.
+**Objetivo:** comprobar productos críticos, productos más vendidos, historial reciente y métricas operacionales.
 
-## 13. Cierre — 1 min
+**Stack:** Angular, Spring Data JPQL y PostgreSQL.
 
-Qué mostrar: trazabilidad y pendientes.\
-Qué decir: “Las suites auditadas aprobaron; ZAP es baseline pasivo, Cloud SQL
-restore y observabilidad interna VM siguen pendientes; el issue #91 no fue
-modificado”.\
-Comando: ninguno.
+**Archivos:** `frontend/src/app/dashboard.component.html`, `backend/src/main/java/com/pucmm/inventory/report/`, `backend/src/main/java/com/pucmm/inventory/stock/repository/StockMovementRepository.java`.
 
-## Limpieza
+**Acción:** abrir el dashboard y contrastar una salida de stock con el ranking y el historial.
 
-`Cambia estado local; conserva volúmenes`
+**Resultado:** los críticos usan `currentStock <= minimumStock`; los más vendidos suman exclusivamente movimientos `EXIT`; entradas, ajustes e inventario inicial no inflan ventas.
 
-```bash
-docker compose stop
-unset ACCESS_TOKEN DEMO_PASSWORD ADMIN_TOKEN
-```
+## 7. Verificar API y contrato — 2 minutos
 
-No usar `down -v` si se necesita conservar la demo/evidencia.
+
+**Objetivo:** comprobar documentación ejecutable, códigos HTTP y esquemas.
+
+**Stack:** REST, OpenAPI 3, Swagger UI y RestAssured.
+
+**Archivos:** `backend/src/main/java/com/pucmm/inventory/config/OpenApiConfig.java`, `backend/src/apiTest/`, `docs/07-api-openapi.md`.
+
+**Acción:** abrir `http://localhost:8080/swagger-ui.html`, autorizar con JWT y consultar productos, reportes y movimientos.
+
+**Resultado:** `/v3/api-docs` expone el contrato, los endpoints protegidos exigen bearer JWT y los errores mantienen un payload uniforme.
+
+## 8. Ejecutar Full Stack Testing — 4 minutos
+
+
+**Objetivo:** mostrar cobertura automatizada desde unidades hasta navegador y datos reales.
+
+**Stack:** JUnit, Mockito, JaCoCo, Testcontainers, RestAssured, Karma y Playwright.
+
+**Archivos:** `backend/src/test/`, `backend/src/apiTest/`, `backend/src/integrationTest/`, `frontend/src/`, `tests/e2e/`.
+
+**Acción:** ejecutar `make test-backend`, `make test-api`, `make test-integration`, `make test-frontend` y `make test-e2e`.
+
+**Resultado:** gates de coverage, contratos, PostgreSQL/Keycloak reales, roles, accesibilidad, responsive y Chromium/Firefox/WebKit producen resultados centralizados en `test-results/`.
+
+## 9. Verificar seguridad y rendimiento — 4 minutos
+
+
+**Objetivo:** comprobar vulnerabilidades, autenticación, carga, estrés, concurrencia, latencia y throughput.
+
+**Stack:** OWASP ZAP, Trivy, k6, Keycloak y Docker.
+
+**Archivos:** `tests/security/`, `tests/performance/performance.js`, `tests/performance/config/profiles.js`.
+
+**Acción:** ejecutar `make test-security`; luego `K6_PROFILE=load ./tests/performance/run-local.sh` y `K6_PROFILE=stress ./tests/performance/run-local.sh`.
+
+**Resultado:** Trivy controla HIGH/CRITICAL; ZAP API activo dejó 118 reglas PASS y cero fallos; k6 stress sostuvo 100 VUs, 10,804 requests, 51 req/s, 0 % de errores y p95 de 166.11 ms.
+
+## 10. Correlacionar métricas, logs, trazas y alertas — 4 minutos
+
+
+**Objetivo:** seguir una petición entre las cuatro señales operacionales.
+
+**Stack:** OpenTelemetry, Alloy, Prometheus, Loki, Tempo, Grafana y Alertmanager.
+
+**Archivos:** `infra/observability/`, `backend/src/main/resources/application.properties`, `backend/src/main/resources/logback-spring.xml`.
+
+**Acción:** abrir `http://localhost:3000`, localizar latencia/throughput, filtrar `{compose_service="backend"}`, abrir una traza y revisar reglas de Alertmanager.
+
+**Resultado:** CPU, memoria, JVM, latencia, throughput, error rate y pool aparecen en Grafana; logs incluyen `traceId`, `spanId`, `correlationId`, usuario y endpoint; existen alertas de disponibilidad, CPU, memoria, errores, latencia, pool y fallos 401/403.
+
+## 11. Seguir CI/CD y calidad — 3 minutos
+
+
+**Objetivo:** comprobar que cada cambio atraviesa build, pruebas, seguridad, calidad, imagen y despliegue.
+
+**Stack:** GitHub Actions, SonarCloud, Docker, OpenTofu, Workload Identity Federation y Jenkins.
+
+**Archivos:** `.github/workflows/`, `Jenkinsfile`, `infra/opentofu/`, `docs/16-ci-cd-jenkins.md`.
+
+**Acción:** abrir el último run y recorrer `CI Required`; mostrar stages equivalentes en `Jenkinsfile` y el flujo `develop → staging → main`.
+
+**Resultado:** las ramas protegidas exigen PR, aprobación cruzada y quality gate; el despliegue utiliza identidad sin llaves y ejecuta validaciones post-deploy.
+
+## 12. Cerrar con trazabilidad — 2 minutos
+
+
+**Objetivo:** conectar requisito, código, prueba y evidencia sin afirmaciones no verificadas.
+
+**Stack:** Git, GitHub Issues/PR, Conventional Commits y reportes Markdown/JSON.
+
+**Archivos:** `docs/25-trazabilidad-entregables.md`, `docs/22-evidencias.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `test-results/README.md`.
+
+**Acción:** seleccionar un requisito y seguir issue → rama → commit → PR → check → archivo → reporte.
+
+**Resultado:** cada conclusión puede verificarse en el repositorio o en GitHub y los pendientes externos quedan identificados por su issue.
+
+## Comprobación final — 1 minuto
+
+
+**Objetivo:** evitar cerrar con servicios o resultados inconsistentes.
+
+**Stack:** Docker Compose, Git y recolector de evidencias.
+
+**Archivos:** `Makefile`, `scripts/testing/collect_local_test_results.sh`, `docs/22-evidencias.md`.
+
+**Acción:** ejecutar `make results`, `git status --short` y `docker compose ps`; al finalizar, `docker compose down`.
+
+**Resultado:** resultados reunidos, cambios conocidos y entorno apagado de forma controlada.

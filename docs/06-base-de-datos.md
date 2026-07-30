@@ -14,7 +14,7 @@ se verificaron bases, usuarios o consumidores en ellas.
 
 ## Esquema
 
-Flyway mantiene siete migraciones bajo
+Flyway mantiene ocho migraciones bajo
 `backend/src/main/resources/db/migration/`:
 
 | Migración | Responsabilidad |
@@ -25,6 +25,7 @@ Flyway mantiene siete migraciones bajo
 | V4 | datos iniciales de inventario y matriz |
 | V5 | sincronización/constraints adicionales |
 | V6-V7 | auditoría Envers y correcciones |
+| V8 | baja lógica de productos para preservar movimientos y auditoría |
 
 Tablas verificadas por migraciones: `products`, `inventory_users`,
 `permissions`, `roles`, `role_permissions`, `user_roles`,

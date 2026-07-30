@@ -16,20 +16,20 @@ La documentación canónica auditada el 29 de julio de 2026 comienza en
 inventario GCP observado, instalación, configuración, base de datos, API,
 JWT/Keycloak, permisos, pruebas, coverage, Playwright, ZAP, k6, Jenkins,
 observabilidad, operación, staging/producción, rollback, troubleshooting,
-evidencias, presentación, demostración y trazabilidad.
+evidencias, recorrido verificable y trazabilidad.
 
 Estado verificable del snapshot:
 
 | Validación | Resultado |
 |---|---|
 | Backend unit | 125/125; JaCoCo líneas 90.97 % |
-| Backend API | 22/22 |
+| Backend API | 23/23 |
 | Backend integración/datos | 17/17; JaCoCo líneas 60.52 %; migraciones, seeds y constraints incluidos |
 | Frontend unit | 101/101; líneas 83.63 % |
 | Playwright E2E | 20/20, Chromium/Firefox/WebKit y responsive |
 | Exploratoria | 6 charters, 6 sesiones y 32 evidencias históricas; retest staging pendiente |
-| k6 smoke | PASS, 0 % errores, p95 127.58 ms |
-| Headers/ZAP/Trivy | PASS; ZAP 0 High y cinco categorías Warning |
+| k6 stress | PASS a 100 VUs; 10,804 requests, 51 req/s, 0 % errores, p95 166.11 ms |
+| Headers/ZAP/Trivy | PASS; baseline 0 High y API activa autenticada 118 reglas, 0 fallos |
 | GitHub Actions | Quality `main` y `staging` PASS; artifacts verificados |
 | Producción VM | HTTPS, frontend, API health y OIDC verificados |
 
@@ -214,9 +214,11 @@ variables, las URLs, el flujo de promocion y el rollback estan en
 La operación OpenTofu/GCP, WIF, state, activación de Cloud Run y recuperación
 están en
 [`docs/deployment/gcp-managed-environments.md`](docs/deployment/gcp-managed-environments.md).
-El workflow está conectado a `develop` y `staging`; su primera ejecución
-post-merge en `develop` quedó `skipped`, por lo que el `apply` automático debe
-validarse antes de declararlo operativo.
+El workflow está conectado a `develop` y `staging`. El último despliegue
+staging detectó que el listado del bucket de state requería permiso a nivel de
+bucket; `infra/opentofu/modules/github_wif/main.tf` incorpora
+`roles/storage.legacyBucketReader`. La validación administrada definitiva se
+realiza al integrar esta rama.
 
 ```bash
 ./scripts/staging/init-env.sh

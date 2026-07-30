@@ -23,7 +23,7 @@ mismo conjunto de migraciones que usa la aplicación, sin acceder a la base loca
 
 Las pruebas validan:
 
-- las siete migraciones Flyway y sus seeds iniciales;
+- las ocho migraciones Flyway y sus seeds iniciales;
 - permisos, roles y usuarios demo con relaciones completas;
 - movimientos `INITIAL` consistentes con el stock de los productos base;
 - restricciones de SKU único, stock no negativo, claves foráneas y delta de stock.
@@ -32,11 +32,11 @@ Las pruebas validan:
 
 | Ambiente | Base de datos | Datos | Persistencia |
 | --- | --- | --- | --- |
-| Integración y CI | Testcontainers PostgreSQL 16 | V1--V7, con seeds deterministas | Efímera; se elimina al terminar la ejecución |
-| Desarrollo local | `docker compose` | V1--V7, con seeds deterministas | Volumen Docker nombrado `inventory-platform_postgres-data` |
-| E2E y ZAP en CI | Compose con proyecto por `github.run_id` | V1--V7, con seeds deterministas | Efímera; CI ejecuta `docker compose down -v` |
-| Staging en GitHub Actions | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V7, con seeds sintéticos deterministas y realm generado | Efímera; el workflow ejecuta `destroy.sh --volumes` |
-| Staging local | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V7, con seeds sintéticos deterministas y realm generado | Administrada por el operador; `destroy.sh` conserva volúmenes por defecto |
+| Integración y CI | Testcontainers PostgreSQL 16 | V1--V8, con seeds deterministas | Efímera; se elimina al terminar la ejecución |
+| Desarrollo local | `docker compose` | V1--V8, con seeds deterministas | Volumen Docker nombrado `inventory-platform_postgres-data` |
+| E2E y ZAP en CI | Compose con proyecto por `github.run_id` | V1--V8, con seeds deterministas | Efímera; CI ejecuta `docker compose down -v` |
+| Staging en GitHub Actions | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V8, con seeds sintéticos deterministas y realm generado | Efímera; el workflow ejecuta `destroy.sh --volumes` |
+| Staging local | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V8, con seeds sintéticos deterministas y realm generado | Administrada por el operador; `destroy.sh` conserva volúmenes por defecto |
 | Producción observada | VM `qa-inventario`; base efectiva interna pendiente de inspección | Las migraciones versionadas aún contienen datos demo; no se verificó el contenido de la base productiva | VM y disco persistente observados; Cloud SQL development/staging no se atribuyen a producción sin evidencia |
 
 La fila de producción no afirma que la VM use una de las instancias Cloud SQL:
@@ -84,7 +84,7 @@ anteriores se restauran como una unidad.
 
 ## Riesgo y política pendiente para producción
 
-Las migraciones V1--V7 son históricas y no se modifican: Flyway valida sus
+Las migraciones V1--V8 son históricas y no se modifican: Flyway valida sus
 checksums. Actualmente incluyen datos demo, por lo que el repositorio no debe
 afirmar que el bootstrap de producción ya está separado.
 

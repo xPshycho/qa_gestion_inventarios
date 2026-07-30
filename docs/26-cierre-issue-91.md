@@ -13,7 +13,7 @@ cerrado. Este archivo es un checklist local, no una acción en GitHub.
 | Matriz requisito -> implementación -> prueba -> evidencia | Completado | [25](25-trazabilidad-entregables.md) |
 | Guía instalación, local, staging y troubleshooting | Completado | [04](04-instalacion-local.md), [19](19-staging-produccion.md), [21](21-troubleshooting.md) |
 | Arquitectura backend/frontend/seguridad/datos/infra/CI/observabilidad | Completado | [02](02-arquitectura.md) + diagramas |
-| Resultados unit/integration/API/E2E/performance/security/data/exploratory | Completado con límites | [11-15](11-guia-de-pruebas.md), [datos](evidence/data/README.md), [exploratoria](evidence/exploratory/README.md); load/stress, ZAP activo y retest staging no se presentan como aprobados |
+| Resultados unit/integration/API/E2E/performance/security/data/exploratory | Completado con límites | [11-15](11-guia-de-pruebas.md), [datos](evidence/data/README.md), [exploratoria](evidence/exploratory/README.md); stress a 100 VUs y ZAP API activo aprobados; retest staging pendiente |
 | Evidencias pipeline/dashboards/Swagger/Keycloak/reportes/flujos | Completado con límites | [22](22-evidencias.md); Actions, OpenAPI/OIDC y capturas versionadas verificados; Jenkins remoto e interior VM pendientes |
 | Corregir documentación desactualizada/contradictoria | Completado en documentación canónica | docs 00-27 y portal README |
 | Checklist final y presentación | Completado | [23](23-presentacion.md), [24](24-script-demostracion.md) |
@@ -22,8 +22,8 @@ cerrado. Este archivo es un checklist local, no una acción en GitHub.
 
 | Criterio real | Estado | Comprobación |
 |---|---|---|
-| Cubre capítulos relevantes del PDF | Completado para el PDF preservado | matriz 25 y 26 documentos especializados; procedencia del nombre `document_pdf (1).pdf` pendiente |
-| No declara entregado lo no implementado | Completado | pendientes explícitos ZAP activo, load, restore, VM interna y Jenkins remoto |
+| Cubre capítulos relevantes del PDF | Completado para el PDF preservado | matriz 25, 27 documentos especializados y hash del PDF de 11 páginas |
+| No declara entregado lo no implementado | Completado | pendientes explícitos restore, VM interna, retest staging y Jenkins remoto |
 | Trazabilidad verificable | Completado | fuentes/rutas/pruebas/estado en 25 |
 | Evidencias enlazadas/ubicadas | Completado | 22 + diez índices `docs/evidence`; runs/artifacts Actions y evidencia exploratoria enlazados |
 | README/docs consistentes con estado real | Completado en capa canónica | README -> 00; links/check posterior |
@@ -43,8 +43,8 @@ cerrado. Este archivo es un checklist local, no una acción en GitHub.
 | Permisos/usuarios | Completado |
 | Unit/API/integration/frontend/E2E | Completado y PASS |
 | Coverage | Completado y PASS |
-| ZAP | Completado baseline; active parcial |
-| k6 | Completado smoke; load parcial |
+| ZAP | Baseline y API activa autenticada completados |
+| k6 | Smoke, load y stress hasta 100 VUs completados |
 | GitHub Actions | Runs quality `main`/`staging` y deploy producción verificados |
 | Jenkins | Pipeline visual documentado; ejecución remota pendiente |
 | Resultados centralizados | Completado, incluidos datos y exploratory histórico |
@@ -66,8 +66,8 @@ equivalencia con el PDF preservado debe comprobarse por hash.
 
 No corresponde cerrar el issue automáticamente aunque la documentación quede
 lista: el usuario pidió no modificarlo. Jenkins remoto, el interior de la VM,
-ZAP activo, load/stress, restore productivo y el retest exploratorio en staging
-no se presentan como entregados.
+El restore productivo, el retest exploratorio en staging, la inspección interna
+de la VM y Jenkins remoto no se presentan como entregados.
 
 ## Paquete esperado para un PR futuro
 

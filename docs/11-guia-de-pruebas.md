@@ -10,7 +10,7 @@
 | Unit frontend | Jasmine/Karma/Chromium | componentes, auth, guards e interceptor |
 | E2E | Playwright | login, CRUD, roles, stock, auditoría, a11y, responsive y browsers |
 | Datos | JUnit/Testcontainers/Flyway | migraciones, seeds, relaciones y constraints PostgreSQL |
-| Seguridad | headers, ZAP baseline, Trivy | configuración HTTP y vulnerabilidades altas/críticas |
+| Seguridad | headers, ZAP baseline/API activo, Trivy | configuración HTTP, API autenticada y vulnerabilidades altas/críticas |
 | Rendimiento | k6 | mezcla autenticada de lecturas y thresholds |
 | Staging | scripts black-box | health, API, OIDC, E2E, seguridad, observabilidad |
 | Exploratoria manual | charters versionados | flujos principales, experiencia, oráculos cruzados y defectos |
@@ -50,7 +50,7 @@ GRADLE_USER_HOME="$PWD/.gradle" \
   --no-daemon --stacktrace
 ```
 
-Resultado: API 22/22; integración 17/17.
+Resultado: API 23/23; integración 17/17.
 
 Reportes:
 `backend/build/reports/tests/{test,apiTest,integrationTest}/index.html` y XML
@@ -77,7 +77,8 @@ pnpm --dir tests/e2e test
 ./tests/security/run-local.sh
 ```
 
-Resultados: E2E 20/20; k6 smoke PASS; headers/ZAP/Trivy PASS. Detalle en los
+Resultados: E2E 20/20; k6 stress PASS a 100 VUs con 10,804 requests y 0 %
+de errores; headers/ZAP baseline/API activo/Trivy PASS. Detalle en los
 documentos 13-15 y [evidencias](22-evidencias.md).
 
 ## Pruebas de datos
@@ -99,7 +100,7 @@ GRADLE_USER_HOME="$PWD/.gradle" \
   --no-daemon --stacktrace
 ```
 
-Resultado: 17/17, incluido el control de siete migraciones, seeds, relaciones,
+Resultado: 17/17, incluido el control de ocho migraciones, seeds, relaciones,
 SKU único, stock no negativo, claves foráneas y delta de movimientos. Reporte:
 `backend/build/reports/tests/integrationTest/index.html`. Índice persistente:
 [evidencia de datos](evidence/data/README.md).

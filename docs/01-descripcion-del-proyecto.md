@@ -25,8 +25,8 @@ La solución real es un monolito modular:
 |---|---|---|
 | Productos | CRUD, paginación, búsqueda, filtros y ordenamiento | `ProductController`, líneas 34-134 |
 | Stock | Entradas, salidas, ajustes e historial | `ProductController`, líneas 100-134; `StockService`, líneas aproximadas 36-154 |
-| Reportes | Dashboard, críticos, más movidos, recientes y métricas | `ReportController`, líneas 20-65 |
-| Auditoría | Revisiones de productos y movimientos con Envers | `AuditController`, líneas 13-33; migraciones V6-V7 |
+| Reportes | Dashboard, críticos, más vendidos por salidas, recientes y métricas | `ReportController`, líneas 20-65 |
+| Auditoría | Revisiones de productos y movimientos con Envers | `AuditController`, líneas 13-33; migraciones V6-V8 |
 | Seguridad | Usuarios, roles, permisos y asignación mediante Keycloak Admin API | `SecurityAdminController`, líneas 24-78 |
 | API | OpenAPI/Swagger y autenticación Bearer | `OpenApiConfig`; `SecurityConfig`, líneas 47-118 |
 

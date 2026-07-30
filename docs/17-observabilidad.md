@@ -25,10 +25,10 @@ Responsabilidad: scrape cada 15 s de backend
 `/actuator/prometheus` y Keycloak management `/metrics`.
 
 Ruta: `infra/observability/prometheus/rules/inventory-alerts.yml`\
-Líneas aproximadas: 1-33\
+Líneas aproximadas: 1-45\
 Componente: alertas\
-Responsabilidad: backend down, error rate >5 %, p95 >1 s, CPU >85 % y Hikari
->90 %.
+Responsabilidad: backend down, error rate >5 %, p95 >1 s, CPU >85 %, memoria
+JVM >85 %, Hikari >90 % y fallos sostenidos de autenticación/autorización.
 
 Ruta: `infra/observability/alloy/config.alloy`\
 Líneas aproximadas: 1-83\
@@ -108,10 +108,10 @@ El password admin viene del secret store del entorno. Revisar
    `http_server_requests_seconds_bucket`, pero no se verificó que la
    distribución/histogram esté publicada. Si no existe, p95 y alerta quedan
    vacíos.
-2. El panel Loki usa `{container=~".*backend.*"}` mientras Alloy define
-   `compose_service`; la consulta canónica debe usar
+2. El panel Loki y Alloy usan la misma etiqueta
    `{compose_service="backend"}`.
-3. El panel Tempo/query y links log-trace requieren validación visual.
+3. El panel Tempo/query y links log-trace requieren validación visual en cada
+   ambiente desplegado.
 4. GCP tenía 0 alert policies, notification channels, dashboards y uptime
    checks.
 5. No se pudo verificar el stack interno de la VM por falta de OS Login.
