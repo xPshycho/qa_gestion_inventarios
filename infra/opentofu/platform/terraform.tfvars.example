@@ -1,9 +1,6 @@
 project_id    = "replace-with-gcp-project-id"
 region        = "us-central1"
 repository_id = "inventory-images"
-state_bucket_name          = "replace-with-state-bucket-name"
-github_repository_id       = "replace-with-numeric-repository-id"
-github_repository_owner_id = "replace-with-numeric-owner-id"
 
 labels = {
   owner = "qa-team"

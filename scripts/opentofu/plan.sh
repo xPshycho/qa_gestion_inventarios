@@ -16,12 +16,6 @@ readonly backend_config="$2"
 readonly variable_file="$3"
 readonly plan_output="${4:-${stack}.tfplan}"
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-readonly plan_lock="${TF_PLAN_LOCK:-true}"
-
-[[ "$plan_lock" == "true" || "$plan_lock" == "false" ]] || {
-  echo "TF_PLAN_LOCK must be true or false" >&2
-  exit 1
-}
 
 case "$stack" in
   platform)
@@ -55,7 +49,6 @@ tofu -chdir="$stack_directory" init \
 
 tofu -chdir="$stack_directory" plan \
   -input=false \
-  -lock="$plan_lock" \
   -lock-timeout=5m \
   -var-file="$variable_file" \
   -out="$plan_output"

@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: opentofu-ci-${{ github.event.pull_request.number || github.ref }}
@@ -32,64 +31,3 @@ jobs:
 
       - name: Validate infrastructure without cloud credentials
         run: ./scripts/opentofu/validate.sh
-
-  cloud-plan:
-    name: Read-only GCP plan
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      GCP_REGION: ${{ vars.GCP_REGION }}
-      GCP_STATE_BUCKET: ${{ vars.GCP_STATE_BUCKET }}
-      GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
-      CLOUD_SQL_PROXY_IMAGE: ${{ vars.GCP_CLOUD_SQL_PROXY_IMAGE }}
-      GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
-      GITHUB_REPOSITORY_OWNER_ID: ${{ github.repository_owner_id }}
-      TF_PLAN_LOCK: "false"
-
-    steps:
-      - name: Checkout pull request revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Authenticate with read-only Workload Identity Federation
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
-        with:
-          workload_identity_provider: ${{ vars.GCP_PLAN_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_PLAN_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-          export_environment_variables: true
-
-      - name: Set up OpenTofu 1.12.5
-        uses: opentofu/setup-opentofu@e95ccdd20623115bfd7d47df14a3250d6066a9d0 # v1.0.7
-        with:
-          tofu_version: 1.12.5
-          tofu_wrapper: false
-
-      - name: Plan shared platform without apply
-        run: |
-          set -Eeuo pipefail
-          config_dir="$RUNNER_TEMP/opentofu/platform"
-          ./scripts/opentofu/render-ci-config.sh platform "$config_dir"
-          ./scripts/opentofu/plan.sh \
-            platform \
-            "$config_dir/backend.hcl" \
-            "$config_dir/terraform.tfvars" \
-            "$RUNNER_TEMP/platform.tfplan"
-
-      - name: Plan every environment without apply
-        env:
-          DEPLOY_SERVICES: "false"
-        run: |
-          set -Eeuo pipefail
-          for plan_stack in development staging production; do
-            config_dir="$RUNNER_TEMP/opentofu/$plan_stack"
-            ./scripts/opentofu/render-ci-config.sh "$plan_stack" "$config_dir"
-            ./scripts/opentofu/plan.sh \
-              "$plan_stack" \
-              "$config_dir/backend.hcl" \
-              "$config_dir/terraform.tfvars" \
-              "$RUNNER_TEMP/$plan_stack.tfplan"
-          done

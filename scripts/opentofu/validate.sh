@@ -17,8 +17,6 @@ readonly roots=(
 )
 
 tofu fmt -check -recursive infra/opentofu
-./tests/opentofu/test-render-ci-config.sh
-./tests/opentofu/test-seed-runtime-secrets.sh
 
 if rg -n \
   '(^|[[:space:]])(secret_data|credentials)[[:space:]]*=' \

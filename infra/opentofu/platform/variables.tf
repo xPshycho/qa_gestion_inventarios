@@ -25,28 +25,3 @@ variable "labels" {
   type        = map(string)
   default     = {}
 }
-
-variable "state_bucket_name" {
-  description = "Remote-state bucket receiving environment-scoped WIF bindings."
-  type        = string
-}
-
-variable "github_repository_id" {
-  description = "Immutable numeric GitHub repository ID."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[1-9][0-9]*$", var.github_repository_id))
-    error_message = "github_repository_id must be numeric."
-  }
-}
-
-variable "github_repository_owner_id" {
-  description = "Immutable numeric GitHub owner ID."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[1-9][0-9]*$", var.github_repository_owner_id))
-    error_message = "github_repository_owner_id must be numeric."
-  }
-}
