@@ -1,5 +1,10 @@
 # Calidad de datos y ambientes
 
+> **Vigencia:** la descripción de la suite y sus resultados fue reconfirmada el
+> 29/30 de julio de 2026. Las referencias al preview del issue #86 describen el
+> flujo versionado; el inventario GCP actual está en
+> [`docs/03-infraestructura-gcp.md`](../03-infraestructura-gcp.md).
+
 Esta guía describe las garantías verificadas por la suite de datos y la
 separación operativa de las bases. El preview de staging del issue #86 está
 definido en [`docs/deployment/staging.md`](../deployment/staging.md).
@@ -18,7 +23,7 @@ mismo conjunto de migraciones que usa la aplicación, sin acceder a la base loca
 
 Las pruebas validan:
 
-- las siete migraciones Flyway y sus seeds iniciales;
+- las ocho migraciones Flyway y sus seeds iniciales;
 - permisos, roles y usuarios demo con relaciones completas;
 - movimientos `INITIAL` consistentes con el stock de los productos base;
 - restricciones de SKU único, stock no negativo, claves foráneas y delta de stock.
@@ -27,12 +32,17 @@ Las pruebas validan:
 
 | Ambiente | Base de datos | Datos | Persistencia |
 | --- | --- | --- | --- |
-| Integración y CI | Testcontainers PostgreSQL 16 | V1--V7, con seeds deterministas | Efímera; se elimina al terminar la ejecución |
-| Desarrollo local | `docker compose` | V1--V7, con seeds deterministas | Volumen Docker nombrado `inventory-platform_postgres-data` |
-| E2E y ZAP en CI | Compose con proyecto por `github.run_id` | V1--V7, con seeds deterministas | Efímera; CI ejecuta `docker compose down -v` |
-| Staging en GitHub Actions | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V7, con seeds sintéticos deterministas y realm generado | Efímera; el workflow ejecuta `destroy.sh --volumes` |
-| Staging local | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V7, con seeds sintéticos deterministas y realm generado | Administrada por el operador; `destroy.sh` conserva volúmenes por defecto |
-| Producción | Aún no provisionado | No debe contener usuarios ni productos demo | Fuera del alcance de este preview; requiere política de bootstrap aprobada |
+| Integración y CI | Testcontainers PostgreSQL 16 | V1--V8, con seeds deterministas | Efímera; se elimina al terminar la ejecución |
+| Desarrollo local | `docker compose` | V1--V8, con seeds deterministas | Volumen Docker nombrado `inventory-platform_postgres-data` |
+| E2E y ZAP en CI | Compose con proyecto por `github.run_id` | V1--V8, con seeds deterministas | Efímera; CI ejecuta `docker compose down -v` |
+| Staging en GitHub Actions | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V8, con seeds sintéticos deterministas y realm generado | Efímera; el workflow ejecuta `destroy.sh --volumes` |
+| Staging local | PostgreSQL de aplicación y PostgreSQL de Keycloak separados | V1--V8, con seeds sintéticos deterministas y realm generado | Administrada por el operador; `destroy.sh` conserva volúmenes por defecto |
+| Producción observada | VM `qa-inventario`; base efectiva interna pendiente de inspección | Las migraciones versionadas aún contienen datos demo; no se verificó el contenido de la base productiva | VM y disco persistente observados; Cloud SQL development/staging no se atribuyen a producción sin evidencia |
+
+La fila de producción no afirma que la VM use una de las instancias Cloud SQL:
+el acceso interno por IAP/OS Login falló y no fue posible inspeccionar el
+`compose` efectivo. El comando de verificación y el motivo están documentados
+en [Infraestructura GCP](../03-infraestructura-gcp.md#producción-en-compute-engine).
 
 Los datos de PostgreSQL no se almacenan en `./`. `postgres-data` es un volumen
 gestionado por Docker y se monta en `/var/lib/postgresql/data` dentro del
@@ -72,14 +82,15 @@ Flyway es forward-only. Una versión anterior de la aplicación puede ser
 incompatible con un esquema más nuevo; en ese caso, respaldo e imágenes
 anteriores se restauran como una unidad.
 
-## Política para producción
+## Riesgo y política pendiente para producción
 
-Las migraciones V1--V7 son históricas y no se modifican: Flyway valida sus
+Las migraciones V1--V8 son históricas y no se modifican: Flyway valida sus
 checksums. Actualmente incluyen datos demo, por lo que el repositorio no debe
 afirmar que el bootstrap de producción ya está separado.
 
-Antes de habilitar producción se debe implementar un bootstrap explícito e
-idempotente, separado de las migraciones estructurales:
+Aunque la VM de producción ya está desplegada, sigue pendiente implementar o
+demostrar un bootstrap explícito e idempotente separado de las migraciones
+estructurales:
 
 1. aplicar Flyway para esquema e integridad en todos los ambientes;
 2. ejecutar datos sintéticos solo en desarrollo, CI y staging;
@@ -87,6 +98,6 @@ idempotente, separado de las migraciones estructurales:
    externas, nunca usuarios/productos demo;
 4. conservar los volúmenes persistentes y respaldarlos antes de cambios.
 
-El issue #86 resuelve el ambiente aislado y validable de staging, pero no esa
-separación de producción. No debe simularse mediante perfiles inexistentes ni
-modificando migraciones ya aplicadas.
+El issue #86 resolvió el ambiente aislado y validable de staging, pero no
+demuestra esa separación en la VM productiva. No debe simularse mediante
+perfiles inexistentes ni modificando migraciones ya aplicadas.

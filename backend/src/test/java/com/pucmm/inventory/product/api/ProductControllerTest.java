@@ -127,7 +127,8 @@ class ProductControllerTest {
     @Test
     void createProductReturnsCreatedProduct() throws Exception {
         ProductRequest request = request("DELL-LAT-5440");
-        when(productService.createProduct(request)).thenReturn(response(1L, "DELL-LAT-5440"));
+        when(authenticatedInventoryUserResolver.resolveUsername(any(Authentication.class))).thenReturn("edwin");
+        when(productService.createProduct(request, "edwin")).thenReturn(response(1L, "DELL-LAT-5440"));
 
         mockMvc.perform(post("/products")
                         .with(jwtWith(PRODUCT_MANAGE))
@@ -163,7 +164,8 @@ class ProductControllerTest {
     @Test
     void createProductReturnsConflictForDuplicateSku() throws Exception {
         ProductRequest request = request("DELL-LAT-5440");
-        when(productService.createProduct(request)).thenThrow(new DuplicateSkuException("DELL-LAT-5440"));
+        when(authenticatedInventoryUserResolver.resolveUsername(any(Authentication.class))).thenReturn("edwin");
+        when(productService.createProduct(request, "edwin")).thenThrow(new DuplicateSkuException("DELL-LAT-5440"));
 
         mockMvc.perform(post("/products")
                         .with(jwtWith(PRODUCT_MANAGE))

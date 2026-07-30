@@ -8,6 +8,8 @@ import com.pucmm.inventory.product.api.dto.ProductRequest;
 import com.pucmm.inventory.product.api.dto.ProductResponse;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.repository.ProductRepository;
+import com.pucmm.inventory.stock.domain.StockMovementType;
+import com.pucmm.inventory.stock.repository.StockMovementRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,9 @@ class ProductServiceIntegrationTest extends PostgreSqlIntegrationTest {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private StockMovementRepository stockMovementRepository;
+
     @Test
     void productCrudPersistsChangesInPostgreSql() {
         ProductResponse created = productService.createProduct(request(
@@ -29,13 +34,21 @@ class ProductServiceIntegrationTest extends PostgreSqlIntegrationTest {
                 new BigDecimal("14900.00"),
                 8,
                 ProductStatus.ACTIVE
-        ));
+        ), "edwin");
 
         assertThat(created.id()).isNotNull();
         assertThat(productRepository.findById(created.id()))
                 .get()
                 .extracting(product -> product.getSku(), product -> product.getCurrentStock())
                 .containsExactly("INT-CRUD-001", 8);
+        assertThat(stockMovementRepository.findByProductIdOrderByCreatedAtDescIdDesc(created.id()))
+                .singleElement()
+                .satisfies(movement -> {
+                    assertThat(movement.getMovementType()).isEqualTo(StockMovementType.INITIAL);
+                    assertThat(movement.getPreviousQuantity()).isZero();
+                    assertThat(movement.getNewQuantity()).isEqualTo(8);
+                    assertThat(movement.getUser().getUsername()).isEqualTo("edwin");
+                });
 
         ProductResponse updated = productService.updateProduct(created.id(), request(
                 "INT-CRUD-001",
@@ -61,9 +74,17 @@ class ProductServiceIntegrationTest extends PostgreSqlIntegrationTest {
 
         productService.deleteProduct(created.id());
 
-        assertThat(productRepository.existsById(created.id())).isFalse();
+        assertThat(productRepository.existsById(created.id())).isTrue();
+        assertThat(productRepository.findById(created.id()))
+                .get()
+                .satisfies(product -> {
+                    assertThat(product.isArchived()).isTrue();
+                    assertThat(product.getStatus()).isEqualTo(ProductStatus.INACTIVE);
+                });
         assertThatThrownBy(() -> productService.getProduct(created.id()))
                 .isInstanceOf(ProductNotFoundException.class);
+        assertThat(stockMovementRepository.findByProductIdOrderByCreatedAtDescIdDesc(created.id()))
+                .hasSize(1);
     }
 
     private ProductRequest request(

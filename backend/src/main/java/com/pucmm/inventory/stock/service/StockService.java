@@ -101,7 +101,7 @@ public class StockService {
     }
 
     public List<StockMovementResponse> findMovements(Long productId) {
-        if (!productRepository.existsById(productId)) {
+        if (!productRepository.existsByIdAndArchivedFalse(productId)) {
             throw new ProductNotFoundException(productId);
         }
 

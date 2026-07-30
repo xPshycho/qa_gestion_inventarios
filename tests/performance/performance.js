@@ -155,7 +155,7 @@ function requestReports(token) {
       && typeof metrics.totalMovements === 'number',
     'reports lists exist': () => body !== null
       && Array.isArray(body.criticalProducts)
-      && Array.isArray(body.mostMovedProducts)
+      && Array.isArray(body.bestSellingProducts)
       && Array.isArray(body.recentMovements),
   }, { endpoint: 'reports' });
 }

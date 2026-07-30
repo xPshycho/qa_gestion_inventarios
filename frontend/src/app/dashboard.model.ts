@@ -26,13 +26,13 @@ export interface CriticalProduct {
   updatedAt: string;
 }
 
-export interface TopMovedProduct {
+export interface BestSellingProduct {
   productId: number;
   productSku: string;
   productName: string;
   category: string;
-  movementCount: number;
-  totalMovedUnits: number;
+  exitMovementCount: number;
+  totalSoldUnits: number;
   lastMovementAt: string;
 }
 
@@ -56,6 +56,6 @@ export interface RecentStockMovement {
 export interface DashboardResponse {
   metrics: DashboardMetrics;
   criticalProducts: CriticalProduct[];
-  mostMovedProducts: TopMovedProduct[];
+  bestSellingProducts: BestSellingProduct[];
   recentMovements: RecentStockMovement[];
 }

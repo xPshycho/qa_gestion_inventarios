@@ -49,6 +49,15 @@ class ReportServiceIntegrationTest extends PostgreSqlIntegrationTest {
                 -2,
                 "Salida cubierta por reporte de integración"
         ));
+        stockMovementRepository.saveAndFlush(new StockMovement(
+                critical,
+                user,
+                StockMovementType.ENTRY,
+                2,
+                102,
+                100,
+                "Entrada que no debe contarse como venta"
+        ));
 
         DashboardResponse dashboard = reportService.getDashboard();
 
@@ -64,10 +73,11 @@ class ReportServiceIntegrationTest extends PostgreSqlIntegrationTest {
                     assertThat(product.id()).isEqualTo(critical.getId());
                     assertThat(product.shortage()).isEqualTo(3);
                 });
-        assertThat(dashboard.mostMovedProducts())
+        assertThat(dashboard.bestSellingProducts())
                 .anySatisfy(product -> {
                     assertThat(product.productId()).isEqualTo(critical.getId());
-                    assertThat(product.totalMovedUnits()).isEqualTo(2);
+                    assertThat(product.totalSoldUnits()).isEqualTo(2);
+                    assertThat(product.exitMovementCount()).isEqualTo(1);
                 });
         assertThat(dashboard.recentMovements())
                 .anySatisfy(movement -> {
@@ -91,7 +101,7 @@ class ReportServiceIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(dashboard.metrics().inventoryValue()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(dashboard.metrics().totalMovements()).isZero();
         assertThat(dashboard.criticalProducts()).isEmpty();
-        assertThat(dashboard.mostMovedProducts()).isEmpty();
+        assertThat(dashboard.bestSellingProducts()).isEmpty();
         assertThat(dashboard.recentMovements()).isEmpty();
     }
 

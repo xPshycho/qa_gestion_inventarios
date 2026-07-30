@@ -10,6 +10,11 @@ La guía describe el contrato de infraestructura y operación. La existencia de
 los archivos en el repositorio no demuestra por sí sola que IAM, la VM, el
 GitHub Environment o un despliegue remoto hayan sido configurados.
 
+La auditoría del 29 de julio de 2026 sí verificó la VM, WIF, el Environment
+`production` protegido, health público y el run exitoso
+[30500093137](https://github.com/xPshycho/qa_gestion_inventarios/actions/runs/30500093137).
+La inspección interna por OS Login continúa pendiente.
+
 La VM debe usar una imagen Debian soportada por Docker CE (Debian 12 es la
 referencia), tener una dirección externa estática y recursos suficientes para
 aplicación, dos bases, identidad y observabilidad. Como punto de partida,
@@ -570,11 +575,18 @@ ps`, logs redactados y el artifact seguro del run.
 
 Esta topología cubre producción en una sola VM y sus validaciones post-deploy.
 No convierte automáticamente `development` ni `staging` en ambientes GCP
-persistentes. El preview actual de staging sigue siendo runner-private. Por
-tanto, para cerrar literalmente el criterio del issue #108 todavía se requieren
-recursos o proyectos GCP separados para development y staging, URLs y secretos
-independientes, y smoke post-deploy por ambiente antes de promocionar a esta
-producción.
+persistentes. El preview actual de staging sigue siendo runner-private. El
+issue #108 fue cerrado el 28 de julio de 2026, pero esa decisión externa no
+cambia el alcance técnico observado: production tiene validación desplegada;
+development posee Cloud Run y staging una foundation GCP. El PR #145 añadió
+planes read-only y `apply` administrado para development/staging, pero ese
+workflow solo valida health/OIDC; no equivale por sí solo a los gates completos
+de producción.
+
+El issue #107 seguía abierto el 29 de julio aunque su implementación fue
+fusionada. No usar el estado `closed` de #108 ni la existencia del workflow
+administrado para afirmar que los tres ambientes GCP tienen promoción y smoke
+equivalentes: production continúa en la VM.
 
 Una sola VM también comparte blast radius, disco, CPU y ventana de
 mantenimiento para gateway, aplicación, identidad, bases y observabilidad. No

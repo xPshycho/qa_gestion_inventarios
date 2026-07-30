@@ -309,6 +309,11 @@ El propietario del repositorio debe crear y proteger el GitHub Environment
 `staging` **antes de ejecutar por primera vez el workflow**. El YAML referencia
 el environment, pero no puede crear sus reglas de protección.
 
+Auditoría pública del 29 de julio de 2026: el Environment `staging` existe,
+pero tiene cero protection rules y no tiene deployment branch policy. Los
+pasos siguientes continúan pendientes; no presentar el Environment como
+protegido hasta configurarlos y volver a consultar su política.
+
 En `Settings > Environments > staging` se debe configurar:
 
 1. al menos un required reviewer distinto del autor y, si la opción está
@@ -401,9 +406,10 @@ volumen persistente, `--import-realm` no reemplaza un realm ya creado. Los
 cambios persistentes de identidad deben aplicarse mediante la Admin API o, solo
 si el volumen es descartable, recreando el volumen de Keycloak.
 
-## Datos y límite de producción
+## Datos y límite frente a producción
 
-Staging ejecuta Flyway V1--V7 y sus datos semilla sintéticos. Producción todavía
-no está provisionada y no debe reutilizar esa carga sin separar o desactivar los
-usuarios y productos demo. Este preview demuestra despliegue, integración y
-recuperación de staging; no representa un despliegue de producción.
+Staging ejecuta Flyway V1--V8 y sus datos semilla sintéticos. La producción
+actual sí está provisionada en la VM `qa-inventario`, pero no se verificó su
+base interna por falta de OS Login y las migraciones todavía contienen seeds
+demo. Este preview demuestra despliegue, integración y recuperación de staging
+aislado; no representa ni administra la producción VM.

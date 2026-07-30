@@ -20,6 +20,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  id-token: write
 
 concurrency:
   group: quality-pipeline-${{ github.event.pull_request.number || github.ref }}
@@ -229,8 +230,11 @@ jobs:
 
   staging:
     name: Staging after CI
+    # always() prevents an intentionally skipped upstream job (for example,
+    # conventional commits on push) from skipping this post-CI gate.
     if: >-
-      needs.ci-required.result == 'success'
+      always()
+      && needs.ci-required.result == 'success'
       && (
         (
           github.event_name == 'pull_request'
@@ -244,4 +248,42 @@ jobs:
     uses: ./.github/workflows/staging-preview.yml
     with:
       run_zap: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  gcp-development:
+    name: GCP managed development after CI
+    if: >-
+      always()
+      && needs.ci-required.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/develop'
+    needs:
+      - ci-required
+    uses: ./.github/workflows/gcp-managed-deploy.yml
+    with:
+      environment: development
+      workload_identity_provider: ${{ vars.GCP_DEVELOPMENT_WORKLOAD_IDENTITY_PROVIDER }}
+      deploy_service_account: ${{ vars.GCP_DEVELOPMENT_DEPLOY_SERVICE_ACCOUNT }}
+      deploy_services: ${{ vars.GCP_DEVELOPMENT_DEPLOY_SERVICES == 'true' }}
+      apply_platform: true
+    secrets: inherit
+
+  gcp-staging:
+    name: GCP managed staging after CI
+    if: >-
+      always()
+      && needs.ci-required.result == 'success'
+      && needs.staging.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/staging'
+    needs:
+      - ci-required
+      - staging
+    uses: ./.github/workflows/gcp-managed-deploy.yml
+    with:
+      environment: staging
+      workload_identity_provider: ${{ vars.GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER }}
+      deploy_service_account: ${{ vars.GCP_STAGING_DEPLOY_SERVICE_ACCOUNT }}
+      deploy_services: ${{ vars.GCP_STAGING_DEPLOY_SERVICES == 'true' }}
+      apply_platform: false
     secrets: inherit

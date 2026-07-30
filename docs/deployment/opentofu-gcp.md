@@ -1,8 +1,18 @@
 # Base GCP declarativa con OpenTofu
 
+> **Estado operativo actualizado el 29-07-2026:** #106 está cerrado y el PR
+> #145 incorporó planes GCP de solo lectura para pull requests y jobs de
+> `apply` para `development` y `staging`. El plan read-only pasó en el PR, pero
+> el primer job post-merge de development quedó `skipped`; #107 permanece
+> abierto hasta diagnosticar y validar el `apply`. La producción vigente sigue
+> siendo la VM y staging conserva además su preview runner-private. Use la
+> [guía operativa #109](../27-guia-operativa-gcp-opentofu.md) para estado,
+> aprobaciones, incidentes, recuperación y trazabilidad.
+
 ## Propósito y estado
 
-Esta guía implementa el contrato del issue #106:
+Esta guía implementa la base declarativa del issue #106 y su automatización
+operativa de los issues #107 y #109:
 
 - Artifact Registry para imágenes inmutables;
 - Cloud Run para aplicación e identidad;
@@ -12,36 +22,56 @@ Esta guía implementa el contrato del issue #106:
 - state remoto GCS separado para plataforma y cada ambiente;
 - validación y planes revisables antes de cualquier `apply`.
 
-La configuración **no demuestra que los recursos existan**. Este cambio
-solamente define, valida y documenta la infraestructura. Ningún workflow de
-pull request posee credenciales GCP o ejecuta `apply`.
+El 29 de julio de 2026 se aplicaron las foundations de `development` y
+`staging` en `project-e70349a8-c787-4733-9a0`. Un plan posterior de ambos
+ambientes terminó en `No changes`. Cloud Run permanece desactivado hasta cargar
+las ocho versiones de secretos y crear los dos usuarios PostgreSQL por
+ambiente. El plan administrado de `production` propone 32 altas, cero cambios
+y cero destrucciones, pero **no se aplicó**.
 
 La VM descrita en [`gcp-vm.md`](gcp-vm.md) continúa siendo la producción
-vigente. La plataforma administrada debe desplegarse y validarse primero en
-development y staging. El cambio de tráfico de producción queda fuera de
-#106.
+vigente y el workflow `gcp-production-deploy.yml` conserva la ruta
+`main` → `production`. La plataforma administrada se valida primero en
+development y staging; cambiar el tráfico productivo a Cloud Run requiere una
+decisión de migración separada.
+
+El procedimiento diario, variables, aprobaciones, rollback, incidentes y
+evidencias se encuentran en
+[`gcp-managed-environments.md`](gcp-managed-environments.md).
 
 ## Decisiones de arquitectura
 
-```text
-Internet
-  │
-  ├── Cloud Run inventory-<env>-web
-  │     ├── frontend Nginx :8080       (ingress)
-  │     ├── backend Spring :8081       (sidecar)
-  │     └── Cloud SQL Auth Proxy :5432 (sidecar)
-  │
-  └── Cloud Run inventory-<env>-identity
-        ├── Keycloak :8080             (ingress)
-        └── Cloud SQL Auth Proxy :5432 (sidecar)
+```mermaid
+flowchart TD
+    INTERNET["Internet"]
 
-Cloud SQL inventory-<env>-postgres
-  ├── database inventory
-  └── database keycloak
+    subgraph WEB["Cloud Run inventory-env-web"]
+        NGINX["Frontend Nginx :8080"]
+        BACKEND["Backend Spring :8081"]
+        PROXYWEB["Cloud SQL Auth Proxy :5432"]
+        NGINX -->|"127.0.0.1:8081 /api"| BACKEND
+    end
 
-VPC inventory-<env>-network
-  ├── Cloud Run Direct VPC egress: 10.<env>.0.0/24
-  └── Private Services Access: rango /16 administrado por Google
+    subgraph ID["Cloud Run inventory-env-identity"]
+        KEYCLOAK["Keycloak :8080"]
+        PROXYID["Cloud SQL Auth Proxy :5432"]
+    end
+
+    subgraph VPC["VPC inventory-env-network"]
+        EGRESS["Direct VPC egress"]
+        PSA["Private Services Access"]
+        SQL[("Cloud SQL PostgreSQL")]
+    end
+
+    INVENTORY[("database inventory")]
+    KEYCLOAKDB[("database keycloak")]
+
+    INTERNET --> NGINX
+    INTERNET --> KEYCLOAK
+    PROXYWEB --> EGRESS --> PSA --> SQL
+    PROXYID --> EGRESS
+    SQL --> INVENTORY
+    SQL --> KEYCLOAKDB
 ```
 
 El frontend y backend comparten una instancia Cloud Run. Nginx conserva el
@@ -178,9 +208,10 @@ Storage, Service Usage y Resource Manager.
   "$PWD/infra/opentofu/platform/terraform.tfvars"
 ```
 
-El plan crea `inventory-images`, pero no construye imágenes. Su política de
-limpieza empieza en `dry_run`; no se habilita una eliminación automática sin
-observar primero los candidatos.
+El plan crea `inventory-images`, pero no construye imágenes. La política
+conserva las 30 versiones más recientes y elimina imágenes sin tag después de
+14 días. Antes de reducir esas ventanas se deben revisar los candidatos y la
+capacidad de rollback.
 
 ## 4. Foundation de un ambiente
 
@@ -243,8 +274,8 @@ unset SECRET_VALUE
 Evitar `set -x`, valores en argumentos, historiales y archivos temporales.
 
 Los usuarios PostgreSQL `inventory` y `keycloak` se crean fuera de OpenTofu con
-los mismos passwords. Su automatización segura y rotación coordinada forman
-parte de #107. No activar Cloud Run mientras falte un usuario o versión.
+los mismos passwords mediante `seed-runtime-secrets.sh`. No activar Cloud Run
+mientras falte un usuario o versión.
 
 El runtime referencia una versión numérica explícita:
 
@@ -265,9 +296,9 @@ keycloak@sha256:...
 cloud-sql-proxy@sha256:...
 ```
 
-No se aceptan tags mutables ni digests abreviados. #107 construirá las tres
-imágenes propias, las publicará y resolverá sus digests. La misma imagen se
-promueve; no se reconstruye por ambiente.
+No se aceptan tags mutables ni digests abreviados. El workflow construye las
+tres imágenes propias con el SHA del commit, las publica y resuelve el digest
+antes de planificar servicios.
 
 ## 7. Activación de Cloud Run
 
@@ -297,7 +328,9 @@ Después del apply se ejecutan:
 7. k6 smoke;
 8. revisión de logs sin secretos.
 
-La promoción automática y estas evidencias corresponden a #107.
+La promoción automática está en `gcp-managed-deploy.yml`. Las pruebas
+funcionales completas se ejecutan cuando `GCP_<ENV>_DEPLOY_SERVICES=true`;
+mientras sea `false`, la evidencia certifica únicamente la foundation.
 
 ## IAM
 
@@ -306,7 +339,9 @@ La promoción automática y estas evidencias corresponden a #107.
 | runtime web | `cloudsql.client`, `logging.logWriter`, `monitoring.metricWriter` | inventory DB, admin client |
 | runtime identity | los mismos roles | Keycloak DB/admin/client y usuarios E2E |
 | operador bootstrap | bucket e IAM inicial | ninguno por defecto |
-| cuenta CI futura | definida en #107 | solo lo necesario para plan/apply |
+| PR plan | viewers GCP y lectura de prefijos de state | ninguno |
+| deploy development | administración de foundation y plataforma compartida | solo bootstrap por Environment |
+| deploy staging | administración de su foundation y escritura de imágenes | solo bootstrap por Environment |
 
 Los bindings usan recursos IAM `member`, no políticas autoritativas, para no
 eliminar permisos ajenos.
@@ -329,8 +364,10 @@ antes de ampliarlos.
 
 ## Bloqueo y recuperación
 
-El backend GCS bloquea escritores. No usar `-lock=false`. Si una ejecución
-muere:
+El backend GCS bloquea escritores. Los `apply` y planes administrativos siempre
+usan locking. La única excepción es el plan de pull request: usa
+`TF_PLAN_LOCK=false` porque su identidad es de solo lectura y jamás aplica. Si
+una ejecución escritora muere:
 
 1. confirmar que no existe otro plan/apply;
 2. revisar Actions y sesiones administrativas;
@@ -353,16 +390,34 @@ Estos roots no declaran ni importan la VM `qa-inventario`, su IP, firewall,
 WIF, certificados o `/opt/inventory`. El apply crea recursos paralelos. Una
 migración futura necesita estrategia de datos, tráfico, rollback y convivencia.
 
-## Evidencia de aceptación
+## Evidencia de aceptación continua
 
-El PR de #106 debe adjuntar:
+Cada cambio OpenTofu debe adjuntar:
 
 - salida de `make test-infra`;
 - árbol de `infra/opentofu/`;
-- planes simulados aprobados de los tres ambientes;
+- planes aprobados de los tres ambientes;
 - ausencia de `secret_data`, claves JSON, states y planes;
 - documentación de state, IAM, APIs, variables y secretos;
-- check verde `OpenTofu CI / Format, validate and test plans`.
+- check verde `OpenTofu CI / Format, validate and test plans`;
+- check verde `OpenTofu CI / Read-only GCP plan`;
+- artifact seguro `gcp-managed-<environment>-<SHA>-<attempt>` después de un
+  despliegue por rama.
 
-Un plan real solo se publica después de configurar backend e identidad
-administrativa y de revisar que no contenga valores sensibles.
+Los planes binarios no se publican como artifact. La evidencia contiene solo
+outputs no sensibles y metadatos del SHA, después de
+`verify-artifacts.sh`.
+
+## Referencias verificadas
+
+- [Flujo central de OpenTofu](https://opentofu.org/docs/intro/core-workflow/)
+- [`tofu plan`](https://opentofu.org/docs/cli/commands/plan/)
+- [`tofu apply` con un plan guardado](https://opentofu.org/docs/cli/commands/apply/)
+- [Bloqueo de state](https://opentofu.org/docs/language/state/locking/)
+- [Backend GCS](https://opentofu.org/docs/language/settings/backends/gcs/)
+- [`opentofu/setup-opentofu`](https://github.com/opentofu/setup-opentofu)
+- [WIF para pipelines de despliegue en Google Cloud](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines)
+- [Buenas prácticas de WIF](https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation)
+
+El orden PR `fmt` → `validate` → `plan`, revisión humana y `apply` posterior al
+merge también fue contrastado con el repositorio docente `iac_open_tofu`.
