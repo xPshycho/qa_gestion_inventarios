@@ -1,13 +1,44 @@
 # Sistema de Gestion de Inventarios Empresarial
 
-Proyecto final de la asignatura Aseguramiento de Calidad de Software.  
+Proyecto final de la asignatura Aseguramiento de Calidad de Software.\
 Pontificia Universidad Catolica Madre y Maestra - Facultad de Ciencias e Ingenieria.
 
-## Descripcion  
+## Descripcion\
 
 Sistema moderno de gestion de inventarios orientado a pequenas empresas, construido con un
 ecosistema completo de aseguramiento de calidad de software (QAS), pruebas automatizadas,
 seguridad, observabilidad, integracion y despliegue continuos.
+
+## Documentación técnica final
+
+La documentación canónica auditada el 29 de julio de 2026 comienza en
+[`docs/00-indice-general.md`](docs/00-indice-general.md). Incluye arquitectura,
+inventario GCP observado, instalación, configuración, base de datos, API,
+JWT/Keycloak, permisos, pruebas, coverage, Playwright, ZAP, k6, Jenkins,
+observabilidad, operación, staging/producción, rollback, troubleshooting,
+evidencias, presentación, demostración y trazabilidad.
+
+Estado verificable del snapshot:
+
+| Validación | Resultado |
+|---|---|
+| Backend unit | 125/125; JaCoCo líneas 90.97 % |
+| Backend API | 22/22 |
+| Backend integración/datos | 17/17; JaCoCo líneas 60.52 %; migraciones, seeds y constraints incluidos |
+| Frontend unit | 101/101; líneas 83.63 % |
+| Playwright E2E | 20/20, Chromium/Firefox/WebKit y responsive |
+| Exploratoria | 6 charters, 6 sesiones y 32 evidencias históricas; retest staging pendiente |
+| k6 smoke | PASS, 0 % errores, p95 127.58 ms |
+| Headers/ZAP/Trivy | PASS; ZAP 0 High y cinco categorías Warning |
+| GitHub Actions | Quality `main` y `staging` PASS; artifacts verificados |
+| Producción VM | HTTPS, frontend, API health y OIDC verificados |
+
+Los resultados completos, timestamp, rutas y limitaciones están en
+[`docs/22-evidencias.md`](docs/22-evidencias.md), y la matriz requisito →
+implementación → prueba → evidencia está en
+[`docs/25-trazabilidad-entregables.md`](docs/25-trazabilidad-entregables.md).
+No se publican secretos. El
+issue #91 no fue modificado ni cerrado durante esta preparación documental.
 
 ## Integrantes
 
@@ -174,7 +205,7 @@ docker compose exec postgres \
 | Staging local | Overlay aislado, secretos generados y puertos solo en loopback | http://127.0.0.1:15173 |
 | Staging CI | Preview efimero por SHA en el runner de GitHub Actions | Runner-private; no publica URL externa |
 | Staging GCP | Foundation administrada paralela al preview privado | Se publica como output de OpenTofu |
-| Production | VM promovida por `staging` → `main` | Configurada como `PRODUCTION_URL` |
+| Production | VM Compute Engine promovida por `staging` → `main`, gateway HTTPS y Compose interno | https://34.123.136.144 |
 
 El staging no usa `docker-compose.override.yml`, no comparte proyecto ni volumenes con desarrollo
 y ejecuta Keycloak en modo `start` con PostgreSQL propio. El runbook completo, el contrato de
@@ -183,6 +214,9 @@ variables, las URLs, el flujo de promocion y el rollback estan en
 La operación OpenTofu/GCP, WIF, state, activación de Cloud Run y recuperación
 están en
 [`docs/deployment/gcp-managed-environments.md`](docs/deployment/gcp-managed-environments.md).
+El workflow está conectado a `develop` y `staging`; su primera ejecución
+post-merge en `develop` quedó `skipped`, por lo que el `apply` automático debe
+validarse antes de declararlo operativo.
 
 ```bash
 ./scripts/staging/init-env.sh
@@ -354,8 +388,10 @@ exitosamente y que los no aplicables hayan sido omitidos. Los reportes se
 publican como artifacts aun cuando una suite falle, para conservar evidencia de
 diagnóstico.
 
-El quality gate de backend exige cobertura de lineas >= 60% mediante JaCoCo. Los reportes de
-SonarCloud consumen los XML de JaCoCo generados por Gradle.
+Los quality gates actuales exigen cobertura de líneas backend unit >= 90 % e
+integración >= 60 % mediante JaCoCo. Frontend exige statements 80 %, branches
+70 %, functions 80 % y lines 80 %. SonarCloud consume los XML de JaCoCo
+generados por Gradle.
 
 El pipeline Jenkins se mantiene como flujo complementario y esta documentado en
 `docs/ci/jenkins.md`. Ejecuta checkout, build, pruebas, analisis de calidad, build Docker,
@@ -425,6 +461,13 @@ posterior al inicio del check con el `deployment.id` de este preview.
 ## Documentacion
 - [`infra/opentofu/README.md`](infra/opentofu/README.md): mapa navegable de
   roots, módulos, scripts, workflows y dependencias GCP.
+- `docs/00-indice-general.md`: puerta de entrada a la documentación final auditada.
+- `docs/22-evidencias.md`: ubicación central de resultados locales, CI y observabilidad.
+- `docs/25-trazabilidad-entregables.md`: requisitos del proyecto final y evidencia.
+- `docs/26-cierre-issue-91.md`: estado documental local, sin modificar el issue.
+- `docs/27-guia-operativa-gcp-opentofu.md`: operación vigente y objetivo
+  OpenTofu, APIs, IAM/WIF, Environments, approvals, incidentes, state y
+  trazabilidad del issue #109.
 - `docs/security/keycloak.md`: configuracion de seguridad, usuarios demo, scopes y permisos.
 - `docs/security/secrets-management.md`: contrato de secretos, rotación, Gitleaks, Jenkins y GitHub Actions.
 - `docs/ci/jenkins.md`: pipeline Jenkins, credenciales, stages, reportes y artifacts.

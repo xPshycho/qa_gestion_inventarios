@@ -21,6 +21,21 @@ dependencia anterior marcada legítimamente como `skipped`. Esto no permite
 desplegar tras un fallo: development y staging exigen explícitamente
 `needs.ci-required.result == 'success'`, y staging administrado exige además el
 preview exitoso.
+El plan GCP de solo lectura del PR #145 pasó en el run
+[30508694249](https://github.com/xPshycho/qa_gestion_inventarios/actions/runs/30508694249).
+En el primer push posterior a `develop`, run
+[30509955395](https://github.com/xPshycho/qa_gestion_inventarios/actions/runs/30509955395),
+`GCP managed development after CI` quedó `skipped`. Por tanto, el wiring está
+versionado, pero el `apply` automático es **Pendiente de verificación**.
+
+## Flujo de promoción
+
+```text
+pull request
+  └─ fmt + validate + tests + plan GCP de solo lectura
+
+merge a develop
+  └─ CI Required ── apply plataforma ── apply development
 
 ## Flujo de promoción
 

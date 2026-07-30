@@ -12,6 +12,11 @@ README del proyecto
     ├── scripts/opentofu/README.md
     └── docs/deployment/gcp-managed-environments.md
 ```
+La guía operativa completa está en
+[`docs/deployment/opentofu-gcp.md`](../../docs/deployment/opentofu-gcp.md). El
+estado observado, las aprobaciones, incidentes, recuperación y trazabilidad del
+issue #109 están en
+[`docs/27-guia-operativa-gcp-opentofu.md`](../../docs/27-guia-operativa-gcp-opentofu.md).
 
 La guía de diseño está en
 [`docs/deployment/opentofu-gcp.md`](../../docs/deployment/opentofu-gcp.md) y el
@@ -127,6 +132,11 @@ flowchart TD
 `environment` es el módulo compositor. Las flechas punteadas representan
 dependencias operativas que cruzan roots y se comunican mediante configuración
 de CI, no mediante acoplamiento directo entre módulos.
+Los archivos `*.tfvars.example` y `backend.hcl.example` son contratos sin
+credenciales. `.tfvars`, state, `.terraform/` y `*.tfplan` están ignorados por
+Git. Una copia llamada `backend.hcl` **no está ignorada actualmente**: nunca
+debe contener `credentials` y el operador debe comprobar `git status` para no
+añadirla por accidente.
 
 ## Validación segura
 
@@ -176,3 +186,9 @@ activación, comprobación, rollback e incidentes de state.
 - [OpenTofu: backends](https://opentofu.org/docs/language/settings/backends/)
 - [Google Cloud: Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation)
 - [GitHub: OIDC en Google Cloud](https://docs.github.com/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-google-cloud-platform)
+Nunca se ejecuta `tofu apply` desde un pull request. Los PR realizan planes
+GCP de solo lectura; `ci-required.yml` conecta los pushes a `develop` y
+`staging` con `gcp-managed-deploy.yml`. El primer job post-merge de development
+quedó `skipped`, por lo que el `apply` automático continúa pendiente de
+validación y el issue #107 sigue abierto. `main -> production` conserva la
+ruta VM: el root OpenTofu de production solo se planifica.
