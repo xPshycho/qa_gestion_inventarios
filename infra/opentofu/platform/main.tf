@@ -37,3 +37,16 @@ module "artifact_registry" {
 
   depends_on = [module.services]
 }
+
+module "github_wif" {
+  source = "../modules/github_wif"
+
+  project_id                 = var.project_id
+  region                     = var.region
+  state_bucket_name          = var.state_bucket_name
+  artifact_repository_id     = module.artifact_registry.repository_id
+  github_repository_id       = var.github_repository_id
+  github_repository_owner_id = var.github_repository_owner_id
+
+  depends_on = [module.artifact_registry]
+}

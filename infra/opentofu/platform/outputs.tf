@@ -9,3 +9,7 @@ output "artifact_registry_url" {
 output "enabled_services" {
   value = module.services.enabled_services
 }
+
+output "github_wif" {
+  value = module.github_wif
+}
