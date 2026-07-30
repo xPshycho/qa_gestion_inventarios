@@ -130,8 +130,14 @@ run_trivy() {
 
 frontend_port="$(read_environment_value FRONTEND_PORT)"
 keycloak_port="$(read_environment_value KEYCLOAK_PORT)"
+backend_port="$(read_environment_value BACKEND_PORT)"
+viewer_username="$(read_environment_value E2E_VIEWER_USERNAME)"
+viewer_password="$(read_environment_value E2E_VIEWER_PASSWORD)"
 test -n "$frontend_port"
 test -n "$keycloak_port"
+test -n "$backend_port"
+test -n "$viewer_username"
+test -n "$viewer_password"
 
 reset_test_result_directory "$repository_root" test-results/security/headers
 reset_test_result_directory "$repository_root" test-results/security/zap
@@ -148,6 +154,18 @@ wait_for_http_endpoint \
   keycloak \
   "http://localhost:$keycloak_port/realms/inventory/.well-known/openid-configuration" \
   120
+wait_for_http_endpoint backend "http://localhost:$backend_port/actuator/health" 120
+
+viewer_token="$(
+  curl --silent --show-error --fail \
+    --request POST \
+    --data-urlencode "client_id=inventory-frontend" \
+    --data-urlencode "grant_type=password" \
+    --data-urlencode "username=$viewer_username" \
+    --data-urlencode "password=$viewer_password" \
+    "http://localhost:$keycloak_port/realms/inventory/protocol/openid-connect/token" |
+    jq -er '.access_token'
+)"
 
 set +e
 run_trivy
@@ -161,8 +179,15 @@ ZAP_TARGET_URL="http://localhost:$frontend_port" \
 ZAP_DOCKER_NETWORK=host \
 ZAP_REPORT_DIR="$repository_root/test-results/security/zap/evidence/reports" \
   "$script_dir/run-zap-baseline.sh"
-zap_exit_code=$?
+zap_baseline_exit_code=$?
+ZAP_OPENAPI_URL="http://localhost:$backend_port/v3/api-docs" \
+ZAP_ACCESS_TOKEN="$viewer_token" \
+ZAP_DOCKER_NETWORK=host \
+ZAP_REPORT_DIR="$repository_root/test-results/security/zap/evidence/reports" \
+  "$script_dir/run-zap-api-scan.sh"
+zap_api_exit_code=$?
 set -e
+unset viewer_token viewer_password
 
 trivy_status=failed
 [[ "$trivy_exit_code" -eq 0 ]] && trivy_status=passed
@@ -182,7 +207,7 @@ python3 "$repository_root/scripts/testing/collect_test_results.py" \
   --metadata workflow=local
 
 zap_status=failed
-[[ "$zap_exit_code" -eq 0 ]] && zap_status=passed
+[[ "$zap_baseline_exit_code" -eq 0 && "$zap_api_exit_code" -eq 0 ]] && zap_status=passed
 python3 "$repository_root/scripts/testing/collect_test_results.py" \
   --suite security/zap \
   --status "$zap_status" \
@@ -191,6 +216,7 @@ python3 "$repository_root/scripts/testing/collect_test_results.py" \
   --metadata format=zap-json-markdown
 
 [[ "$headers_exit_code" -eq 0 ]] || failed=1
-[[ "$zap_exit_code" -eq 0 ]] || failed=1
+[[ "$zap_baseline_exit_code" -eq 0 ]] || failed=1
+[[ "$zap_api_exit_code" -eq 0 ]] || failed=1
 [[ "$trivy_exit_code" -eq 0 ]] || failed=1
 exit "$failed"
