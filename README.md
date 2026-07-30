@@ -170,14 +170,19 @@ docker compose exec postgres \
 | Ambiente | Descripcion | URL |
 |----------|-------------|-----|
 | Development | Local con Docker Compose | http://localhost:5173 |
+| Development GCP | Foundation administrada; Cloud Run se activa tras provisionar secretos | Se publica como output de OpenTofu |
 | Staging local | Overlay aislado, secretos generados y puertos solo en loopback | http://127.0.0.1:15173 |
 | Staging CI | Preview efimero por SHA en el runner de GitHub Actions | Runner-private; no publica URL externa |
-| Production | Ambiente final | Fuera del alcance del preview de staging |
+| Staging GCP | Foundation administrada paralela al preview privado | Se publica como output de OpenTofu |
+| Production | VM promovida por `staging` → `main` | Configurada como `PRODUCTION_URL` |
 
 El staging no usa `docker-compose.override.yml`, no comparte proyecto ni volumenes con desarrollo
 y ejecuta Keycloak en modo `start` con PostgreSQL propio. El runbook completo, el contrato de
 variables, las URLs, el flujo de promocion y el rollback estan en
 [`docs/deployment/staging.md`](docs/deployment/staging.md).
+La operación OpenTofu/GCP, WIF, state, activación de Cloud Run y recuperación
+están en
+[`docs/deployment/gcp-managed-environments.md`](docs/deployment/gcp-managed-environments.md).
 
 ```bash
 ./scripts/staging/init-env.sh
@@ -382,6 +387,7 @@ limpieza está en `docs/ci/jenkins.md`.
 | Frontend unit + coverage | `cd frontend && pnpm test` | `test-results/frontend/unit/` | `test-results-frontend-unit-*` |
 | E2E Playwright | `cd tests/e2e && pnpm test` | `test-results/e2e/playwright/` | `test-results-e2e-playwright-*`, Jenkins Pipeline |
 | Staging post-deploy | `./scripts/staging/post-deploy.sh` | `test-results/staging/post-deploy/` después del recolector | `test-results-staging-post-deploy-<DEPLOYED_SHA>-<run_attempt>`, solo con safety `PASS` |
+| GCP managed deploy | `./scripts/opentofu/plan.sh ...` | `test-results/gcp-managed/<environment>/` en CI | `gcp-managed-<environment>-<SHA>-<run_attempt>`, solo con safety `PASS` |
 
 Estado de automatizacion de testing:
 
