@@ -423,10 +423,14 @@ posterior al inicio del check con el `deployment.id` de este preview.
 
 
 ## Documentacion
+- [`infra/opentofu/README.md`](infra/opentofu/README.md): mapa navegable de
+  roots, módulos, scripts, workflows y dependencias GCP.
 - `docs/security/keycloak.md`: configuracion de seguridad, usuarios demo, scopes y permisos.
 - `docs/security/secrets-management.md`: contrato de secretos, rotación, Gitleaks, Jenkins y GitHub Actions.
 - `docs/ci/jenkins.md`: pipeline Jenkins, credenciales, stages, reportes y artifacts.
 - `docs/deployment/staging.md`: despliegue staging reproducible, secretos, validacion, promocion y rollback.
 - `docs/deployment/opentofu-gcp.md`: bootstrap GCS, módulos OpenTofu, IAM, secretos y planes por ambiente.
+- `docs/deployment/gcp-managed-environments.md`: operación diaria, WIF,
+  activación de Cloud Run, evidencia, rollback e incidentes de state.
 - `docs/deployment/gcp-vm.md`: operación de la producción vigente en una VM de Google Cloud.
 - `docs/testing/ci-reporting.md`: guia de testing, cobertura, artifacts y evidencia para PRs.

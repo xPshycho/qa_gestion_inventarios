@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+#
+# validate.sh
+# Ejecuta el contrato offline de OpenTofu: formato, controles de material
+# sensible, tests de scripts, init sin backend, validate y tests con mocks.
+#
+# Uso:
+#   scripts/opentofu/validate.sh
+#
+# Red:
+#   OpenTofu puede descargar providers si no están en caché, pero no autentica
+#   contra GCP ni consulta recursos del proyecto.
 
 set -Eeuo pipefail
 
@@ -19,6 +30,8 @@ readonly roots=(
 tofu fmt -check -recursive infra/opentofu
 ./tests/opentofu/test-render-ci-config.sh
 ./tests/opentofu/test-seed-runtime-secrets.sh
+./tests/opentofu/test-ci-deployment-gates.sh
+node ./tests/opentofu/test-infra-doc-links.mjs
 
 if rg -n \
   '(^|[[:space:]])(secret_data|credentials)[[:space:]]*=' \
