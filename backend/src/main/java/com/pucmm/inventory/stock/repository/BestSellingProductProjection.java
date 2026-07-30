@@ -2,7 +2,7 @@ package com.pucmm.inventory.stock.repository;
 
 import java.time.OffsetDateTime;
 
-public interface TopMovedProductProjection {
+public interface BestSellingProductProjection {
     Long getProductId();
 
     String getProductSku();
@@ -11,9 +11,9 @@ public interface TopMovedProductProjection {
 
     String getCategory();
 
-    long getMovementCount();
+    long getExitMovementCount();
 
-    long getTotalMovedUnits();
+    long getTotalSoldUnits();
 
     OffsetDateTime getLastMovementAt();
 }

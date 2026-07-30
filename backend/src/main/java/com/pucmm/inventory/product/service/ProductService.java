@@ -7,6 +7,12 @@ import com.pucmm.inventory.product.domain.Product;
 import com.pucmm.inventory.product.domain.ProductData;
 import com.pucmm.inventory.product.domain.ProductStatus;
 import com.pucmm.inventory.product.repository.ProductRepository;
+import com.pucmm.inventory.stock.domain.InventoryUser;
+import com.pucmm.inventory.stock.domain.StockMovement;
+import com.pucmm.inventory.stock.domain.StockMovementType;
+import com.pucmm.inventory.stock.repository.InventoryUserRepository;
+import com.pucmm.inventory.stock.repository.StockMovementRepository;
+import com.pucmm.inventory.stock.service.AuthenticatedInventoryUserException;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +28,17 @@ import org.springframework.util.StringUtils;
 @Transactional(readOnly = true)
 public class ProductService {
     private final ProductRepository productRepository;
+    private final InventoryUserRepository inventoryUserRepository;
+    private final StockMovementRepository stockMovementRepository;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(
+            ProductRepository productRepository,
+            InventoryUserRepository inventoryUserRepository,
+            StockMovementRepository stockMovementRepository
+    ) {
         this.productRepository = productRepository;
+        this.inventoryUserRepository = inventoryUserRepository;
+        this.stockMovementRepository = stockMovementRepository;
     }
 
     public ProductPageResponse findProducts(
@@ -49,14 +63,25 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse createProduct(ProductRequest request) {
+    public ProductResponse createProduct(ProductRequest request, String actorUsername) {
         if (productRepository.existsBySkuIgnoreCase(request.sku())) {
             throw new DuplicateSkuException(request.sku());
         }
 
         Product product = new Product(toProductData(request));
+        Product savedProduct = productRepository.save(product);
+        InventoryUser actor = findAuthenticatedUser(actorUsername);
+        stockMovementRepository.save(new StockMovement(
+                savedProduct,
+                actor,
+                StockMovementType.INITIAL,
+                0,
+                savedProduct.getCurrentStock(),
+                savedProduct.getCurrentStock(),
+                "Cantidad inicial registrada al crear el producto"
+        ));
 
-        return ProductResponse.from(productRepository.save(product));
+        return ProductResponse.from(savedProduct);
     }
 
     @Transactional
@@ -77,7 +102,18 @@ public class ProductService {
     @Transactional
     public void deleteProduct(Long id) {
         Product product = findProductById(id);
-        productRepository.delete(product);
+        product.archive();
+        productRepository.save(product);
+    }
+
+    private InventoryUser findAuthenticatedUser(String username) {
+        if (!StringUtils.hasText(username)) {
+            throw new AuthenticatedInventoryUserException();
+        }
+
+        String normalizedUsername = username.trim();
+        return inventoryUserRepository.findByUsernameIgnoreCase(normalizedUsername)
+                .orElseThrow(() -> new AuthenticatedInventoryUserException(normalizedUsername));
     }
 
     private ProductData toProductData(ProductRequest request) {
@@ -94,13 +130,14 @@ public class ProductService {
     }
 
     private Product findProductById(Long id) {
-        return productRepository.findById(id)
+        return productRepository.findByIdAndArchivedFalse(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
     private Specification<Product> buildSpecification(String search, String category, ProductStatus status) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.isFalse(root.get("archived")));
 
             if (StringUtils.hasText(search)) {
                 String pattern = "%" + search.trim().toLowerCase() + "%";

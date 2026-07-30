@@ -167,7 +167,9 @@ Objetivo: preparar el flujo en vivo.\
 Contenido: health, login, producto/stock, API, permiso, test, reportes,
 observabilidad.\
 Evidencia: [guion](24-script-demostracion.md).\
-Notas: usar entorno local/staging y plan B de screenshots.
+Notas: cada bloque del recorrido enlaza con Ctrl+clic los archivos que lo
+implementan; usar local/staging para mutaciones y el smoke de sólo lectura
+documentado allí cuando se necesite generar telemetría en producción.
 
 ### 23. Conclusiones — 1 min
 

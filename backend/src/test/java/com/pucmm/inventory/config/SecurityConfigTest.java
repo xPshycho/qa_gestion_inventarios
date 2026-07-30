@@ -99,7 +99,9 @@ class SecurityConfigTest {
     @Test
     void mutatingRequestWithJwtDoesNotRequireCsrfToken() throws Exception {
         ProductRequest request = request();
-        when(productService.createProduct(request)).thenReturn(response());
+        when(authenticatedInventoryUserResolver.resolveUsername(
+                org.mockito.ArgumentMatchers.any(Authentication.class))).thenReturn("edwin");
+        when(productService.createProduct(request, "edwin")).thenReturn(response());
 
         mockMvc.perform(post("/products")
                         .with(jwt().authorities(new SimpleGrantedAuthority(PRODUCT_MANAGE)))

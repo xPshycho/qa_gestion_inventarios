@@ -10,13 +10,13 @@ OpenTofu, aprobaciones, incidentes, secretos, state y evidencia.
 Estado documental: **Completo con dependencias técnicas explícitas**.
 Estado remoto observado del issue: `open`.
 
-Estado de dependencias consultado en modo público y solo lectura el 29 de julio
+Estado de dependencias consultado en modo público y solo lectura el 30 de julio
 de 2026:
 
 | Issue dependiente | Estado observado | Consecuencia |
 |---|---|---|
 | [#106 — Base GCP declarativa/OpenTofu](https://github.com/xPshycho/qa_gestion_inventarios/issues/106) | `closed` el 29-07-2026 | roots, módulos, state separado y validación offline disponibles |
-| [#107 — Deploy promovido por ambiente/WIF](https://github.com/xPshycho/qa_gestion_inventarios/issues/107) | `open`; implementación fusionada por PR #145 | el plan GCP read-only pasó; los jobs de `apply` por `develop`/`staging` existen, pero el primer job development post-merge quedó `skipped` |
+| [#107 — Deploy promovido por ambiente/WIF](https://github.com/xPshycho/qa_gestion_inventarios/issues/107) | `open`; implementación base fusionada por PR #145 | el run staging `30542766465` expuso la falta de `storage.objects.list` a nivel de bucket; esta rama añade `roles/storage.legacyBucketReader` y conserva el acceso a objetos condicionado por prefijo |
 | [#108 — Validación post-deploy GCP](https://github.com/xPshycho/qa_gestion_inventarios/issues/108) | `closed` el 28-07-2026 | producción VM tiene smoke/ZAP/rollback; el workflow administrado valida health/OIDC y exige validación funcional adicional |
 
 No se modificó ningún issue, GitHub Environment, secreto, recurso GCP o state
@@ -29,8 +29,8 @@ que describe OpenTofu:
 
 | Ambiente | Operación vigente observada | Plataforma OpenTofu declarada | Estado |
 |---|---|---|---|
-| Development | Cloud Run `inventory-development`, Cloud SQL y acceso público | `inventory-development-web`, `inventory-development-identity`, SQL privada y VPC propia | foundation aplicada; job por `develop` implementado, primera ejecución `skipped`; activación controlada por `GCP_DEVELOPMENT_DEPLOY_SERVICES` |
-| Staging | preview Compose efímero en runner y foundation GCP sin servicio Cloud Run público observado | web/identity Cloud Run, SQL privada, VPC y state propios | foundation aplicada; job por `staging` implementado y pendiente de ejecución verificada |
+| Development | Cloud Run `inventory-development`, Cloud SQL y acceso público | `inventory-development-web`, `inventory-development-identity`, SQL privada y VPC propia | foundation aplicada; job por `develop` implementado; activación controlada por `GCP_DEVELOPMENT_DEPLOY_SERVICES` |
+| Staging | preview Compose efímero en runner y foundation GCP sin servicio Cloud Run público observado | web/identity Cloud Run, SQL privada, VPC y state propios | el último apply falló al listar state; corrección IAM versionada y pendiente de validación tras merge |
 | Production | VM `qa-inventario` con Compose, WIF, IAP y workflow dedicado | Cloud Run/SQL regional protegidos | la VM es producción; el root OpenTofu está planificado pero no aplicado |
 
 Ruta: `infra/opentofu/modules/environment/main.tf`\
@@ -49,8 +49,8 @@ Ruta: `.github/workflows/gcp-managed-deploy.yml`\
 Líneas aproximadas: 1-218\
 Componente: `GCP Managed Environment Deploy`\
 Responsabilidad: autenticar por WIF, construir imágenes inmutables y aplicar
-los planes exactos de plataforma, development o staging. La ejecución del
-`apply` sigue pendiente de validación por el `skipped` observado.
+los planes exactos de plataforma, development o staging. El ajuste IAM del
+bucket debe validarse en el siguiente `apply` administrado.
 
 Aplicar el root OpenTofu de production no modifica ni importa automáticamente
 la VM. No aplicarlo hasta aprobar una migración y conciliar state, recursos y
@@ -683,10 +683,10 @@ Para cualquier incidente:
 |---|---|---|---|---|
 | prerrequisitos/APIs | `platform/main.tf` + comandos de inventario | APIs GCP observadas; OpenTofu CI | 03 + esta guía | Completo |
 | IAM mínimo | módulos environment/GitHub WIF + deploy VM | roles versionados y IAM read-only auditado | 03, `gcp-vm.md`, módulo `github_wif` | Completo con permisos de aprovisionamiento amplios |
-| WIF sin keys | planes PR, deploy administrado y VM | plan read-only PR #145 PASS; deploy job `skipped`; 0 user-managed SA keys | runs 30508694249 y 30509955395; producción 30500093137 | Parcial hasta validar apply |
+| WIF sin keys | planes PR, deploy administrado y VM | plan read-only PR #145 PASS; último staging alcanzó GCS y falló por permiso de listado; 0 user-managed SA keys | runs 30508694249, 30542766465; producción 30500093137 | Parcial hasta validar ajuste IAM |
 | GitHub Environments | `gcp-managed-deploy.yml`, `staging-preview.yml`, `gcp-production-deploy.yml` | API pública + referencias versionadas | production protegido; staging sin protección | Parcial |
 | Secret Manager | catálogo OpenTofu + versiones externas | 17 nombres observados; valores no leídos | 03 y esta guía | Completo documental |
-| init/plan/apply | `render-ci-config.sh`, `plan.sh`, `opentofu-ci.yml`, `gcp-managed-deploy.yml` | plan PR PASS; primer apply development `skipped` | runs 30508694249 y 30509955395 | Parcial: implementación presente, apply sin validar |
+| init/plan/apply | `render-ci-config.sh`, `plan.sh`, `opentofu-ci.yml`, `gcp-managed-deploy.yml` | plan PR PASS; staging identificó permiso GCS faltante y el módulo fue corregido | runs 30508694249 y 30542766465 | Parcial: corrección presente, apply post-merge pendiente |
 | rollback OpenTofu | plan correctivo/revisión anterior | no hubo drill | 20 + esta guía | Pendiente de validación |
 | URLs/variables/health | workflows, outputs y scripts de environment | curl dev/production; staging histórico | 19, 22, evidencia deployment | Completo con staging GCP pendiente |
 | observabilidad por ambiente | Compose/Cloud Monitoring/Ops Agent | local/staging histórica; producción externa | 17 y evidence/observability | Parcial |
@@ -703,9 +703,9 @@ Para cualquier incidente:
 | integrante nuevo prepara development sin secretos versionados | **Completo documentalmente** para validación y foundation; activar servicios requiere secretos/usuarios externos |
 | staging y production tienen aprobación, rollback y responsables | **Parcial**: producción sí; staging tiene proceso/rollback pero el Environment no exige reviewer |
 | evidencia y artifacts documentados | **Completo** |
-| consistencia con workflows/infra final | **Completo**: separa VM, runner-private y OpenTofu; refleja plan PR aprobado y jobs apply todavía no validados |
+| consistencia con workflows/infra final | **Completo**: separa VM, runner-private y OpenTofu; refleja el fallo GCS más reciente y su corrección pendiente de ejecución |
 
 El issue #109 no debe considerarse técnicamente cerrado solo por este documento:
-staging carece de required reviewer, #107 sigue abierto aunque su implementación
-fue fusionada, el primer apply quedó `skipped` y no se ha probado recuperación
-de state/rotación.
+staging carece de required reviewer, #107 sigue abierto, el ajuste IAM aún no
+ha pasado un `apply` administrado y no se ha probado recuperación de
+state/rotación.

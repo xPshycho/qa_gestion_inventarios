@@ -6,7 +6,7 @@ import {
   DashboardResponse,
   RecentStockMovement,
   StockMovementType,
-  TopMovedProduct
+  BestSellingProduct
 } from './dashboard.model';
 import { DashboardService } from './dashboard.service';
 import { MATERIAL_IMPORTS } from './shared/material.imports';
@@ -96,7 +96,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return product.id;
   }
 
-  trackByTopMovedProductId(_: number, product: TopMovedProduct): number {
+  trackByBestSellingProductId(_: number, product: BestSellingProduct): number {
     return product.productId;
   }
 

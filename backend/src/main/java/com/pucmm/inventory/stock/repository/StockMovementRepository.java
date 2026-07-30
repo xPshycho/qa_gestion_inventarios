@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
+    @EntityGraph(attributePaths = {"product", "user"})
     List<StockMovement> findByProductIdOrderByCreatedAtDescIdDesc(Long productId);
 
     long countByMovementType(StockMovementType movementType);
@@ -21,13 +22,15 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
                    p.sku as productSku,
                    p.name as productName,
                    p.category as category,
-                   count(m.id) as movementCount,
-                   sum(abs(m.deltaQuantity)) as totalMovedUnits,
+                   count(m.id) as exitMovementCount,
+                   sum(abs(m.deltaQuantity)) as totalSoldUnits,
                    max(m.createdAt) as lastMovementAt
             from StockMovement m
             join m.product p
+            where m.movementType = com.pucmm.inventory.stock.domain.StockMovementType.EXIT
+              and p.archived = false
             group by p.id, p.sku, p.name, p.category
-            order by count(m.id) desc, sum(abs(m.deltaQuantity)) desc, max(m.createdAt) desc
+            order by sum(abs(m.deltaQuantity)) desc, count(m.id) desc, max(m.createdAt) desc
             """)
-    List<TopMovedProductProjection> findTopMovedProducts(Pageable pageable);
+    List<BestSellingProductProjection> findBestSellingProducts(Pageable pageable);
 }

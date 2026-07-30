@@ -12,12 +12,12 @@ import com.pucmm.inventory.report.api.dto.CriticalProductResponse;
 import com.pucmm.inventory.report.api.dto.DashboardMetricsResponse;
 import com.pucmm.inventory.report.api.dto.DashboardResponse;
 import com.pucmm.inventory.report.api.dto.RecentStockMovementResponse;
-import com.pucmm.inventory.report.api.dto.TopMovedProductResponse;
+import com.pucmm.inventory.report.api.dto.BestSellingProductResponse;
 import com.pucmm.inventory.stock.domain.InventoryUser;
 import com.pucmm.inventory.stock.domain.StockMovement;
 import com.pucmm.inventory.stock.domain.StockMovementType;
 import com.pucmm.inventory.stock.repository.StockMovementRepository;
-import com.pucmm.inventory.stock.repository.TopMovedProductProjection;
+import com.pucmm.inventory.stock.repository.BestSellingProductProjection;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -45,9 +45,9 @@ class ReportServiceTest {
 
     @Test
     void getMetricsReturnsOperationalTotals() {
-        when(productRepository.count()).thenReturn(4L);
-        when(productRepository.countByStatus(ProductStatus.ACTIVE)).thenReturn(3L);
-        when(productRepository.countByStatus(ProductStatus.INACTIVE)).thenReturn(1L);
+        when(productRepository.countByArchivedFalse()).thenReturn(4L);
+        when(productRepository.countByStatusAndArchivedFalse(ProductStatus.ACTIVE)).thenReturn(3L);
+        when(productRepository.countByStatusAndArchivedFalse(ProductStatus.INACTIVE)).thenReturn(1L);
         when(productRepository.countCriticalActiveProducts()).thenReturn(1L);
         when(productRepository.sumCurrentStock()).thenReturn(26L);
         when(productRepository.calculateInventoryValue()).thenReturn(new BigDecimal("1728000.00"));
@@ -70,9 +70,9 @@ class ReportServiceTest {
 
     @Test
     void getMetricsReturnsZeroWhenAggregateSumsAreNull() {
-        when(productRepository.count()).thenReturn(0L);
-        when(productRepository.countByStatus(ProductStatus.ACTIVE)).thenReturn(0L);
-        when(productRepository.countByStatus(ProductStatus.INACTIVE)).thenReturn(0L);
+        when(productRepository.countByArchivedFalse()).thenReturn(0L);
+        when(productRepository.countByStatusAndArchivedFalse(ProductStatus.ACTIVE)).thenReturn(0L);
+        when(productRepository.countByStatusAndArchivedFalse(ProductStatus.INACTIVE)).thenReturn(0L);
         when(productRepository.countCriticalActiveProducts()).thenReturn(0L);
         when(productRepository.sumCurrentStock()).thenReturn(null);
         when(productRepository.calculateInventoryValue()).thenReturn(null);
@@ -102,16 +102,16 @@ class ReportServiceTest {
     }
 
     @Test
-    void getMostMovedProductsMapsProjectionAndUsesLimit() {
-        TopMovedProductProjection projection = projection(3, 18);
-        when(stockMovementRepository.findTopMovedProducts(PageRequest.of(0, 5))).thenReturn(List.of(projection));
+    void getBestSellingProductsMapsProjectionAndUsesLimit() {
+        BestSellingProductProjection projection = projection(3, 18);
+        when(stockMovementRepository.findBestSellingProducts(PageRequest.of(0, 5))).thenReturn(List.of(projection));
 
-        List<TopMovedProductResponse> response = reportService.getMostMovedProducts(5);
+        List<BestSellingProductResponse> response = reportService.getBestSellingProducts(5);
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().productSku()).isEqualTo("DELL-LAT-5440");
-        assertThat(response.getFirst().movementCount()).isEqualTo(3);
-        assertThat(response.getFirst().totalMovedUnits()).isEqualTo(18);
+        assertThat(response.getFirst().exitMovementCount()).isEqualTo(3);
+        assertThat(response.getFirst().totalSoldUnits()).isEqualTo(18);
     }
 
     @Test
@@ -170,9 +170,9 @@ class ReportServiceTest {
 
     @Test
     void getDashboardUsesDefaultSectionLimits() {
-        when(productRepository.count()).thenReturn(4L);
-        when(productRepository.countByStatus(ProductStatus.ACTIVE)).thenReturn(3L);
-        when(productRepository.countByStatus(ProductStatus.INACTIVE)).thenReturn(1L);
+        when(productRepository.countByArchivedFalse()).thenReturn(4L);
+        when(productRepository.countByStatusAndArchivedFalse(ProductStatus.ACTIVE)).thenReturn(3L);
+        when(productRepository.countByStatusAndArchivedFalse(ProductStatus.INACTIVE)).thenReturn(1L);
         when(productRepository.countCriticalActiveProducts()).thenReturn(1L);
         when(productRepository.sumCurrentStock()).thenReturn(26L);
         when(productRepository.calculateInventoryValue()).thenReturn(new BigDecimal("1728000.00"));
@@ -182,14 +182,14 @@ class ReportServiceTest {
         when(stockMovementRepository.countByMovementType(StockMovementType.EXIT)).thenReturn(1L);
         when(stockMovementRepository.countByMovementType(StockMovementType.ADJUSTMENT)).thenReturn(1L);
         when(productRepository.findCriticalActiveProducts(PageRequest.of(0, 5))).thenReturn(List.of(productWithStock(2, 5)));
-        when(stockMovementRepository.findTopMovedProducts(PageRequest.of(0, 5))).thenReturn(List.of(projection(3, 18)));
+        when(stockMovementRepository.findBestSellingProducts(PageRequest.of(0, 5))).thenReturn(List.of(projection(3, 18)));
         when(stockMovementRepository.findAllByOrderByCreatedAtDescIdDesc(PageRequest.of(0, 8))).thenReturn(List.of());
 
         DashboardResponse response = reportService.getDashboard();
 
         assertThat(response.metrics().totalProducts()).isEqualTo(4);
         assertThat(response.criticalProducts()).hasSize(1);
-        assertThat(response.mostMovedProducts()).hasSize(1);
+        assertThat(response.bestSellingProducts()).hasSize(1);
         assertThat(response.recentMovements()).isEmpty();
     }
 
@@ -218,8 +218,8 @@ class ReportServiceTest {
         return user;
     }
 
-    private TopMovedProductProjection projection(long movementCount, long totalMovedUnits) {
-        return new TopMovedProductProjection() {
+    private BestSellingProductProjection projection(long exitMovementCount, long totalSoldUnits) {
+        return new BestSellingProductProjection() {
             @Override
             public Long getProductId() {
                 return 1L;
@@ -241,13 +241,13 @@ class ReportServiceTest {
             }
 
             @Override
-            public long getMovementCount() {
-                return movementCount;
+            public long getExitMovementCount() {
+                return exitMovementCount;
             }
 
             @Override
-            public long getTotalMovedUnits() {
-                return totalMovedUnits;
+            public long getTotalSoldUnits() {
+                return totalSoldUnits;
             }
 
             @Override

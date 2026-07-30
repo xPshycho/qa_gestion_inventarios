@@ -69,6 +69,8 @@ check-config: env ## Valida scripts, recolector y modelo Docker Compose
 		tests/e2e/scripts/run-local.sh \
 		tests/performance/run-local.sh \
 		tests/security/run-local.sh \
+		tests/security/run-zap-api-scan.sh \
+		tests/security/run-zap-baseline.sh \
 		tests/opentofu/test-render-ci-config.sh \
 		tests/testing/test_local_compose.sh
 	python3 -m unittest tests/testing/test_collect_test_results.py

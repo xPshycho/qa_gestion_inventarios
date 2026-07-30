@@ -1,8 +1,9 @@
 # Performance testing con k6
 
-Suite minima de performance para validar que la API responde bajo una carga local conservadora.
-Cubre health, consulta paginada de productos y dashboard de reportes. No es una certificacion de
-capacidad, no ejecuta stress/soak/spike testing y no debe ejecutarse contra produccion.
+Suite de performance para validar la API con perfiles smoke, carga y estrés
+controlado. Cubre health, consulta paginada de productos y dashboard de
+reportes. No es una certificación de capacidad productiva ni debe ejecutarse
+contra producción.
 
 ## Prerrequisitos
 
@@ -44,7 +45,7 @@ un token ya emitido mediante `K6_ACCESS_TOKEN`.
 | `K6_USERNAME` | No | `viewer` | Usuario de pruebas con permisos de lectura. |
 | `K6_PASSWORD` | Si, salvo `K6_ACCESS_TOKEN` | vacio | Password del usuario de pruebas. No se imprime ni se guarda. |
 | `K6_ACCESS_TOKEN` | Si, salvo `K6_PASSWORD` | vacio | Access token preemitido. Tiene prioridad sobre password grant. |
-| `K6_PROFILE` | No | `smoke` | Perfil `smoke` o `load`. |
+| `K6_PROFILE` | No | `smoke` | Perfil `smoke`, `load` o `stress`. |
 | `HEALTH_PATH` | No | `/actuator/health` | Endpoint de health. |
 | `PRODUCTS_PATH` | No | `/products?page=0&size=20&sort=name&direction=asc` | Consulta paginada de productos. |
 | `REPORTS_PATH` | No | `/reports/dashboard` | Endpoint principal de reportes. |
@@ -89,6 +90,17 @@ El perfil `load` usa una carga local conservadora con ramp-up, periodo estable y
 
 ```bash
 K6_PROFILE=load \
+K6_PASSWORD="<password-local>" \
+k6 run tests/performance/performance.js
+```
+
+## Ejecución stress
+
+El perfil `stress` eleva la concurrencia de 25 a 100 VUs y conserva los mismos
+thresholds de error, checks, latencia y throughput:
+
+```bash
+K6_PROFILE=stress \
 K6_PASSWORD="<password-local>" \
 k6 run tests/performance/performance.js
 ```
@@ -208,7 +220,8 @@ Ese fallo es intencional y no debe registrarse como defecto de la plataforma.
 ## Limitaciones
 
 - Es una prueba inicial de respuesta, no una prueba de capacidad maxima.
-- No sustituye stress, soak, spike ni pruebas de performance en staging.
+- No sustituye soak, spike, capacidad ni pruebas de performance con tráfico
+  productivo real.
 - Los resultados locales dependen de CPU, memoria, Docker Desktop, red y procesos del equipo.
 - No comparar directamente cifras locales con produccion.
 - Repetir la suite contra staging cuando el issue #86 este resuelto.

@@ -41,7 +41,7 @@ describe('DashboardService', () => {
         adjustmentMovements: 1
       },
       criticalProducts: [],
-      mostMovedProducts: [],
+      bestSellingProducts: [],
       recentMovements: []
     };
 

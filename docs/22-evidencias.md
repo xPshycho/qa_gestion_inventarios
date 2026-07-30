@@ -37,7 +37,7 @@ verificación** porque no se proporcionó un servidor/run consultable.
 | Suite | Comando | Resultado |
 |---|---|---|
 | Backend unit | Gradle `clean test jacoco...` | 125/125, coverage gate PASS |
-| Backend API | Gradle `apiTest` | 22/22 |
+| Backend API | Gradle `apiTest` | 23/23 |
 | Backend integración | Gradle `integrationTest jacoco...` | 17/17, gate PASS |
 | Datos | mismas 17 pruebas de integración | migraciones, seeds, relaciones y constraints PASS |
 | Frontend | `./frontend/scripts/test-local.sh` | 101/101, gates PASS |

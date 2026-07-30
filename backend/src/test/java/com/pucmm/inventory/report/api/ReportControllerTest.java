@@ -16,7 +16,7 @@ import com.pucmm.inventory.report.api.dto.CriticalProductResponse;
 import com.pucmm.inventory.report.api.dto.DashboardMetricsResponse;
 import com.pucmm.inventory.report.api.dto.DashboardResponse;
 import com.pucmm.inventory.report.api.dto.RecentStockMovementResponse;
-import com.pucmm.inventory.report.api.dto.TopMovedProductResponse;
+import com.pucmm.inventory.report.api.dto.BestSellingProductResponse;
 import com.pucmm.inventory.report.service.ReportService;
 import com.pucmm.inventory.stock.domain.StockMovementType;
 import java.math.BigDecimal;
@@ -53,7 +53,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.metrics.inventoryValue").value(1728000))
                 .andExpect(jsonPath("$.criticalProducts[0].sku").value("DELL-LAT-5440"))
                 .andExpect(jsonPath("$.criticalProducts[0].shortage").value(3))
-                .andExpect(jsonPath("$.mostMovedProducts[0].movementCount").value(3))
+                .andExpect(jsonPath("$.bestSellingProducts[0].exitMovementCount").value(3))
                 .andExpect(jsonPath("$.recentMovements[0].movementType").value("EXIT"))
                 .andExpect(jsonPath("$.recentMovements[0].stockAlert").value(true));
     }
@@ -72,16 +72,16 @@ class ReportControllerTest {
     }
 
     @Test
-    void getMostMovedProductsUsesRequestedLimit() throws Exception {
-        when(reportService.getMostMovedProducts(3)).thenReturn(List.of(topMovedProduct()));
+    void getBestSellingProductsUsesRequestedLimit() throws Exception {
+        when(reportService.getBestSellingProducts(3)).thenReturn(List.of(bestSellingProduct()));
 
-        mockMvc.perform(get("/reports/most-moved-products")
+        mockMvc.perform(get("/reports/best-selling-products")
                         .with(jwtWith(REPORT_VIEW))
                         .param("limit", "3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].productSku").value("DELL-LAT-5440"));
 
-        verify(reportService).getMostMovedProducts(3);
+        verify(reportService).getBestSellingProducts(3);
     }
 
     @Test
@@ -122,7 +122,7 @@ class ReportControllerTest {
         return new DashboardResponse(
                 metrics(),
                 List.of(criticalProduct()),
-                List.of(topMovedProduct()),
+                List.of(bestSellingProduct()),
                 List.of(recentMovement())
         );
     }
@@ -157,8 +157,8 @@ class ReportControllerTest {
         );
     }
 
-    private TopMovedProductResponse topMovedProduct() {
-        return new TopMovedProductResponse(
+    private BestSellingProductResponse bestSellingProduct() {
+        return new BestSellingProductResponse(
                 1L,
                 "DELL-LAT-5440",
                 "Dell Latitude 5440",
