@@ -5,7 +5,10 @@ una plataforma administrada y aislada para `development`, `staging` y
 `production` sin modificar automáticamente la VM de producción existente.
 
 La guía operativa completa está en
-[`docs/deployment/opentofu-gcp.md`](../../docs/deployment/opentofu-gcp.md).
+[`docs/deployment/opentofu-gcp.md`](../../docs/deployment/opentofu-gcp.md). El
+estado observado, las aprobaciones, incidentes, recuperación y trazabilidad del
+issue #109 están en
+[`docs/27-guia-operativa-gcp-opentofu.md`](../../docs/27-guia-operativa-gcp-opentofu.md).
 
 ## Estructura
 
@@ -27,7 +30,10 @@ infra/opentofu/
 ```
 
 Los archivos `*.tfvars.example` y `backend.hcl.example` son contratos sin
-credenciales. Las copias reales están ignoradas por Git.
+credenciales. `.tfvars`, state, `.terraform/` y `*.tfplan` están ignorados por
+Git. Una copia llamada `backend.hcl` **no está ignorada actualmente**: nunca
+debe contener `credentials` y el operador debe comprobar `git status` para no
+añadirla por accidente.
 
 ## Validación segura
 
@@ -65,6 +71,9 @@ publicar imágenes inmutables
 environment con deploy_services=true
 ```
 
-Nunca se ejecuta `tofu apply` desde un pull request. El issue #107 incorporará
-Workload Identity Federation, aprobación por GitHub Environment y promoción
-automática por SHA.
+Nunca se ejecuta `tofu apply` desde un pull request. Los PR realizan planes
+GCP de solo lectura; `ci-required.yml` conecta los pushes a `develop` y
+`staging` con `gcp-managed-deploy.yml`. El primer job post-merge de development
+quedó `skipped`, por lo que el `apply` automático continúa pendiente de
+validación y el issue #107 sigue abierto. `main -> production` conserva la
+ruta VM: el root OpenTofu de production solo se planifica.

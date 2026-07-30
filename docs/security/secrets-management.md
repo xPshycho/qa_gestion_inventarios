@@ -180,3 +180,15 @@ evidencia afectada se retiene y el job falla.
 
 El checklist del PR exige además confirmar que `.env`, realms renderizados,
 tokens, traces, videos y HAR sensibles no fueron publicados.
+
+## GCP y OpenTofu
+
+Secret Manager almacena versiones; OpenTofu administra solo catálogos,
+permisos y la referencia numérica `secret_version`. La producción VM vigente
+usa un environment privado `0600` y no debe confundirse con esa topología.
+
+El procedimiento coordinado para Secret Manager, PostgreSQL, Keycloak,
+GitHub Environment y producción VM está en
+[Guía operativa GCP/OpenTofu](../27-guia-operativa-gcp-opentofu.md#rotación-de-secretos).
+Cambiar solo una versión de secreto no demuestra que la credencial del
+servicio haya sido rotada.

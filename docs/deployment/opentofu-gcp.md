@@ -1,5 +1,14 @@
 # Base GCP declarativa con OpenTofu
 
+> **Estado operativo actualizado el 29-07-2026:** #106 está cerrado y el PR
+> #145 incorporó planes GCP de solo lectura para pull requests y jobs de
+> `apply` para `development` y `staging`. El plan read-only pasó en el PR, pero
+> el primer job post-merge de development quedó `skipped`; #107 permanece
+> abierto hasta diagnosticar y validar el `apply`. La producción vigente sigue
+> siendo la VM y staging conserva además su preview runner-private. Use la
+> [guía operativa #109](../27-guia-operativa-gcp-opentofu.md) para estado,
+> aprobaciones, incidentes, recuperación y trazabilidad.
+
 ## Propósito y estado
 
 Esta guía implementa la base declarativa del issue #106 y su automatización
