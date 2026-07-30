@@ -240,7 +240,21 @@ jobs:
       - name: Verify evidence safety
         if: always()
         id: evidence_safety
-        run: ./scripts/security/verify-artifacts.sh test-results/gcp-managed
+        env:
+          INVENTORY_SECRET_ENV_OUTPUT: ${{ runner.temp }}/artifact-safety.env
+          INVENTORY_SECRET_ENV_FILE: ${{ runner.temp }}/artifact-safety.env
+          POSTGRES_PASSWORD: ${{ secrets.INVENTORY_DB_PASSWORD }}
+          KEYCLOAK_DB_PASSWORD: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
+          KEYCLOAK_ADMIN_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_OPERATOR_PASSWORD: ${{ secrets.E2E_OPERATOR_PASSWORD }}
+          E2E_VIEWER_PASSWORD: ${{ secrets.E2E_VIEWER_PASSWORD }}
+          E2E_AUDITOR_PASSWORD: ${{ secrets.E2E_AUDITOR_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          ./scripts/security/init-secret-env.sh local --rotate
+          ./scripts/security/verify-artifacts.sh test-results/gcp-managed
 
       - name: Upload safe deployment evidence
         if: always() && steps.evidence_safety.outcome == 'success'

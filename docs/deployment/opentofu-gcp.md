@@ -1,5 +1,14 @@
 # Base GCP declarativa con OpenTofu
 
+> **Estado operativo actualizado el 29-07-2026:** #106 está cerrado y el PR
+> #145 incorporó planes GCP de solo lectura para pull requests y jobs de
+> `apply` para `development` y `staging`. El plan read-only pasó en el PR, pero
+> el primer job post-merge de development quedó `skipped`; #107 permanece
+> abierto hasta diagnosticar y validar el `apply`. La producción vigente sigue
+> siendo la VM y staging conserva además su preview runner-private. Use la
+> [guía operativa #109](../27-guia-operativa-gcp-opentofu.md) para estado,
+> aprobaciones, incidentes, recuperación y trazabilidad.
+
 ## Propósito y estado
 
 Esta guía implementa la base declarativa del issue #106 y su automatización
@@ -32,25 +41,37 @@ evidencias se encuentran en
 
 ## Decisiones de arquitectura
 
-```text
-Internet
-  │
-  ├── Cloud Run inventory-<env>-web
-  │     ├── frontend Nginx :8080       (ingress)
-  │     ├── backend Spring :8081       (sidecar)
-  │     └── Cloud SQL Auth Proxy :5432 (sidecar)
-  │
-  └── Cloud Run inventory-<env>-identity
-        ├── Keycloak :8080             (ingress)
-        └── Cloud SQL Auth Proxy :5432 (sidecar)
+```mermaid
+flowchart TD
+    INTERNET["Internet"]
 
-Cloud SQL inventory-<env>-postgres
-  ├── database inventory
-  └── database keycloak
+    subgraph WEB["Cloud Run inventory-env-web"]
+        NGINX["Frontend Nginx :8080"]
+        BACKEND["Backend Spring :8081"]
+        PROXYWEB["Cloud SQL Auth Proxy :5432"]
+        NGINX -->|"127.0.0.1:8081 /api"| BACKEND
+    end
 
-VPC inventory-<env>-network
-  ├── Cloud Run Direct VPC egress: 10.<env>.0.0/24
-  └── Private Services Access: rango /16 administrado por Google
+    subgraph ID["Cloud Run inventory-env-identity"]
+        KEYCLOAK["Keycloak :8080"]
+        PROXYID["Cloud SQL Auth Proxy :5432"]
+    end
+
+    subgraph VPC["VPC inventory-env-network"]
+        EGRESS["Direct VPC egress"]
+        PSA["Private Services Access"]
+        SQL[("Cloud SQL PostgreSQL")]
+    end
+
+    INVENTORY[("database inventory")]
+    KEYCLOAKDB[("database keycloak")]
+
+    INTERNET --> NGINX
+    INTERNET --> KEYCLOAK
+    PROXYWEB --> EGRESS --> PSA --> SQL
+    PROXYID --> EGRESS
+    SQL --> INVENTORY
+    SQL --> KEYCLOAKDB
 ```
 
 El frontend y backend comparten una instancia Cloud Run. Nginx conserva el

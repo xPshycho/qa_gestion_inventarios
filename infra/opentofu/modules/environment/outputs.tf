@@ -1,8 +1,10 @@
 output "environment" {
-  value = var.environment
+  description = "Nombre canónico del ambiente."
+  value       = var.environment
 }
 
 output "database" {
+  description = "Identificadores de Cloud SQL y sus bases."
   value = {
     instance_name   = module.database.instance_name
     connection_name = module.database.connection_name
@@ -11,6 +13,7 @@ output "database" {
 }
 
 output "network" {
+  description = "Identificadores y rangos de la red privada del ambiente."
   value = {
     name                   = google_compute_network.environment.name
     serverless_subnet_name = google_compute_subnetwork.serverless.name
@@ -20,6 +23,7 @@ output "network" {
 }
 
 output "runtime_service_accounts" {
+  description = "Cuentas de servicio runtime, indexadas por componente."
   value = {
     for name, account in google_service_account.runtime :
     name => account.email
@@ -27,10 +31,12 @@ output "runtime_service_accounts" {
 }
 
 output "secret_ids" {
-  value = module.secrets.secret_ids
+  description = "IDs de los contenedores de secretos; no incluye valores ni versiones."
+  value       = module.secrets.secret_ids
 }
 
 output "service_urls" {
+  description = "URLs de web e identity cuando Cloud Run está activado; null en foundation."
   value = var.deploy_services ? {
     web      = module.web[0].uri
     identity = module.identity[0].uri
@@ -38,10 +44,12 @@ output "service_urls" {
 }
 
 output "cloud_run_enabled" {
-  value = var.deploy_services
+  description = "Indica si este plan materializa los servicios Cloud Run."
+  value       = var.deploy_services
 }
 
 output "safety_contract" {
+  description = "Invariantes verificables de disponibilidad, protección, red e imágenes."
   value = {
     database_availability_type   = var.database_availability_type
     database_deletion_protection = var.database_deletion_protection

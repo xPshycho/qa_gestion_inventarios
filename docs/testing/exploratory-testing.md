@@ -1,5 +1,16 @@
 # Issue #89 - Pruebas exploratorias manuales
 
+> **Documento histórico, evidencia válida:** este reporte conserva la ejecución
+> local del 25 de julio de 2026 y sus 32 artefactos. Los estados de issues y
+> dependencias que aparecen abajo son el snapshot de esa fecha, no el estado
+> vigente. Para el cierre documental actual consulte
+> [`docs/25-trazabilidad-entregables.md`](../25-trazabilidad-entregables.md) y
+> [`docs/26-cierre-issue-91.md`](../26-cierre-issue-91.md). El retest final en
+> staging continúa como **Pendiente de verificación**. Las fuentes
+> `proyecto_final*` citadas con sus rutas originales no forman parte de este
+> commit documental; su disponibilidad en
+> `docs/referencias/proyecto-final/` es **Pendiente de verificación**.
+
 ## Estado del reporte
 
 | Campo | Valor |
@@ -417,7 +428,10 @@ métricas/logs de negocio incompletos.
 - [Consultas PromQL del dashboard](evidence/exploratory/2026-07-25/EXP-OBS-01-prometheus-dashboard-queries.json)
 - [Consulta Loki vacía](evidence/exploratory/2026-07-25/EXP-OBS-01-loki-dashboard-query.json)
 - [Búsqueda de trazas Tempo](evidence/exploratory/2026-07-25/EXP-OBS-01-tempo-search.json)
-- [Extracto de arranque y correlación](evidence/exploratory/2026-07-25/EXP-OBS-01-backend-correlation.log)
+- Extracto de arranque y correlación:
+  `evidence/exploratory/2026-07-25/EXP-OBS-01-backend-correlation.log`
+  (artifact local ignorado por Git; disponibilidad posterior al clonado
+  **Pendiente de verificación**).
 - [Alerta activa JSON](evidence/exploratory/2026-07-25/EXP-OBS-01-alertmanager-firing.json)
 - [Alerta resuelta JSON](evidence/exploratory/2026-07-25/EXP-OBS-01-alertmanager-resolved.json)
 - [Estado final post-incidente](evidence/exploratory/2026-07-25/EXP-OBS-01-final-state.json)

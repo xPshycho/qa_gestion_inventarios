@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+#
+# seed-runtime-secrets.sh
+# Crea la primera versión faltante de los secretos runtime y sincroniza los
+# usuarios PostgreSQL de development o staging.
+#
+# Uso:
+#   scripts/opentofu/seed-runtime-secrets.sh <development|staging>
+#
+# Entradas:
+#   GCP_PROJECT_ID y los ocho secretos enumerados en scripts/opentofu/README.md.
+# Salida:
+#   Imprime únicamente el número común de versión; nunca imprime los valores.
+# Efectos:
+#   Escribe versiones en Secret Manager y crea o rota dos usuarios de Cloud SQL.
 
 set -Eeuo pipefail
 
